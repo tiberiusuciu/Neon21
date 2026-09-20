@@ -4,7 +4,10 @@
   "scripts": {
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
-    "db:migrate": "pnpm --filter @neon21/server exec prisma migrate deploy"
+    "db:migrate": "pnpm --filter @neon21/server exec prisma migrate deploy",
+    "web:dev": "pnpm --filter @neon21/web dev",
+    "apk:debug": "pnpm --filter @neon21/web run apk:debug",
+    "wallet:topup": "pnpm --filter @neon21/server run wallet:topup"
   },
   "engines": {
     "node": ">=20"

@@ -5,7 +5,7 @@ import { env } from "./env.js";
 export function setupSocket(app: FastifyInstance, httpServer: import("node:http").Server) {
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: env.CORS_ORIGIN,
+      origin: env.corsOrigin,
       credentials: true,
     },
   });

@@ -16,4 +16,16 @@ const envSchema = z.object({
   HOST: z.string().default("0.0.0.0"),
 });
 
-export const env = envSchema.parse(process.env);
+const parsed = envSchema.parse(process.env);
+
+function corsOrigins(raw: string): boolean | string | string[] {
+  const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
+  const extras = ["capacitor://localhost", "http://localhost"];
+  const set = new Set([...parts, ...extras]);
+  return [...set];
+}
+
+export const env = {
+  ...parsed,
+  corsOrigin: corsOrigins(parsed.CORS_ORIGIN),
+};

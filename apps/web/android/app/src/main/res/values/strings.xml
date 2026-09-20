@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Neon21</string>
+    <string name="title_activity_main">Neon21</string>
+    <string name="package_name">com.neon21.app</string>
+    <string name="custom_url_scheme">com.neon21.app</string>
+</resources>
