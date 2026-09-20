@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.next
+coverage
+*.log
+.DS_Store
+*.tsbuildinfo
+.turbo
+.prisma
+apps/server/prisma/*.db
+apps/server/prisma/*.db-journal

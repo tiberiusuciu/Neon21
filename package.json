@@ -1,0 +1,13 @@
+{
+  "name": "neon21",
+  "private": true,
+  "scripts": {
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "db:migrate": "pnpm --filter @neon21/server exec prisma migrate deploy"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.0"
+}
