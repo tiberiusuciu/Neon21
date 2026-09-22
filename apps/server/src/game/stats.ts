@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 
 export type HandOutcomeInput = {
@@ -37,7 +38,7 @@ export async function recordHandOutcomes(
     if (h.isBlackjack) blackjacks++;
   }
 
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const user = await tx.user.findUnique({ where: { id: userId } });
     if (!user) return;
 

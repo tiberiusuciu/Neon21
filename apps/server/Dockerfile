@@ -12,7 +12,6 @@ FROM deps AS build
 COPY packages/shared ./packages/shared
 COPY apps/server ./apps/server
 RUN pnpm --filter @neon21/shared build
-RUN pnpm --filter @neon21/server exec prisma generate
 RUN pnpm --filter @neon21/server build
 
 FROM base AS runner

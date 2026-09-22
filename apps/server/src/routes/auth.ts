@@ -138,7 +138,11 @@ export async function authRoutes(app: FastifyInstance) {
       }
 
       const jwt = app.jwt.sign({ sub: user.id, email: user.email });
-      const redirectUrl = new URL(env.CORS_ORIGIN);
+      const primaryOrigin = env.CORS_ORIGIN.split(",")[0]?.trim();
+      if (!primaryOrigin) {
+        return reply.status(500).send({ error: "CORS_ORIGIN is not configured" });
+      }
+      const redirectUrl = new URL(primaryOrigin);
       redirectUrl.searchParams.set("token", jwt);
       return reply.redirect(redirectUrl.toString());
     });
