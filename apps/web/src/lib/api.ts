@@ -1,9 +1,12 @@
 import type {
   ClaimResponse,
   GameTable,
+  LeaderboardResponse,
+  LeaderboardScope,
   LoginBody,
   PublicUser,
   RegisterBody,
+  StatsResponse,
   Wallet,
 } from "@neon21/shared";
 
@@ -125,5 +128,16 @@ export const api = {
 
   tables(token: string) {
     return request<{ tables: GameTable[] }>("/tables", { token });
+  },
+
+  stats(token: string) {
+    return request<StatsResponse>("/stats", { token });
+  },
+
+  leaderboard(token: string, scope: LeaderboardScope = "season") {
+    return request<LeaderboardResponse>(
+      `/leaderboard?scope=${encodeURIComponent(scope)}`,
+      { token }
+    );
   },
 };

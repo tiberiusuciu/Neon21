@@ -8,15 +8,38 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String
-  email        String    @unique
-  passwordHash String?
-  googleId     String?   @unique
-  balanceCents Int       @default(10000)
-  lastClaimAt  DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id               String        @id @default(cuid())
+  name             String
+  email            String        @unique
+  passwordHash     String?
+  googleId         String?       @unique
+  balanceCents     Int           @default(10000)
+  lastClaimAt      DateTime?
+  handsPlayed      Int           @default(0)
+  wins             Int           @default(0)
+  losses           Int           @default(0)
+  pushes           Int           @default(0)
+  blackjacks       Int           @default(0)
+  biggestWinCents  Int           @default(0)
+  biggestLossCents Int           @default(0)
+  netProfitCents   Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  handOutcomes     HandOutcome[]
+}
+
+model HandOutcome {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resultCents Int
+  betCents    Int
+  isBlackjack Boolean  @default(false)
+  doubled     Boolean  @default(false)
+  bust        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model Table {

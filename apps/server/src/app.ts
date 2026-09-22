@@ -6,6 +6,8 @@ import { healthRoutes } from "./routes/health.js";
 import { authRoutes } from "./routes/auth.js";
 import { walletRoutes } from "./routes/wallet.js";
 import { tableRoutes } from "./routes/tables.js";
+import { statsRoutes } from "./routes/stats.js";
+import { leaderboardRoutes } from "./routes/leaderboard.js";
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -39,6 +41,8 @@ export async function buildApp() {
   await app.register(authRoutes);
   await app.register(walletRoutes);
   await app.register(tableRoutes);
+  await app.register(statsRoutes);
+  await app.register(leaderboardRoutes);
 
   return app;
 }

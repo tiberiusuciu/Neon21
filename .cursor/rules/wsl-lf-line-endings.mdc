@@ -1,0 +1,15 @@
+---
+description: Always use LF line endings; this project runs in WSL, never Windows CRLF
+alwaysApply: true
+---
+
+# WSL + LF line endings
+
+This repo is developed and run **inside WSL (Ubuntu)**, not native Windows shells.
+
+- **Always write files with Unix LF (`\n`) line endings.** Never CRLF (`\r\n`).
+- Especially critical for: `*.sh`, Docker `ENTRYPOINT` scripts, `.env` helpers, any file executed by bash.
+- CRLF breaks bash as `set: pipefail` / `: invalid option name` — if you see that, strip `\r` immediately.
+- Prefer creating/editing scripts via approaches that preserve LF (e.g. `printf`/`cat` heredoc in WSL, or Node `.mjs` instead of bash when the editor keeps reintroducing CRLF).
+- Keep [`.gitattributes`](.gitattributes) with `*.sh text eol=lf` (and similar) so Git does not convert scripts to CRLF.
+- Run commands with WSL bash (`wsl` / `/home/...` paths), not PowerShell, unless the user explicitly asks otherwise.

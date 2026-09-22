@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { formatCents, formatCountdown } from "../lib/format";
+import { useCashFx } from "../lib/cashFx";
 
 export function AppHeader() {
   const { user, wallet, claim, logout, refresh } = useAuth();
+  const { walletRef, walletPulse, walletSpend } = useCashFx();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -67,6 +70,9 @@ export function AppHeader() {
       <NavLink to="/stats" onClick={() => setOpen(false)}>
         Stats
       </NavLink>
+      <NavLink to="/leaderboard" onClick={() => setOpen(false)}>
+        Leaderboard
+      </NavLink>
       <NavLink to="/settings" onClick={() => setOpen(false)}>
         Settings
       </NavLink>
@@ -90,7 +96,33 @@ export function AppHeader() {
           </Link>
           <nav className="nav-desktop">{links}</nav>
           <div className="header-meta">
-            <span className="balance">{formatCents(balance)}</span>
+            <motion.span
+              ref={walletRef}
+              className={[
+                "balance",
+                walletPulse ? `balance-pulse balance-pulse-${walletPulse}` : "",
+                walletSpend ? "balance-spend" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              animate={
+                walletPulse
+                  ? { scale: [1, 1.18, 1], y: [0, -2, 0] }
+                  : walletSpend
+                    ? { scale: [1, 0.94, 1] }
+                    : { scale: 1 }
+              }
+              transition={{
+                duration:
+                  walletPulse === "jackpot" || walletPulse === "mega"
+                    ? 0.5
+                    : walletSpend
+                      ? 0.35
+                      : 0.4,
+              }}
+            >
+              {formatCents(balance)}
+            </motion.span>
             <button
               type="button"
               className={`btn btn-sm${!canClaim || claiming ? " is-disabled" : ""}`}
@@ -125,11 +157,7 @@ export function AppHeader() {
           </div>
         </div>
       </header>
-      {open && (
-        <nav className="nav-drawer">
-          {links}
-        </nav>
-      )}
+      {open && <nav className="nav-drawer">{links}</nav>}
     </>
   );
 }

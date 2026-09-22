@@ -1,16 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import type { GameTable } from "@neon21/shared";
+import type { LobbyTable } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
+import { useGameSocket } from "../lib/SocketProvider";
 
 export function LobbyPage() {
   const { token } = useAuth();
   const toast = useToast();
-  const [tables, setTables] = useState<GameTable[]>([]);
+  const { lobbyTables, subscribeLobby, connected } = useGameSocket();
+  const [fallback, setFallback] = useState<LobbyTable[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!connected) return;
+    subscribeLobby();
+  }, [connected, subscribeLobby]);
 
   useEffect(() => {
     if (!token) return;
@@ -18,9 +25,9 @@ export function LobbyPage() {
     (async () => {
       try {
         const res = await api.tables(token);
-        if (!cancelled) setTables(res.tables);
+        if (!cancelled) setFallback(res.tables);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled && lobbyTables.length === 0) {
           toast.error(
             err instanceof ApiError ? err.message : "Failed to load tables"
           );
@@ -32,8 +39,14 @@ export function LobbyPage() {
     return () => {
       cancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- toast once on token change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    if (lobbyTables.length > 0) setLoading(false);
+  }, [lobbyTables]);
+
+  const tables = lobbyTables.length > 0 ? lobbyTables : fallback;
 
   return (
     <motion.div

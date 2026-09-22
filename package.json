@@ -2,6 +2,9 @@
   "name": "neon21",
   "private": true,
   "scripts": {
+    "dev": "node scripts/dev-up.mjs",
+    "start": "pnpm dev",
+    "stop": "docker compose down",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down",
     "db:migrate": "pnpm --filter @neon21/server exec prisma migrate deploy",

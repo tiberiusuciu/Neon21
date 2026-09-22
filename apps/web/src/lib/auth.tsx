@@ -23,6 +23,7 @@ type AuthState = {
   refresh: () => Promise<void>;
   claim: () => Promise<void>;
   setTokenFromUrl: (token: string) => Promise<void>;
+  setBalanceCents: (n: number) => void;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -159,6 +160,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyToken]
   );
 
+  const setBalanceCents = useCallback((n: number) => {
+    setUser((prev) => (prev ? { ...prev, balanceCents: n } : prev));
+    setWallet((prev) => (prev ? { ...prev, balanceCents: n } : prev));
+  }, []);
+
   const value = useMemo<AuthState>(
     () => ({
       token,
@@ -171,6 +177,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       claim,
       setTokenFromUrl,
+      setBalanceCents,
     }),
     [
       token,
@@ -183,6 +190,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       claim,
       setTokenFromUrl,
+      setBalanceCents,
     ]
   );
 
