@@ -6,7 +6,7 @@ import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 
 export function OnboardingNamePage() {
-  const { user, loading, updateName } = useAuth();
+  const { user, token, loading, updateName } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [name, setName] = useState("");
