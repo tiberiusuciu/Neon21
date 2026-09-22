@@ -47,10 +47,13 @@ function takeTokenFromUrl(): string | null {
 }
 
 async function loadSession(token: string) {
-  const [{ user }, wallet] = await Promise.all([
-    api.me(token),
-    api.wallet(token),
-  ]);
+  const { user } = await api.me(token);
+  let wallet: Wallet | null = null;
+  try {
+    wallet = await api.wallet(token);
+  } catch (err) {
+    console.error("[Auth] Wallet fetch failed:", err);
+  }
   return { user, wallet };
 }
 
@@ -68,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(next);
     const session = await loadSession(next);
     setUser(session.user);
-    setWallet(session.wallet);
+    if (session.wallet) setWallet(session.wallet);
     return session.user;
   }, []);
 
@@ -87,7 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const session = await loadSession(token);
       setUser(session.user);
-      setWallet(session.wallet);
+      if (session.wallet) setWallet(session.wallet);
     } catch {
       clear();
     }
@@ -105,15 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = await loadSession(token);
         if (!cancelled) {
           setUser(session.user);
-          setWallet(session.wallet);
+          if (session.wallet) setWallet(session.wallet);
         }
       } catch (err: unknown) {
         console.error("[Auth] Session fetch failed:", err);
-        const status =
-          err && typeof err === "object" && "status" in err
-            ? (err as { status?: number }).status
-            : undefined;
-        if (status === 401 && !cancelled) clear();
+        if (!cancelled) clear();
       } finally {
         if (!cancelled) setLoading(false);
       }

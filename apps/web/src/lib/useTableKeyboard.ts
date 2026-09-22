@@ -77,7 +77,7 @@ export function useTableKeyboard({
       }
 
       if (showBet) {
-        const chipIdx = "qwert".indexOf(key);
+        const chipIdx = "qwe".indexOf(key);
         if (chipIdx >= 0) {
           const cents = CHIP_DENOMINATIONS_CENTS[chipIdx];
           if (cents != null) {

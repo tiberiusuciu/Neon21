@@ -193,16 +193,6 @@ export function ActionBar({
     };
   }, [showDrawer, drawer, showBet, showInsurance]);
 
-  useEffect(() => {
-    if (!showDrawer || drawer !== "open") return;
-    const seat = document.querySelector(".seat-you");
-    if (!(seat instanceof HTMLElement)) return;
-    const id = window.setTimeout(() => {
-      seat.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 80);
-    return () => window.clearTimeout(id);
-  }, [showDrawer, drawer, showActions, showBet, showInsurance]);
-
   useEffect(() => () => clearCollapseTimer(), []);
 
   function act(

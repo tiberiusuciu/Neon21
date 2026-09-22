@@ -960,7 +960,6 @@ h3 {
   padding: 0.55rem 0.75rem;
   border-radius: 12px;
   transition:
-    height 0.4s var(--ease),
     background 0.3s var(--ease),
     box-shadow 0.3s var(--ease);
 }
@@ -1020,6 +1019,12 @@ h3 {
   background: color-mix(in srgb, #f0c674 28%, transparent);
   color: #f5e6c0;
   letter-spacing: 0.04em;
+  min-width: 3.6rem;
+  text-align: center;
+}
+
+.zone-live-tag.is-hidden {
+  visibility: hidden;
 }
 
 .seats-arc {
@@ -1081,8 +1086,6 @@ h3 {
   gap: 0.3rem;
   text-align: center;
   transition:
-    height 0.55s var(--ease),
-    min-height 0.55s var(--ease),
     border-color 0.3s var(--ease),
     background 0.3s var(--ease),
     opacity 0.3s var(--ease);
@@ -1189,7 +1192,6 @@ h3 {
   width: 100%;
   align-items: center;
   margin-bottom: 0.2rem;
-  transition: height 0.35s var(--ease);
 }
 
 .seat-hands-split {
@@ -1240,8 +1242,6 @@ h3 {
     0 0 16px color-mix(in srgb, var(--accent) 22%, transparent);
   animation: hand-playing-pulse 1.35s ease-in-out infinite;
   z-index: 2;
-  transform: translateY(-3px) scale(1.07);
-  transform-origin: center bottom;
 }
 
 @keyframes hand-playing-pulse {
@@ -1774,7 +1774,6 @@ h3 {
   position: relative;
   outline: 1px solid color-mix(in srgb, #f0c674 50%, transparent);
   border-radius: 8px;
-  padding: 0.25rem 0.2rem 0.15rem;
   background: color-mix(in srgb, #f0c674 10%, transparent);
 }
 

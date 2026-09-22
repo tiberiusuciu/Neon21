@@ -24,13 +24,15 @@ export function NamedRoute() {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading || !user) {
+  if (loading) {
     return (
       <div className="auth-page">
         <p className="muted">Loading…</p>
       </div>
     );
   }
+
+  if (!user) return <Navigate to="/login" replace />;
 
   if (!user.nameChosen && location.pathname !== "/onboarding") {
     return <Navigate to="/onboarding" replace />;

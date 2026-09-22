@@ -24,7 +24,9 @@ export function OnboardingNamePage() {
     );
   }
 
-  if (user?.nameChosen) return <Navigate to="/lobby" replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  if (user.nameChosen) return <Navigate to="/lobby" replace />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

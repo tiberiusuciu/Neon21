@@ -11,7 +11,7 @@ type Props = {
   onReuse: () => void;
 };
 
-const CHIP_KEYS = ["Q", "W", "E", "R", "T"] as const;
+const CHIP_KEYS = ["Q", "W", "E"] as const;
 
 export function ChipTray({
   pendingBetCents,

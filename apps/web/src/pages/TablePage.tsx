@@ -70,7 +70,6 @@ export function TablePage() {
   } = useGameSocket();
   const { playWin, playSpend } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
-
   const balanceCents = wallet?.balanceCents ?? user?.balanceCents ?? 0;
 
   const [now, setNow] = useState(() => Date.now());
@@ -608,7 +607,7 @@ export function TablePage() {
       return `${parts.join(" · ")}${suffix} · ${z}`;
     }
     if (showInsurance) return `Y / T Take · N Decline · ${z}`;
-    if (showBet) return `Q–T chips · C Clear · D Reuse · ${z}`;
+    if (showBet) return `Q-E chips · C Clear · D Reuse · ${z}`;
     if (!seated) return `1–7 Sit · ${z}`;
     return z;
   }, [showActions, showPreActions, showInsurance, showBet, seated, canSplit]);
@@ -720,7 +719,6 @@ export function TablePage() {
         </div>
       )}
 
-      <LayoutGroup id="felt-layout">
       <motion.div
         className={[
           "felt",
@@ -741,76 +739,91 @@ export function TablePage() {
         }}
       >
         <div ref={feltMeasureRef} className="felt-measure">
-        <motion.div
-          layout="position"
-          className={[
-            "dealer-zone",
-            phase === "dealer" || phase === "dealing" ? "dealer-zone-live" : "",
-            phase === "insurance" ? "dealer-zone-insurance" : "",
-          ]
-            .filter(Boolean)
-            .join(" ")}
-          transition={{ layout: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }}
-        >
-          <div className="zone-label">
-            Dealer
-            {phase === "insurance" && (
-              <span className="zone-live-tag zone-insurance-tag">Ace up</span>
-            )}
-            {(phase === "dealer" || phase === "dealing") && (
-              <span className="zone-live-tag">
-                {phase === "dealing" ? "dealing" : "playing"}
-              </span>
-            )}
-          </div>
-          <div className="card-row">
-            {(tableState?.dealer.cards ?? []).map((c, i) => (
-              <PlayingCard key={`${phase}-${i}-${"rank" in c ? c.rank : "h"}`} card={c} index={i} />
-            ))}
-          </div>
-          <HandValueBadge value={tableState?.dealer.value} />
-        </motion.div>
-
-        <motion.div
-          className="seats-arc"
-          layout="position"
-          transition={{ layout: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }}
-        >
-          {(tableState?.seats ?? EMPTY_SEATS).map((seat) => {
-            const seatIsYou = !!user && seat.userId === user.id;
-            const seatIsActive = tableState?.activeSeatIndex === seat.index;
-            const showWaitTimer =
-              phase === "playerTurns" &&
-              seatIsActive &&
-              !seatIsYou &&
-              timerProgress != null;
-            return (
-              <SeatView
-                key={seat.index}
-                seat={seat}
-                isYou={seatIsYou}
-                isActive={seatIsActive}
-                activeHandIndex={
-                  seatIsActive ? tableState.activeHandIndex : null
+          <div
+            className={[
+              "dealer-zone",
+              phase === "dealer" || phase === "dealing" ? "dealer-zone-live" : "",
+              phase === "insurance" ? "dealer-zone-insurance" : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
+            <div className="zone-label">
+              Dealer
+              <span
+                className={[
+                  "zone-live-tag",
+                  phase === "insurance" ? "zone-insurance-tag" : "",
+                  phase !== "insurance" &&
+                  phase !== "dealer" &&
+                  phase !== "dealing"
+                    ? "is-hidden"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ")}
+                aria-hidden={
+                  phase !== "insurance" &&
+                  phase !== "dealer" &&
+                  phase !== "dealing"
                 }
-                settle={phase === "settle"}
-                waitTimerProgress={showWaitTimer ? timerProgress : null}
-                waitTimerUrgent={showWaitTimer && timerUrgent}
-                canSit={balanceCents > 0}
-                onSit={() => {
-                  if (balanceCents <= 0) {
-                    toast.error("Need chips to sit — claim from the lobby");
-                    return;
-                  }
-                  takeSeat(seat.index);
-                }}
-              />
-            );
-          })}
-        </motion.div>
+              >
+                {phase === "insurance"
+                  ? "Ace up"
+                  : phase === "dealing"
+                    ? "dealing"
+                    : "playing"}
+              </span>
+            </div>
+            <div className="card-row">
+              {(tableState?.dealer.cards ?? []).map((c, i) => (
+                <PlayingCard
+                  key={`${i}-${"rank" in c ? `${c.rank}${c.suit}` : "h"}`}
+                  card={c}
+                  index={i}
+                />
+              ))}
+            </div>
+            <HandValueBadge value={tableState?.dealer.value} />
+          </div>
+
+          <LayoutGroup id="seats-arc">
+            <div className="seats-arc">
+              {(tableState?.seats ?? EMPTY_SEATS).map((seat) => {
+                const seatIsYou = !!user && seat.userId === user.id;
+                const seatIsActive = tableState?.activeSeatIndex === seat.index;
+                const showWaitTimer =
+                  phase === "playerTurns" &&
+                  seatIsActive &&
+                  !seatIsYou &&
+                  timerProgress != null;
+                return (
+                  <SeatView
+                    key={seat.index}
+                    seat={seat}
+                    isYou={seatIsYou}
+                    isActive={seatIsActive}
+                    activeHandIndex={
+                      seatIsActive ? tableState.activeHandIndex : null
+                    }
+                    settle={phase === "settle"}
+                    waitTimerProgress={showWaitTimer ? timerProgress : null}
+                    waitTimerUrgent={showWaitTimer && timerUrgent}
+                    canSit={balanceCents > 0}
+                    onSit={() => {
+                      if (balanceCents <= 0) {
+                        toast.error("Need chips to sit — claim from the lobby");
+                        return;
+                      }
+                      takeSeat(seat.index);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </LayoutGroup>
         </div>
       </motion.div>
-      </LayoutGroup>
 
       <ActionBar
         phase={statusLine}
