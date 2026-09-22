@@ -3,16 +3,18 @@ import { useAuth } from "../lib/auth";
 import { AppHeader } from "./AppHeader";
 import { CashFxProvider } from "../lib/cashFx";
 
-export function ProtectedRoute() {
-  const { token, loading } = useAuth();
+function BootScreen() {
+  return (
+    <div className="auth-page">
+      <p className="muted">Loading…</p>
+    </div>
+  );
+}
 
-  if (loading) {
-    return (
-      <div className="auth-page">
-        <p className="muted">Loading…</p>
-      </div>
-    );
-  }
+export function ProtectedRoute() {
+  const { token, user, loading } = useAuth();
+
+  if (loading || (token && !user)) return <BootScreen />;
 
   if (!token) return <Navigate to="/login" replace />;
 
@@ -21,16 +23,10 @@ export function ProtectedRoute() {
 
 /** Requires display name before the rest of the app. */
 export function NamedRoute() {
-  const { user, loading } = useAuth();
+  const { token, user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) {
-    return (
-      <div className="auth-page">
-        <p className="muted">Loading…</p>
-      </div>
-    );
-  }
+  if (loading || (token && !user)) return <BootScreen />;
 
   if (!user) return <Navigate to="/login" replace />;
 

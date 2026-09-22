@@ -16,7 +16,7 @@ export function OnboardingNamePage() {
     if (user?.name) setName(user.name);
   }, [user?.name]);
 
-  if (loading) {
+  if (loading || (token && !user)) {
     return (
       <div className="auth-page">
         <p className="muted">Loading…</p>

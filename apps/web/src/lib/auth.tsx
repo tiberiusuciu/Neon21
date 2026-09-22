@@ -66,21 +66,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const applyToken = useCallback(async (next: string) => {
-    localStorage.setItem(TOKEN_KEY, next);
-    setToken(next);
-    const session = await loadSession(next);
-    setUser(session.user);
-    if (session.wallet) setWallet(session.wallet);
-    return session.user;
-  }, []);
-
   const clear = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     setToken(null);
     setUser(null);
     setWallet(null);
   }, []);
+
+  const applyToken = useCallback(
+    async (next: string) => {
+      localStorage.setItem(TOKEN_KEY, next);
+      setToken(next);
+      setLoading(true);
+      try {
+        const session = await loadSession(next);
+        setUser(session.user);
+        if (session.wallet) setWallet(session.wallet);
+        return session.user;
+      } catch (err) {
+        clear();
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [clear]
+  );
 
   const refresh = useCallback(async () => {
     if (!token) {
@@ -121,6 +132,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- boot once
+
+  // Safety: token without user must not stick forever (failed/hung session).
+  useEffect(() => {
+    if (!token || user || loading) return;
+    const id = window.setTimeout(() => {
+      console.error("[Auth] Session never loaded; clearing token");
+      clear();
+    }, 12_000);
+    return () => window.clearTimeout(id);
+  }, [token, user, loading, clear]);
 
   useEffect(() => {
     if (!isNativeApp()) return;

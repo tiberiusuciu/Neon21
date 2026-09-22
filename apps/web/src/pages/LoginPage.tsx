@@ -6,14 +6,14 @@ import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 
 export function LoginPage() {
-  const { login, token, loading, startGoogleSignIn } = useAuth();
+  const { login, token, user, loading, startGoogleSignIn } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (loading) {
+  if (loading || (token && !user)) {
     return (
       <div className="auth-page">
         <p className="muted">Loading…</p>
@@ -21,7 +21,14 @@ export function LoginPage() {
     );
   }
 
-  if (token) return <Navigate to="/lobby" replace />;
+  if (token && user) {
+    return (
+      <Navigate
+        to={user.nameChosen ? "/lobby" : "/onboarding"}
+        replace
+      />
+    );
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
