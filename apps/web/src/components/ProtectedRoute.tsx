@@ -4,7 +4,7 @@ import { AppHeader } from "./AppHeader";
 import { CashFxProvider } from "../lib/cashFx";
 
 export function ProtectedRoute() {
-  const { token, user, loading } = useAuth();
+  const { token, loading } = useAuth();
 
   if (loading) {
     return (

@@ -41,7 +41,14 @@ export const WIRE_MARK = {
   },
 } as const;
 
-export type WirePalette = (typeof WIRE)[keyof typeof WIRE];
+export type WirePalette = {
+  color: string;
+  card: number;
+  spadeFront: number;
+  spadeBack: number;
+  letter: number;
+  pip: number;
+};
 
 function makeSpadeShape(scale = 1): THREE.Shape {
   const s = new THREE.Shape();
