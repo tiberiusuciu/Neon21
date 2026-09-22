@@ -78,6 +78,7 @@ export function TablePage() {
   );
   const celebratedSettle = useRef(false);
   const spentBetRound = useRef(false);
+  const spentInsuranceRound = useRef(false);
   const loggedSettle = useRef(false);
   const celebrateTimer = useRef<number | null>(null);
 
@@ -207,6 +208,7 @@ export function TablePage() {
   useEffect(() => {
     if (phase === "betting") {
       spentBetRound.current = false;
+      spentInsuranceRound.current = false;
       return;
     }
     if (phase !== "dealing" || spentBetRound.current || !mySeat) return;
@@ -214,6 +216,14 @@ export function TablePage() {
     if (bet <= 0) return;
     spentBetRound.current = true;
     playSpend(bet);
+  }, [phase, mySeat, playSpend]);
+
+  useEffect(() => {
+    if (phase !== "insurance" || !mySeat || spentInsuranceRound.current) return;
+    const cost = mySeat.insuranceCents;
+    if (cost <= 0) return;
+    spentInsuranceRound.current = true;
+    playSpend(cost);
   }, [phase, mySeat, playSpend]);
 
   const seated = !!mySeat;
@@ -405,11 +415,13 @@ export function TablePage() {
   const canDouble = !!actionHand && actionHand.cards.length === 2;
   const canSplit = useMemo(() => {
     if (!actionHand || !mySeat) return false;
-    if (mySeat.hands.length !== 1) return false;
+    if (mySeat.hands.length >= 4) return false;
     if (actionHand.cards.length !== 2) return false;
     const [a, b] = actionHand.cards;
     if (!a || !b || "hidden" in a || "hidden" in b) return false;
     if (!("rank" in a) || !("rank" in b) || a.rank !== b.rank) return false;
+    // Match server: no re-split aces
+    if (a.rank === "A" && mySeat.hands.length > 1) return false;
     return balanceCents >= actionHand.betCents;
   }, [actionHand, mySeat, balanceCents]);
 
@@ -573,77 +585,85 @@ export function TablePage() {
       transition={{ duration: 0.3 }}
     >
       <div className="table-toolbar">
-        <div>
-          <h1 className="page-title">{tableState?.name ?? "Table"}</h1>
-          <p className="page-sub table-sub">
-            <AnimatePresence mode="wait">
-              <motion.span
-                key={statusLine}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
-              >
-                {statusLine}
-              </motion.span>
-            </AnimatePresence>
-            {remainingMs != null && (
-              <span className={timerUrgent ? "timer-urgent" : ""}>
-                {" "}
-                · {formatCountdown(remainingMs)}
+        <div className="table-toolbar-top">
+          <h1 className="page-title table-title">{tableState?.name ?? "Table"}</h1>
+          <div className="table-toolbar-actions">
+            {tableState != null && (
+              <span className="table-spectators" title="Spectators">
+                <svg
+                  className="table-spectators-icon"
+                  viewBox="0 0 24 24"
+                  width="14"
+                  height="14"
+                  aria-hidden
+                >
+                  <path
+                    fill="currentColor"
+                    d="M12 5c-5.5 0-9.5 5.2-10.7 6.7a1 1 0 0 0 0 1.2C2.5 14.3 6.5 19 12 19s9.5-4.7 10.7-6.1a1 1 0 0 0 0-1.2C21.5 10.2 17.5 5 12 5Zm0 12c-3.9 0-7.1-3.2-8.5-5 1.4-1.8 4.6-5 8.5-5s7.1 3.2 8.5 5c-1.4 1.8-4.6 5-8.5 5Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"
+                  />
+                </svg>
+                {tableState.spectatorCount}
               </span>
             )}
-            {!connected && <> · reconnecting…</>}
-          </p>
-          <div className="phase-timer-slot" aria-hidden>
-            <div
-              className={`phase-timer-track${timerProgress == null ? " is-empty" : ""}`}
+            <button
+              type="button"
+              className={`btn btn-sm btn-ghost${historyOpen ? " is-active" : ""}`}
+              onClick={() => setHistoryOpen((v) => !v)}
+              title="Round history (Z)"
             >
-              {timerProgress != null && (
-                <motion.div
-                  className={`phase-timer-fill${timerUrgent ? " is-urgent" : ""}`}
-                  animate={{ scaleX: timerProgress }}
-                  transition={{ duration: 0.2, ease: "linear" }}
-                  style={{ transformOrigin: "left center" }}
-                />
-              )}
-            </div>
+              History <kbd className="kbd">Z</kbd>
+            </button>
+            {seated && (
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                onClick={leaveSeat}
+              >
+                Leave seat
+              </button>
+            )}
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost"
+              onClick={goLobby}
+            >
+              Lobby
+            </button>
           </div>
         </div>
-        <div className="table-toolbar-actions">
-          {tableState != null && (
-            <span className="table-spectators" title="Spectators">
-              <svg
-                className="table-spectators-icon"
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                aria-hidden
-              >
-                <path
-                  fill="currentColor"
-                  d="M12 5c-5.5 0-9.5 5.2-10.7 6.7a1 1 0 0 0 0 1.2C2.5 14.3 6.5 19 12 19s9.5-4.7 10.7-6.1a1 1 0 0 0 0-1.2C21.5 10.2 17.5 5 12 5Zm0 12c-3.9 0-7.1-3.2-8.5-5 1.4-1.8 4.6-5 8.5-5s7.1 3.2 8.5 5c-1.4 1.8-4.6 5-8.5 5Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"
-                />
-              </svg>
-              {tableState.spectatorCount}
+        <p className="page-sub table-sub">
+          <AnimatePresence mode="wait">
+            <motion.span
+              key={statusLine}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+            >
+              {statusLine}
+            </motion.span>
+          </AnimatePresence>
+          {remainingMs != null && (
+            <span className={timerUrgent ? "timer-urgent" : ""}>
+              {" "}
+              · {formatCountdown(remainingMs)}
             </span>
           )}
-          <button
-            type="button"
-            className={`btn btn-sm btn-ghost${historyOpen ? " is-active" : ""}`}
-            onClick={() => setHistoryOpen((v) => !v)}
-            title="Round history (Z)"
+          {!connected && <> · reconnecting…</>}
+        </p>
+        <div className="phase-timer-slot phase-timer-desktop" aria-hidden>
+          <div
+            className={`phase-timer-track${timerProgress == null ? " is-empty" : ""}`}
           >
-            History <kbd className="kbd">Z</kbd>
-          </button>
-          {seated && (
-            <button type="button" className="btn btn-sm btn-ghost" onClick={leaveSeat}>
-              Leave seat
-            </button>
-          )}
-          <button type="button" className="btn btn-sm btn-ghost" onClick={goLobby}>
-            Back to lobby
-          </button>
+            {timerProgress != null && (
+              <motion.div
+                className={`phase-timer-fill${timerUrgent ? " is-urgent" : ""}`}
+                animate={{ scaleX: timerProgress }}
+                transition={{ duration: 0.2, ease: "linear" }}
+                style={{ transformOrigin: "left center" }}
+              />
+            )}
+          </div>
         </div>
       </div>
 
@@ -672,11 +692,9 @@ export function TablePage() {
         ]
           .filter(Boolean)
           .join(" ")}
-        layout
-        transition={{ layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }}
       >
         <motion.div
-          layout
+          layout="position"
           className={[
             "dealer-zone",
             phase === "dealer" || phase === "dealing" ? "dealer-zone-live" : "",
@@ -710,21 +728,30 @@ export function TablePage() {
           layout
           transition={{ layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }}
         >
-          {(tableState?.seats ?? EMPTY_SEATS).map((seat) => (
-            <SeatView
-              key={seat.index}
-              seat={seat}
-              isYou={!!user && seat.userId === user.id}
-              isActive={tableState?.activeSeatIndex === seat.index}
-              activeHandIndex={
-                tableState?.activeSeatIndex === seat.index
-                  ? tableState.activeHandIndex
-                  : null
-              }
-              settle={phase === "settle"}
-              onSit={() => takeSeat(seat.index)}
-            />
-          ))}
+          {(tableState?.seats ?? EMPTY_SEATS).map((seat) => {
+            const seatIsYou = !!user && seat.userId === user.id;
+            const seatIsActive = tableState?.activeSeatIndex === seat.index;
+            const showWaitTimer =
+              phase === "playerTurns" &&
+              seatIsActive &&
+              !seatIsYou &&
+              timerProgress != null;
+            return (
+              <SeatView
+                key={seat.index}
+                seat={seat}
+                isYou={seatIsYou}
+                isActive={seatIsActive}
+                activeHandIndex={
+                  seatIsActive ? tableState.activeHandIndex : null
+                }
+                settle={phase === "settle"}
+                waitTimerProgress={showWaitTimer ? timerProgress : null}
+                waitTimerUrgent={showWaitTimer && timerUrgent}
+                onSit={() => takeSeat(seat.index)}
+              />
+            );
+          })}
         </motion.div>
       </motion.div>
       </LayoutGroup>
@@ -739,6 +766,11 @@ export function TablePage() {
         canDouble={canDouble}
         canSplit={canSplit}
         holding={isHolding}
+        handBusted={
+          isMyTurn && !!myActiveHand?.value.bust
+        }
+        timerProgress={timerProgress}
+        timerUrgent={timerUrgent}
         onHit={hit}
         onStand={stand}
         onDouble={double}

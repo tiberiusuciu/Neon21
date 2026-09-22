@@ -25,6 +25,7 @@ import {
   DEALER_BUST_PAUSE_MS,
   SETTLE_WIN_PAYOUT_MS,
   INSURANCE_MS,
+  MAX_SPLIT_HANDS,
   SETTLE_MS,
   TURN_MS,
   type DealerState,
@@ -762,10 +763,11 @@ export class TableRoom {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
     if (ctx.hand.stood) return "Cannot split";
-    if (ctx.seat.hands.length > 1) return "Already split";
-    if (ctx.handIndex !== 0) return "Cannot split";
+    if (ctx.hand.fromSplitAces) return "Cannot re-split aces";
+    if (ctx.seat.hands.length >= MAX_SPLIT_HANDS) return "Max splits reached";
     if (!canSplit(ctx.hand.cards)) return "Cannot split";
     const isAces = ctx.hand.cards[0].rank === "A";
+    if (isAces && ctx.hand.fromSplit) return "Cannot re-split aces";
     try {
       const bal = await debitCents(userId, ctx.hand.betCents);
       this.cb.onWalletUpdate(userId, bal);
@@ -790,8 +792,8 @@ export class TableRoom {
         fromSplitAces: isAces,
         resultCents: null,
       };
-      ctx.seat.hands = [left, right];
-      this.activeHandIndex = 0;
+      ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
+      this.activeHandIndex = ctx.handIndex;
 
       if (isAces) {
         left.cards.push(this.shoe.draw());

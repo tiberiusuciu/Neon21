@@ -67,3 +67,5 @@ export const SETTLE_MS = 3_000;
 export const EMPTY_DELETE_MS = 10_000;
 export const SHOE_DECKS = 6;
 export const RESHUFFLE_RATIO = 0.25;
+/** Max hands per seat after re-splits (1 original + up to 3 splits). */
+export const MAX_SPLIT_HANDS = 4;

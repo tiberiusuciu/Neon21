@@ -16,6 +16,8 @@ type Props = {
   isActive: boolean;
   activeHandIndex: number | null;
   settle: boolean;
+  waitTimerProgress?: number | null;
+  waitTimerUrgent?: boolean;
   onSit: () => void;
 };
 
@@ -25,6 +27,8 @@ export function SeatView({
   isActive,
   activeHandIndex,
   settle,
+  waitTimerProgress = null,
+  waitTimerUrgent = false,
   onSit,
 }: Props) {
   const empty = !seat.userId;
@@ -74,6 +78,19 @@ export function SeatView({
         .join(" ")}
     >
       {auraTier > 0 && <SeatBetAura tier={auraTier} />}
+      {waitTimerProgress != null && (
+        <div
+          className={`seat-wait-timer${waitTimerUrgent ? " is-urgent" : ""}`}
+          aria-hidden
+        >
+          <motion.div
+            className="seat-wait-timer-fill"
+            animate={{ scaleX: waitTimerProgress }}
+            transition={{ duration: 0.2, ease: "linear" }}
+            style={{ transformOrigin: "left center" }}
+          />
+        </div>
+      )}
       {empty ? (
         <button type="button" className="btn btn-sm btn-ghost seat-sit" onClick={onSit}>
           Sit
