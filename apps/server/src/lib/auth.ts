@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import type { User } from "@prisma/client";
+import { env } from "../env.js";
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -12,11 +13,17 @@ export async function verifyPassword(
   return bcrypt.compare(password, passwordHash);
 }
 
+export function isAdminEmail(email: string): boolean {
+  return Boolean(env.ADMIN_EMAIL) && email === env.ADMIN_EMAIL;
+}
+
 export function toPublicUser(user: User) {
   return {
     id: user.id,
     name: user.name,
+    nameChosen: user.nameChosen,
     email: user.email,
+    isAdmin: isAdminEmail(user.email),
     balanceCents: user.balanceCents,
     lastClaimAt: user.lastClaimAt?.toISOString() ?? null,
     createdAt: user.createdAt.toISOString(),

@@ -27,8 +27,18 @@ if ! command -v java >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Building web (dist/)"
-pnpm run build
+# Android always talks to the production API (never localhost / LAN).
+API_URL="${VITE_API_URL:-https://api.neon21.tiberiusuciu.io}"
+case "$API_URL" in
+  *localhost*|*127.0.0.1*|http://192.168.*|http://10.*)
+    echo "error: APK must use the production API, not '$API_URL'." >&2
+    echo "  unset VITE_API_URL or set it to https://api.neon21.tiberiusuciu.io" >&2
+    exit 1
+    ;;
+esac
+
+echo "==> Building web (dist/) with VITE_API_URL=$API_URL"
+VITE_API_URL="$API_URL" pnpm run build
 
 if [[ ! -d android ]]; then
   echo "==> Adding Capacitor Android platform"
@@ -50,6 +60,7 @@ if [[ -f "$APK" ]]; then
   echo ""
   echo "APK ready:"
   echo "  $ROOT/$APK"
+  echo "  API: $API_URL"
 else
   echo "error: expected APK not found at $APK" >&2
   exit 1

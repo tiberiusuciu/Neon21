@@ -13,16 +13,71 @@ export const LoginBodySchema = z.object({
 });
 export type LoginBody = z.infer<typeof LoginBodySchema>;
 
+export const UpdateNameBodySchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+export type UpdateNameBody = z.infer<typeof UpdateNameBodySchema>;
+
 export const PublicUserSchema = z.object({
   id: z.string(),
   name: z.string(),
+  nameChosen: z.boolean(),
   email: z.string().email(),
+  isAdmin: z.boolean(),
   balanceCents: z.number().int(),
   lastClaimAt: z.string().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 export type PublicUser = z.infer<typeof PublicUserSchema>;
+
+export const AdminUserRowSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  email: z.string().email(),
+  balanceCents: z.number().int(),
+  handsPlayed: z.number().int(),
+  netProfitCents: z.number().int(),
+});
+export type AdminUserRow = z.infer<typeof AdminUserRowSchema>;
+
+export const AdminUsersResponseSchema = z.object({
+  users: z.array(AdminUserRowSchema),
+});
+export type AdminUsersResponse = z.infer<typeof AdminUsersResponseSchema>;
+
+export const AdminTopUpBodySchema = z.object({
+  dollars: z.number().positive().max(1_000_000),
+});
+export type AdminTopUpBody = z.infer<typeof AdminTopUpBodySchema>;
+
+export const AdminTopUpResponseSchema = z.object({
+  user: AdminUserRowSchema,
+  creditedCents: z.number().int().positive(),
+});
+export type AdminTopUpResponse = z.infer<typeof AdminTopUpResponseSchema>;
+
+export const AdminResetStatsBodySchema = z.discriminatedUnion("period", [
+  z.object({ period: z.literal("season") }),
+  z.object({ period: z.literal("alltime") }),
+  z.object({
+    period: z.literal("custom"),
+    from: z.string().min(1),
+    to: z.string().min(1),
+  }),
+]);
+export type AdminResetStatsBody = z.infer<typeof AdminResetStatsBodySchema>;
+
+export const AdminResetStatsResponseSchema = z.object({
+  user: AdminUserRowSchema,
+  deletedOutcomes: z.number().int().nonnegative(),
+  period: z.enum(["season", "alltime", "custom"]),
+  from: z.string().nullable(),
+  to: z.string().nullable(),
+});
+export type AdminResetStatsResponse = z.infer<
+  typeof AdminResetStatsResponseSchema
+>;
 
 export const WalletSchema = z.object({
   balanceCents: z.number().int(),

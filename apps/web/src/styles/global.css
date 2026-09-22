@@ -133,6 +133,10 @@ h3 {
   opacity: 0.55;
 }
 
+.ambient[data-mode="light"] {
+  opacity: 0.9;
+}
+
 .page-wrap {
   position: relative;
   z-index: 1;
@@ -146,9 +150,28 @@ h3 {
   font-weight: 800;
   letter-spacing: -0.04em;
   font-size: 1.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
-.brand span {
+.brand-mark {
+  display: block;
+  width: calc(var(--header-h) * 0.78);
+  height: calc(var(--header-h) - 6px);
+  flex-shrink: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.brand-mark canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.brand-accent {
   color: var(--accent);
 }
 
@@ -182,10 +205,6 @@ h3 {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: nowrap;
-}
-
-.header-logout {
-  flex-shrink: 0;
 }
 
 .balance {
@@ -506,6 +525,75 @@ h3 {
   flex-direction: column;
   gap: 0.75rem;
   max-width: 28rem;
+}
+
+.admin-search {
+  flex-direction: row;
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  max-width: 36rem;
+}
+
+.admin-search .field {
+  flex: 1;
+}
+
+.admin-layout {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 800px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.admin-user-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-height: 28rem;
+  overflow: auto;
+}
+
+.admin-user {
+  width: 100%;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.admin-user.active {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.admin-user-name {
+  font-weight: 600;
+}
+
+.admin-user-email,
+.admin-user-meta {
+  font-size: 0.85rem;
+}
+
+.admin-delete {
+  color: var(--danger);
+  align-self: flex-start;
+  margin-top: 0.5rem;
 }
 
 .segmented {

@@ -48,7 +48,7 @@ export function RegisterPage() {
         transition={{ duration: 0.35 }}
       >
         <div className="brand">
-          Neon<span>21</span>
+          Neon<span className="brand-accent">21</span>
         </div>
         <p className="auth-lead">Create your account.</p>
         <form className="form" onSubmit={onSubmit}>

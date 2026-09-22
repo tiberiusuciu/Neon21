@@ -1,4 +1,9 @@
 import type {
+  AdminResetStatsBody,
+  AdminResetStatsResponse,
+  AdminTopUpBody,
+  AdminTopUpResponse,
+  AdminUsersResponse,
   ClaimResponse,
   GameTable,
   LeaderboardResponse,
@@ -7,6 +12,7 @@ import type {
   PublicUser,
   RegisterBody,
   StatsResponse,
+  UpdateNameBody,
   Wallet,
 } from "@neon21/shared";
 
@@ -111,6 +117,14 @@ export const api = {
     return request<{ user: PublicUser }>("/auth/me", { token });
   },
 
+  updateName(token: string, body: UpdateNameBody) {
+    return request<{ user: PublicUser }>("/auth/me", {
+      method: "PATCH",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
   googleUrl() {
     return `${API_URL}/auth/google`;
   },
@@ -138,6 +152,37 @@ export const api = {
     return request<LeaderboardResponse>(
       `/leaderboard?scope=${encodeURIComponent(scope)}`,
       { token }
+    );
+  },
+
+  adminUsers(token: string, q = "") {
+    const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
+    return request<AdminUsersResponse>(`/admin/users${qs}`, { token });
+  },
+
+  adminTopUp(token: string, userId: string, body: AdminTopUpBody) {
+    return request<AdminTopUpResponse>(`/admin/users/${userId}/topup`, {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  adminResetStats(token: string, userId: string, body: AdminResetStatsBody) {
+    return request<AdminResetStatsResponse>(
+      `/admin/users/${userId}/reset-stats`,
+      {
+        method: "POST",
+        token,
+        body: JSON.stringify(body),
+      }
+    );
+  },
+
+  adminDeleteUser(token: string, userId: string) {
+    return request<{ ok: true; id: string; email: string }>(
+      `/admin/users/${userId}`,
+      { method: "DELETE", token }
     );
   },
 };

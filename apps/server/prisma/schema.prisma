@@ -10,6 +10,7 @@ datasource db {
 model User {
   id               String        @id @default(cuid())
   name             String
+  nameChosen       Boolean       @default(false)
   email            String        @unique
   passwordHash     String?
   googleId         String?       @unique

@@ -6,6 +6,7 @@ dotenv.config();
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1),
   JWT_SECRET: z.string().min(1),
+  ADMIN_EMAIL: z.union([z.literal(""), z.string().email()]).default(""),
   GOOGLE_CLIENT_ID: z.string().optional().default(""),
   GOOGLE_CLIENT_SECRET: z.string().optional().default(""),
   GOOGLE_CALLBACK_URL: z

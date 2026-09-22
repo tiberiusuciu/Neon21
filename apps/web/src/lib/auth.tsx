@@ -22,6 +22,7 @@ type AuthState = {
   logout: () => void;
   refresh: () => Promise<void>;
   claim: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
   setTokenFromUrl: (token: string) => Promise<void>;
   setBalanceCents: (n: number) => void;
 };
@@ -153,6 +154,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [token]);
 
+  const updateName = useCallback(
+    async (name: string) => {
+      if (!token) throw new Error("Not signed in");
+      const res = await api.updateName(token, { name });
+      setUser(res.user);
+    },
+    [token]
+  );
+
   const setTokenFromUrl = useCallback(
     async (t: string) => {
       await applyToken(t);
@@ -176,6 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout: clear,
       refresh,
       claim,
+      updateName,
       setTokenFromUrl,
       setBalanceCents,
     }),
@@ -189,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clear,
       refresh,
       claim,
+      updateName,
       setTokenFromUrl,
       setBalanceCents,
     ]

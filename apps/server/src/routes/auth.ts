@@ -1,6 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import oauth2Plugin from "@fastify/oauth2";
-import { RegisterBodySchema, LoginBodySchema } from "@neon21/shared";
+import {
+  RegisterBodySchema,
+  LoginBodySchema,
+  UpdateNameBodySchema,
+} from "@neon21/shared";
 import { prisma } from "../lib/prisma.js";
 import { hashPassword, verifyPassword, toPublicUser } from "../lib/auth.js";
 import { env } from "../env.js";
@@ -30,7 +34,7 @@ export async function authRoutes(app: FastifyInstance) {
 
     const passwordHash = await hashPassword(password);
     const user = await prisma.user.create({
-      data: { name, email, passwordHash },
+      data: { name, email, passwordHash, nameChosen: true },
     });
 
     const token = app.jwt.sign({ sub: user.id, email: user.email });
@@ -68,6 +72,23 @@ export async function authRoutes(app: FastifyInstance) {
       if (!user) {
         return reply.status(404).send({ error: "User not found" });
       }
+      return { user: toPublicUser(user) };
+    }
+  );
+
+  app.patch(
+    "/auth/me",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      const parsed = UpdateNameBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const user = await prisma.user.update({
+        where: { id: request.user.sub },
+        data: { name: parsed.data.name, nameChosen: true },
+      });
       return { user: toPublicUser(user) };
     }
   );
@@ -128,6 +149,7 @@ export async function authRoutes(app: FastifyInstance) {
             name: profile.name ?? profile.email.split("@")[0],
             email: profile.email,
             googleId: profile.id,
+            nameChosen: false,
           },
         });
       } else if (!user.googleId) {
@@ -142,7 +164,8 @@ export async function authRoutes(app: FastifyInstance) {
       if (!primaryOrigin) {
         return reply.status(500).send({ error: "CORS_ORIGIN is not configured" });
       }
-      const redirectUrl = new URL("/lobby", primaryOrigin);
+      const path = user.nameChosen ? "/lobby" : "/onboarding";
+      const redirectUrl = new URL(path, primaryOrigin);
       redirectUrl.searchParams.set("token", jwt);
       return reply.redirect(redirectUrl.toString());
     });

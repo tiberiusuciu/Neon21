@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { formatCents, formatCountdown } from "../lib/format";
 import { useCashFx } from "../lib/cashFx";
+import { BrandMark } from "./BrandMark";
 
 export function AppHeader() {
-  const { user, wallet, claim, logout, refresh } = useAuth();
+  const { user, wallet, claim, refresh } = useAuth();
   const { walletRef, walletPulse, walletSpend } = useCashFx();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [now, setNow] = useState(() => Date.now());
-  const navigate = useNavigate();
 
   const canClaim = wallet?.canClaim === true;
   const balance = wallet?.balanceCents ?? user?.balanceCents ?? 0;
@@ -57,11 +57,6 @@ export function AppHeader() {
     }
   }
 
-  function onLogout() {
-    logout();
-    navigate("/login");
-  }
-
   const links = (
     <>
       <NavLink to="/lobby" onClick={() => setOpen(false)}>
@@ -73,6 +68,11 @@ export function AppHeader() {
       <NavLink to="/leaderboard" onClick={() => setOpen(false)}>
         Leaderboard
       </NavLink>
+      {user?.isAdmin && (
+        <NavLink to="/admin" onClick={() => setOpen(false)}>
+          Admin
+        </NavLink>
+      )}
       <NavLink to="/settings" onClick={() => setOpen(false)}>
         Settings
       </NavLink>
@@ -92,7 +92,10 @@ export function AppHeader() {
       <header className="header">
         <div className="header-inner">
           <Link to="/lobby" className="brand">
-            Neon<span>21</span>
+            <BrandMark />
+            <span className="brand-text">
+              Neon<span className="brand-accent">21</span>
+            </span>
           </Link>
           <nav className="nav-desktop">{links}</nav>
           <div className="header-meta">
@@ -137,13 +140,6 @@ export function AppHeader() {
               }
             >
               {claimLabel}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm header-logout"
-              onClick={onLogout}
-            >
-              Log out
             </button>
             <button
               type="button"
