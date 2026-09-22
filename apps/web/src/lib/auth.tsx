@@ -25,7 +25,7 @@ type AuthState = {
   refresh: () => Promise<void>;
   claim: () => Promise<void>;
   updateName: (name: string) => Promise<void>;
-  setTokenFromUrl: (token: string) => Promise<void>;
+  setTokenFromUrl: (token: string) => Promise<PublicUser>;
   setBalanceCents: (n: number) => void;
   startGoogleSignIn: () => Promise<void>;
 };
@@ -33,6 +33,8 @@ type AuthState = {
 const AuthContext = createContext<AuthState | null>(null);
 
 function takeTokenFromUrl(): string | null {
+  // App bridge owns ?token= on this path — do not strip it here.
+  if (window.location.pathname === "/auth/app-bridge") return null;
   const params = new URLSearchParams(window.location.search);
   const urlToken = params.get("token");
   if (!urlToken) return null;
@@ -149,31 +151,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let handle: { remove: () => Promise<void> } | undefined;
     let cancelled = false;
 
+    const finishNativeAuth = async (url: string) => {
+      const parsed = parseAppAuthUrl(url);
+      if (!parsed) return;
+      try {
+        const { Browser } = await import("@capacitor/browser");
+        await Browser.close();
+      } catch {
+        /* already closed */
+      }
+      try {
+        const u = await applyToken(parsed.token);
+        const next =
+          parsed.next === "/onboarding" || !u.nameChosen
+            ? "/onboarding"
+            : parsed.next || "/lobby";
+        navigate(next, { replace: true });
+      } catch (err) {
+        console.error("[Auth] Native Google callback failed:", err);
+        clear();
+        navigate("/login", { replace: true });
+      }
+    };
+
     (async () => {
       const { App: CapApp } = await import("@capacitor/app");
-      const { Browser } = await import("@capacitor/browser");
       if (cancelled) return;
 
-      handle = await CapApp.addListener("appUrlOpen", async ({ url }) => {
-        const parsed = parseAppAuthUrl(url);
-        if (!parsed) return;
-        try {
-          await Browser.close();
-        } catch {
-          /* already closed */
-        }
-        try {
-          const u = await applyToken(parsed.token);
-          const next =
-            parsed.next === "/onboarding" || !u.nameChosen
-              ? "/onboarding"
-              : parsed.next || "/lobby";
-          navigate(next, { replace: true });
-        } catch (err) {
-          console.error("[Auth] Native Google callback failed:", err);
-          clear();
-          navigate("/login", { replace: true });
-        }
+      try {
+        const launch = await CapApp.getLaunchUrl();
+        if (launch?.url) await finishNativeAuth(launch.url);
+      } catch {
+        /* no launch URL */
+      }
+
+      handle = await CapApp.addListener("appUrlOpen", ({ url }) => {
+        void finishNativeAuth(url);
       });
     })();
 
@@ -230,7 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const setTokenFromUrl = useCallback(
     async (t: string) => {
-      await applyToken(t);
+      return applyToken(t);
     },
     [applyToken]
   );

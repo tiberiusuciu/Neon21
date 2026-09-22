@@ -21,7 +21,13 @@ const parsed = envSchema.parse(process.env);
 
 function corsOrigins(raw: string): boolean | string | string[] {
   const parts = raw.split(",").map((s) => s.trim()).filter(Boolean);
-  const extras = ["capacitor://localhost", "http://localhost"];
+  const extras = [
+    "capacitor://localhost",
+    "http://localhost",
+    "https://localhost",
+    "ionic://localhost",
+    "http://localhost:5173",
+  ];
   const set = new Set([...parts, ...extras]);
   return [...set];
 }

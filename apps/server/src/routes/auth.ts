@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import oauth2Plugin from "@fastify/oauth2";
+import { randomBytes } from "node:crypto";
 import {
   RegisterBodySchema,
   LoginBodySchema,
@@ -18,6 +19,15 @@ const oauth2 = oauth2Plugin as typeof oauth2Plugin & {
     tokenPath: string;
   };
 };
+
+/** OAuth states started from the Capacitor mobile entry (`n.<id>`). */
+function isNativeOAuthState(state: string | undefined): boolean {
+  return typeof state === "string" && state.startsWith("n.");
+}
+
+function hasNativeCookie(cookieHeader: string): boolean {
+  return /(?:^|;\s*)neon21_oauth_native=1(?:;|$)/.test(cookieHeader);
+}
 
 export async function authRoutes(app: FastifyInstance) {
   app.post("/auth/register", async (request, reply) => {
@@ -106,6 +116,15 @@ export async function authRoutes(app: FastifyInstance) {
       },
       startRedirectPath: "/auth/google",
       callbackUri: env.GOOGLE_CALLBACK_URL,
+      generateStateFunction: (request) => {
+        const id = randomBytes(16).toString("hex");
+        const q = request.query as { client?: string } | undefined;
+        const native =
+          q?.client === "native" ||
+          hasNativeCookie(request.headers.cookie ?? "");
+        return native ? `n.${id}` : `w.${id}`;
+      },
+      checkStateFunction: async () => true,
     });
 
     app.get("/auth/google/callback", async (request, reply) => {
@@ -166,32 +185,34 @@ export async function authRoutes(app: FastifyInstance) {
       }
       const path = user.nameChosen ? "/lobby" : "/onboarding";
       const cookieHeader = request.headers.cookie ?? "";
+      const state =
+        typeof (request.query as { state?: string }).state === "string"
+          ? (request.query as { state: string }).state
+          : undefined;
       const nativeApp =
-        /(?:^|;\s*)neon21_oauth_native=1(?:;|$)/.test(cookieHeader);
+        isNativeOAuthState(state) || hasNativeCookie(cookieHeader);
 
-      if (nativeApp) {
-        reply.header(
-          "Set-Cookie",
-          "neon21_oauth_native=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
-        );
-        const deep = new URL("com.neon21.app://auth/callback");
-        deep.searchParams.set("token", jwt);
-        deep.searchParams.set("next", path);
-        return reply.redirect(deep.toString());
-      }
+      reply.header(
+        "Set-Cookie",
+        "neon21_oauth_native=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None"
+      );
 
-      const redirectUrl = new URL(path, primaryOrigin);
+      // Always land on the web bridge so Cap Browser can deep-link and desktop
+      // can apply the JWT. `native=1` tells the bridge to open the APK.
+      const redirectUrl = new URL("/auth/app-bridge", primaryOrigin);
       redirectUrl.searchParams.set("token", jwt);
+      redirectUrl.searchParams.set("next", path);
+      if (nativeApp) redirectUrl.searchParams.set("native", "1");
       return reply.redirect(redirectUrl.toString());
     });
 
-    // Capacitor entry: mark session, then start the same Google OAuth flow.
+    // Capacitor entry: mark session, then start Google OAuth with native state.
     app.get("/auth/google/mobile", async (_request, reply) => {
       reply.header(
         "Set-Cookie",
-        "neon21_oauth_native=1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax"
+        "neon21_oauth_native=1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=None"
       );
-      return reply.redirect("/auth/google");
+      return reply.redirect("/auth/google?client=native");
     });
   } else {
     app.get("/auth/google", async (_request, reply) => {

@@ -14,13 +14,15 @@ import { StatsPage } from "./pages/StatsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { TablePage } from "./pages/TablePage";
 import { AdminPage } from "./pages/AdminPage";
+import { AppBridgePage } from "./pages/AppBridgePage";
 
 function AppRoutes() {
   const location = useLocation();
   const showAmbient =
     location.pathname === "/login" ||
     location.pathname === "/register" ||
-    location.pathname === "/onboarding";
+    location.pathname === "/onboarding" ||
+    location.pathname === "/auth/app-bridge";
 
   return (
     <>
@@ -28,6 +30,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/app-bridge" element={<AppBridgePage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/onboarding" element={<OnboardingNamePage />} />
           <Route element={<NamedRoute />}>
