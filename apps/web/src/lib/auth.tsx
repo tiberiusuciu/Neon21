@@ -79,19 +79,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const params = new URLSearchParams(window.location.search);
       const urlToken = params.get("token");
       if (urlToken) {
+        localStorage.setItem(TOKEN_KEY, urlToken);
+        setToken(urlToken);
+
         params.delete("token");
         const clean =
           window.location.pathname +
           (params.toString() ? `?${params}` : "") +
           window.location.hash;
         window.history.replaceState({}, "", clean);
+
         try {
-          console.log("[OAuth Debug] Found token in URL, applying token...", urlToken);
-          await applyToken(urlToken);
-          console.log("[OAuth Debug] Token successfully applied!");
-        } catch (error) {
-          console.error("[OAuth Debug] Failed to apply token during OAuth redirect:", error);
-          clear();
+          const session = await loadSession(urlToken);
+          if (!cancelled) {
+            setUser(session.user);
+            setWallet(session.wallet);
+          }
+        } catch (err: unknown) {
+          console.error("[Auth] Session fetch failed:", err);
+          const status =
+            err && typeof err === "object" && "status" in err
+              ? (err as { status?: number }).status
+              : undefined;
+          if (status === 401) {
+            clear();
+          }
         } finally {
           if (!cancelled) setLoading(false);
         }
