@@ -5,6 +5,7 @@ import { formatCents } from "../../lib/format";
 type Props = {
   pendingBetCents: number;
   balanceCents: number;
+  lastBetCents?: number;
   onAdd: (cents: number) => void;
   onClear: () => void;
   onReuse: () => void;
@@ -15,6 +16,7 @@ const CHIP_KEYS = ["Q", "W", "E", "R", "T"] as const;
 export function ChipTray({
   pendingBetCents,
   balanceCents,
+  lastBetCents = 0,
   onAdd,
   onClear,
   onReuse,
@@ -23,6 +25,9 @@ export function ChipTray({
   const canBetAnything =
     remaining >= MIN_BET_CENTS ||
     (pendingBetCents > 0 && remaining > 0);
+  const canClear = pendingBetCents > 0;
+  const canReuse =
+    lastBetCents >= MIN_BET_CENTS && lastBetCents <= balanceCents;
 
   return (
     <div className="chip-tray">
@@ -82,16 +87,32 @@ export function ChipTray({
         <motion.button
           type="button"
           className="btn btn-sm btn-ghost"
-          whileTap={{ scale: 0.95 }}
-          onClick={onClear}
+          whileTap={canClear ? { scale: 0.95 } : undefined}
+          disabled={!canClear}
+          title={canClear ? undefined : "No bet to clear"}
+          onClick={() => {
+            if (!canClear) return;
+            onClear();
+          }}
         >
           Clear <kbd className="kbd">C</kbd>
         </motion.button>
         <motion.button
           type="button"
           className="btn btn-sm btn-ghost"
-          whileTap={{ scale: 0.95 }}
-          onClick={onReuse}
+          whileTap={canReuse ? { scale: 0.95 } : undefined}
+          disabled={!canReuse}
+          title={
+            canReuse
+              ? `Reuse ${formatCents(lastBetCents)}`
+              : lastBetCents < MIN_BET_CENTS
+                ? "No previous bet"
+                : "Not enough chips to reuse last bet"
+          }
+          onClick={() => {
+            if (!canReuse) return;
+            onReuse();
+          }}
         >
           Reuse <kbd className="kbd">D</kbd>
         </motion.button>

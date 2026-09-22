@@ -16,6 +16,7 @@ type Props = {
   isActive: boolean;
   activeHandIndex: number | null;
   settle: boolean;
+  canSit?: boolean;
   waitTimerProgress?: number | null;
   waitTimerUrgent?: boolean;
   onSit: () => void;
@@ -27,6 +28,7 @@ export function SeatView({
   isActive,
   activeHandIndex,
   settle,
+  canSit = true,
   waitTimerProgress = null,
   waitTimerUrgent = false,
   onSit,
@@ -61,7 +63,7 @@ export function SeatView({
 
   return (
     <motion.div
-      layout
+      layout="position"
       transition={{
         layout: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
       }}
@@ -92,7 +94,13 @@ export function SeatView({
         </div>
       )}
       {empty ? (
-        <button type="button" className="btn btn-sm btn-ghost seat-sit" onClick={onSit}>
+        <button
+          type="button"
+          className="btn btn-sm btn-ghost seat-sit"
+          disabled={!canSit}
+          title={canSit ? undefined : "Need chips to sit"}
+          onClick={onSit}
+        >
           Sit
         </button>
       ) : (
@@ -174,8 +182,8 @@ export function SeatView({
                       : {
                           opacity: waiting || done ? (done ? 0.55 : 0.38) : 1,
                           x: 0,
-                          scale: playing ? 1.07 : waiting || done ? 0.9 : 1,
-                          y: playing ? -3 : 0,
+                          scale: waiting || done ? 0.9 : 1,
+                          y: 0,
                         }
                   }
                   transition={{
@@ -186,7 +194,6 @@ export function SeatView({
                     damping: peeling ? undefined : 22,
                     delay: peeling ? hi * 0.04 : 0,
                   }}
-                  layout
                 >
                   {split && (
                     <span

@@ -40,8 +40,16 @@ export class TablePool {
       onLobbyChanged: () => this.broadcastLobby(),
       onWalletUpdate: (userId, balanceCents) => {
         this.io.to(`user:${userId}`).emit("wallet:update", { balanceCents });
+        if (balanceCents <= 0) {
+          for (const room of this.tables.values()) {
+            void room.kickIfBroke(userId);
+          }
+        }
       },
       onSeatedChanged: (tableId) => this.handleSeatedChanged(tableId),
+      onNotice: (userId, message) => {
+        this.io.to(`user:${userId}`).emit("game:error", { message });
+      },
     });
     this.tables.set(id, room);
     this.broadcastLobby();

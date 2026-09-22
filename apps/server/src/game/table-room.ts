@@ -223,6 +223,7 @@ export class TableRoom {
       this.seats[seatIdx]!.connected = true;
       this.seats[seatIdx]!.name = name;
       this.broadcast();
+      void this.kickIfBroke(userId);
       return;
     }
     this.spectators.set(userId, { userId, name });
@@ -248,11 +249,16 @@ export class TableRoom {
     }
   }
 
-  takeSeat(userId: string, seatIndex: number): string | null {
+  async takeSeat(userId: string, seatIndex: number): Promise<string | null> {
     if (seatIndex < 0 || seatIndex >= SEAT_CAPACITY) return "Invalid seat";
     if (this.seats[seatIndex]) return "Seat taken";
     const existing = this.findSeatIndex(userId);
     if (existing >= 0) return "Already seated";
+
+    const bal = await getBalanceCents(userId);
+    if (bal == null || bal <= 0) {
+      return "Need chips to sit — claim from the lobby";
+    }
 
     const spec = this.spectators.get(userId);
     const name = spec?.name ?? "Player";
@@ -288,6 +294,30 @@ export class TableRoom {
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
     return null;
+  }
+
+  /** Kick if broke and not mid-hand (betting with no cards dealt yet). */
+  async kickIfBroke(userId: string): Promise<boolean> {
+    if (this.phase !== "betting") return false;
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return false;
+    const seat = this.seats[seatIdx]!;
+    if (seat.hands.some((h) => h.cards.length > 0)) return false;
+    if (seat.pendingBetCents > 0) return false;
+
+    const bal = await getBalanceCents(userId);
+    if ((bal ?? 0) > 0) return false;
+
+    this.spectators.set(userId, { userId, name: seat.name });
+    this.seats[seatIdx] = null;
+    this.cb.onNotice(
+      userId,
+      "Out of chips — you're spectating. Claim more to sit again."
+    );
+    this.cb.onSeatedChanged(this.id);
+    this.cb.onLobbyChanged();
+    this.broadcast();
+    return true;
   }
 
   private clearSeat(seatIdx: number) {
@@ -379,6 +409,38 @@ export class TableRoom {
   }
 
   private startBetting() {
+    void this.beginBettingRound();
+  }
+
+  /** Move broke players to spectating before a new betting round. */
+  private async ejectBrokePlayers(): Promise<void> {
+    let kicked = false;
+    for (let i = 0; i < this.seats.length; i++) {
+      const seat = this.seats[i];
+      if (!seat) continue;
+      const bal = await getBalanceCents(seat.userId);
+      if ((bal ?? 0) > 0) continue;
+      this.spectators.set(seat.userId, {
+        userId: seat.userId,
+        name: seat.name,
+      });
+      this.seats[i] = null;
+      kicked = true;
+      this.cb.onNotice(
+        seat.userId,
+        "Out of chips — you're spectating. Claim more to sit again."
+      );
+    }
+    if (!kicked) return;
+    this.cb.onSeatedChanged(this.id);
+    this.cb.onLobbyChanged();
+    this.broadcast();
+  }
+
+  private async beginBettingRound() {
+    await this.ejectBrokePlayers();
+    if (this.destroyed) return;
+
     this.generation += 1;
     this.clearTimer();
     this.phase = "betting";
@@ -942,6 +1004,9 @@ export class TableRoom {
         this.cb.onWalletUpdate(userId, bal);
       }
     }
+
+    await this.ejectBrokePlayers();
+    if (!this.alive(gen)) return;
 
     this.schedule(SETTLE_MS, () => {
       if (!this.alive(gen)) return;

@@ -52,6 +52,7 @@ export type RoomCallbacks = {
   onLobbyChanged: () => void;
   onWalletUpdate: (userId: string, balanceCents: number) => void;
   onSeatedChanged: (tableId: string) => void;
+  onNotice: (userId: string, message: string) => void;
 };
 
 export const BETTING_MS = 20_000;

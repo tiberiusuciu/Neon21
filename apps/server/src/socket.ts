@@ -83,7 +83,7 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       socket.data.tableId = undefined;
     });
 
-    socket.on("seat:take", (raw) => {
+    socket.on("seat:take", async (raw) => {
       const parsed = SeatTakeSchema.safeParse(raw);
       if (!parsed.success) {
         socket.emit("game:error", { message: "Invalid seat" });
@@ -95,7 +95,7 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
         socket.emit("game:error", { message: "Join a table first" });
         return;
       }
-      const err = room.takeSeat(userId, parsed.data.seatIndex);
+      const err = await room.takeSeat(userId, parsed.data.seatIndex);
       if (err) socket.emit("game:error", { message: err });
     });
 

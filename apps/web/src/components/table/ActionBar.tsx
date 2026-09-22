@@ -5,6 +5,8 @@ export type QueuedAction = "hit" | "stand" | "double" | "split";
 
 type Props = {
   phase: string;
+  bannerTitle?: string;
+  bannerHint?: string;
   showBet: boolean;
   showInsurance: boolean;
   showActions: boolean;
@@ -53,6 +55,8 @@ function useIsNarrow(maxPx = 639) {
 
 export function ActionBar({
   phase,
+  bannerTitle,
+  bannerHint,
   showBet,
   showInsurance,
   showActions,
@@ -179,7 +183,7 @@ export function ActionBar({
       document.documentElement.style.removeProperty("--action-drawer-pad");
       return;
     }
-    const openPad = showBet ? "14rem" : showInsurance ? "12rem" : "10.5rem";
+    const openPad = showBet ? "16rem" : showInsurance ? "12rem" : "10.5rem";
     document.documentElement.style.setProperty(
       "--action-drawer-pad",
       drawer === "open" ? openPad : "5.5rem"
@@ -318,7 +322,7 @@ export function ActionBar({
       </motion.button>
       <motion.button
         type="button"
-        className={`btn btn-double${queuedAction === "double" ? " is-queued" : ""}`}
+        className={`btn btn-double${canDouble ? " is-ready" : ""}${queuedAction === "double" ? " is-queued" : ""}`}
         whileHover={
           canDouble && !(busy && showActions) ? { scale: 1.04 } : undefined
         }
@@ -339,7 +343,11 @@ export function ActionBar({
         }
         transition={{ duration: 0.55 }}
         disabled={(busy && showActions) || !canDouble}
-        title={canDouble ? undefined : "Double only on your first action"}
+        title={
+          canDouble
+            ? undefined
+            : "Need a two-card hand and enough chips to double"
+        }
         onClick={() => {
           if (!canDouble) return;
           if (showPreActions) queue("double");
@@ -348,7 +356,7 @@ export function ActionBar({
       >
         <span className="btn-double-label">Double</span>
         <span className="btn-double-x2">×2</span>
-        <kbd className="kbd kbd-on-accent">E</kbd>
+        <kbd className={`kbd${canDouble ? " kbd-on-accent" : ""}`}>E</kbd>
       </motion.button>
       <motion.button
         type="button"
@@ -405,8 +413,8 @@ export function ActionBar({
           : "Choose early — plays when it’s your turn"
         : phase;
 
-  let peekTitle = "Your move";
-  let peekHint = "What will you do?";
+  let peekTitle = bannerTitle ?? "Your move";
+  let peekHint = bannerHint ?? "What will you do?";
   if (holding) {
     peekTitle = "Holding";
     peekHint = "\u00a0";
@@ -414,24 +422,33 @@ export function ActionBar({
     peekTitle = "Bust";
     peekHint = "\u00a0";
   } else if (showBet) {
-    peekTitle = "Betting";
-    peekHint = drawer === "peek" ? "Tap to add chips" : "Place your bet";
+    peekTitle = bannerTitle ?? "Place your bets";
+    peekHint =
+      drawer === "peek"
+        ? "Tap to add chips"
+        : bannerHint ?? "Chips lock when the timer ends";
   } else if (showInsurance) {
-    peekTitle = "Insurance";
-    peekHint = drawer === "peek" ? "Tap to decide" : "Dealer shows an Ace";
+    peekTitle = bannerTitle ?? "Insurance";
+    peekHint =
+      drawer === "peek"
+        ? "Tap to decide"
+        : bannerHint ?? "Dealer shows an Ace";
   } else if (showPreActions) {
     peekTitle = queuedAction
       ? `Queued ${QUEUE_LABEL[queuedAction]}`
-      : "Queue your move";
+      : bannerTitle ?? "Queue your move";
     peekHint =
       drawer === "peek"
         ? queuedAction
           ? "Tap to change"
           : "Tap to choose"
-        : "Plays when it’s your turn";
+        : bannerHint ?? "Plays when it’s your turn";
   } else if (showActions) {
-    peekTitle = "Your move";
-    peekHint = drawer === "peek" ? "Tap to change" : "What will you do?";
+    peekTitle = bannerTitle ?? "Your move";
+    peekHint =
+      drawer === "peek"
+        ? "Tap to change"
+        : bannerHint ?? "What will you do?";
   }
 
   const showChrome =
@@ -494,7 +511,7 @@ export function ActionBar({
               .filter(Boolean)
               .join(" ")}
             initial={{ y: "100%" }}
-            animate={{ y: drawer === "open" ? "0%" : "50%" }}
+            animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
             drag="y"

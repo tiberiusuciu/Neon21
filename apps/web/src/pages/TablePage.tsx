@@ -2,18 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import type { PublicSeat, TablePhase } from "@neon21/shared";
-import { SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
+import { MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { useGameSocket } from "../lib/SocketProvider";
 import { useTableKeyboard } from "../lib/useTableKeyboard";
 import { useCashFx } from "../lib/cashFx";
 import { formatCountdown } from "../lib/format";
+import { useAutoHeight } from "../lib/useAutoHeight";
 import { PlayingCard } from "../components/table/PlayingCard";
 import { HandValueBadge } from "../components/table/HandValueBadge";
 import { SeatView } from "../components/table/SeatView";
 import { ChipTray } from "../components/table/ChipTray";
 import { ActionBar, type QueuedAction } from "../components/table/ActionBar";
 import { PhaseBanner } from "../components/table/PhaseBanner";
+import { getPhaseBannerCopy } from "../components/table/phaseCopy";
 import {
   RoundHistoryDrawer,
   toHistoryCards,
@@ -67,6 +69,7 @@ export function TablePage() {
     declineInsurance,
   } = useGameSocket();
   const { playWin, playSpend } = useCashFx();
+  const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
 
   const balanceCents = wallet?.balanceCents ?? user?.balanceCents ?? 0;
 
@@ -227,6 +230,17 @@ export function TablePage() {
   }, [phase, mySeat, playSpend]);
 
   const seated = !!mySeat;
+
+  // Client safety net: leave the seat if broke during betting with nothing in play.
+  useEffect(() => {
+    if (balanceCents > 0 || !seated || !mySeat) return;
+    if (phase !== "betting") return;
+    if (mySeat.hands.some((h) => h.cards.length > 0)) return;
+    if (mySeat.pendingBetCents > 0) return;
+    leaveSeat();
+    toast.info("Out of chips — spectating. Claim more to sit again.");
+  }, [balanceCents, seated, mySeat, phase, leaveSeat, toast]);
+
   const isMyTurn =
     seated &&
     phase === "playerTurns" &&
@@ -411,8 +425,21 @@ export function TablePage() {
 
   const showBet = seated && phase === "betting";
   const showActions = canAct;
+  const phaseBanner = useMemo(
+    () =>
+      getPhaseBannerCopy({
+        phase,
+        isYourTurn: isMyTurn && !isHolding,
+        isHolding,
+        needsInsurance: showInsurance,
+      }),
+    [phase, isMyTurn, isHolding, showInsurance]
+  );
   const actionHand = canAct ? myActiveHand : queueHand;
-  const canDouble = !!actionHand && actionHand.cards.length === 2;
+  const canDouble = useMemo(() => {
+    if (!actionHand || actionHand.cards.length !== 2) return false;
+    return balanceCents >= actionHand.betCents;
+  }, [actionHand, balanceCents]);
   const canSplit = useMemo(() => {
     if (!actionHand || !mySeat) return false;
     if (mySeat.hands.length >= 4) return false;
@@ -515,8 +542,14 @@ export function TablePage() {
   }, [declineInsurance]);
 
   const onSitKb = useCallback(
-    (seatIndex: number) => takeSeat(seatIndex),
-    [takeSeat]
+    (seatIndex: number) => {
+      if (balanceCents <= 0) {
+        toast.error("Need chips to sit — claim from the lobby");
+        return;
+      }
+      takeSeat(seatIndex);
+    },
+    [balanceCents, takeSeat, toast]
   );
 
   const onAddBetKb = useCallback(
@@ -554,8 +587,15 @@ export function TablePage() {
     onTakeInsurance: onTakeInsuranceKb,
     onDeclineInsurance: onDeclineInsuranceKb,
     onAddBet: onAddBetKb,
-    onClearBet: clearBet,
-    onReuseBet: reuseBet,
+    onClearBet: () => {
+      if ((mySeat?.pendingBetCents ?? 0) <= 0) return;
+      clearBet();
+    },
+    onReuseBet: () => {
+      const last = mySeat?.lastBetCents ?? 0;
+      if (last < MIN_BET_CENTS || last > balanceCents) return;
+      reuseBet();
+    },
     onSit: onSitKb,
   });
 
@@ -692,7 +732,15 @@ export function TablePage() {
         ]
           .filter(Boolean)
           .join(" ")}
+        initial={false}
+        animate={
+          feltHeight != null ? { height: feltHeight } : undefined
+        }
+        transition={{
+          height: { duration: 0.55, ease: [0.22, 1, 0.36, 1] },
+        }}
       >
+        <div ref={feltMeasureRef} className="felt-measure">
         <motion.div
           layout="position"
           className={[
@@ -702,7 +750,7 @@ export function TablePage() {
           ]
             .filter(Boolean)
             .join(" ")}
-          transition={{ layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }}
+          transition={{ layout: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }}
         >
           <div className="zone-label">
             Dealer
@@ -725,8 +773,8 @@ export function TablePage() {
 
         <motion.div
           className="seats-arc"
-          layout
-          transition={{ layout: { duration: 0.6, ease: [0.22, 1, 0.36, 1] } }}
+          layout="position"
+          transition={{ layout: { duration: 0.55, ease: [0.22, 1, 0.36, 1] } }}
         >
           {(tableState?.seats ?? EMPTY_SEATS).map((seat) => {
             const seatIsYou = !!user && seat.userId === user.id;
@@ -748,16 +796,26 @@ export function TablePage() {
                 settle={phase === "settle"}
                 waitTimerProgress={showWaitTimer ? timerProgress : null}
                 waitTimerUrgent={showWaitTimer && timerUrgent}
-                onSit={() => takeSeat(seat.index)}
+                canSit={balanceCents > 0}
+                onSit={() => {
+                  if (balanceCents <= 0) {
+                    toast.error("Need chips to sit — claim from the lobby");
+                    return;
+                  }
+                  takeSeat(seat.index);
+                }}
               />
             );
           })}
         </motion.div>
+        </div>
       </motion.div>
       </LayoutGroup>
 
       <ActionBar
         phase={statusLine}
+        bannerTitle={phaseBanner.title}
+        bannerHint={phaseBanner.hint}
         showBet={showBet}
         showInsurance={showInsurance}
         showActions={showActions}
@@ -789,6 +847,7 @@ export function TablePage() {
             <ChipTray
               pendingBetCents={mySeat.pendingBetCents}
               balanceCents={balanceCents}
+              lastBetCents={mySeat.lastBetCents}
               onAdd={addBet}
               onClear={clearBet}
               onReuse={reuseBet}
