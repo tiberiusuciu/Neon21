@@ -142,7 +142,7 @@ export async function authRoutes(app: FastifyInstance) {
       if (!primaryOrigin) {
         return reply.status(500).send({ error: "CORS_ORIGIN is not configured" });
       }
-      const redirectUrl = new URL(primaryOrigin);
+      const redirectUrl = new URL("/lobby", primaryOrigin);
       redirectUrl.searchParams.set("token", jwt);
       return reply.redirect(redirectUrl.toString());
     });

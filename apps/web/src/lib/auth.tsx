@@ -28,6 +28,20 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function takeTokenFromUrl(): string | null {
+  const params = new URLSearchParams(window.location.search);
+  const urlToken = params.get("token");
+  if (!urlToken) return null;
+  localStorage.setItem(TOKEN_KEY, urlToken);
+  params.delete("token");
+  const clean =
+    window.location.pathname +
+    (params.toString() ? `?${params}` : "") +
+    window.location.hash;
+  window.history.replaceState({}, "", clean);
+  return urlToken;
+}
+
 async function loadSession(token: string) {
   const [{ user }, wallet] = await Promise.all([
     api.me(token),
@@ -37,9 +51,9 @@ async function loadSession(token: string) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem(TOKEN_KEY)
-  );
+  const [token, setToken] = useState<string | null>(() => {
+    return takeTokenFromUrl() ?? localStorage.getItem(TOKEN_KEY);
+  });
   const [user, setUser] = useState<PublicUser | null>(null);
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,40 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const urlToken = params.get("token");
-      if (urlToken) {
-        localStorage.setItem(TOKEN_KEY, urlToken);
-        setToken(urlToken);
-
-        params.delete("token");
-        const clean =
-          window.location.pathname +
-          (params.toString() ? `?${params}` : "") +
-          window.location.hash;
-        window.history.replaceState({}, "", clean);
-
-        try {
-          const session = await loadSession(urlToken);
-          if (!cancelled) {
-            setUser(session.user);
-            setWallet(session.wallet);
-          }
-        } catch (err: unknown) {
-          console.error("[Auth] Session fetch failed:", err);
-          const status =
-            err && typeof err === "object" && "status" in err
-              ? (err as { status?: number }).status
-              : undefined;
-          if (status === 401) {
-            clear();
-          }
-        } finally {
-          if (!cancelled) setLoading(false);
-        }
-        return;
-      }
-
       if (!token) {
         if (!cancelled) setLoading(false);
         return;
@@ -121,8 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(session.user);
           setWallet(session.wallet);
         }
-      } catch {
-        if (!cancelled) clear();
+      } catch (err: unknown) {
+        console.error("[Auth] Session fetch failed:", err);
+        const status =
+          err && typeof err === "object" && "status" in err
+            ? (err as { status?: number }).status
+            : undefined;
+        if (status === 401 && !cancelled) clear();
       } finally {
         if (!cancelled) setLoading(false);
       }

@@ -13,7 +13,15 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
-  if (!loading && token) return <Navigate to="/lobby" replace />;
+  if (loading) {
+    return (
+      <div className="auth-page">
+        <p className="muted">Loading…</p>
+      </div>
+    );
+  }
+
+  if (token) return <Navigate to="/lobby" replace />;
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

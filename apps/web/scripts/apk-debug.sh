@@ -4,6 +4,19 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
+REPO_ROOT="$(cd "$ROOT/../.." && pwd)"
+if [[ -z "${ANDROID_HOME:-}" && -d "${HOME}/Android/Sdk" ]]; then
+  if [[ -f "$REPO_ROOT/scripts/env-android.sh" ]]; then
+    # shellcheck source=/dev/null
+    . "$REPO_ROOT/scripts/env-android.sh"
+  else
+    export JAVA_HOME="${JAVA_HOME:-$HOME/.local/jdk/jdk-17}"
+    export ANDROID_HOME="$HOME/Android/Sdk"
+    export ANDROID_SDK_ROOT="$ANDROID_HOME"
+    export PATH="$JAVA_HOME/bin:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH"
+  fi
+fi
+
 if [[ -z "${ANDROID_HOME:-}" ]]; then
   echo "error: ANDROID_HOME is not set. Install the Android SDK and export ANDROID_HOME." >&2
   exit 1
