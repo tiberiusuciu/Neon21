@@ -183,16 +183,55 @@ proxy_pass http://127.0.0.1:4000;
 3. Join a table — cards and turns update over the socket (no console CORS/WS errors).
 4. `curl -s https://api.neon21.example.com/health`.
 
-### 8. Updates
+### 8. GitHub Actions deploy
+
+On every push to `main` (and via **Actions → Deploy → Run workflow**), [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) SSHs into the VPS, resets the repo to `origin/main`, and runs [`scripts/deploy.sh`](scripts/deploy.sh):
+
+1. `pnpm install` + build `@neon21/shared`
+2. `docker compose up --build -d` — API container entrypoint runs **`prisma migrate deploy`**, then starts the server
+3. Wait for `http://127.0.0.1:4000/health`
+4. Build the web app into `apps/web/dist/` (uses `apps/web/.env` → `VITE_API_URL`)
+
+#### One-time VPS prep
+
+```bash
+# clone once, configure .env + apps/web/.env as above
+git clone <your-repo-url> ~/neon21
+cd ~/neon21
+cp .env.example .env
+# edit .env; create apps/web/.env with VITE_API_URL=https://api.neon21.example.com
+
+# let the deploy user pull without a password (deploy key or HTTPS credential)
+# Node 20+ (for corepack/pnpm) and Docker must already be available
+```
+
+Generate an SSH key used only by Actions (on your laptop or the VPS):
+
+```bash
+ssh-keygen -t ed25519 -f neon21-deploy -N "" -C "github-actions-deploy"
+# append neon21-deploy.pub to the VPS user's ~/.ssh/authorized_keys
+```
+
+#### GitHub repo secrets / variables
+
+Settings → Secrets and variables → Actions:
+
+| Name | Type | Example |
+|------|------|---------|
+| `DEPLOY_HOST` | secret | `203.0.113.10` or `neon21.example.com` |
+| `DEPLOY_USER` | secret | `deploy` |
+| `DEPLOY_SSH_KEY` | secret | full private key (`neon21-deploy`) |
+| `DEPLOY_PATH` | secret (optional) | `/home/deploy/neon21` (default `$HOME/neon21`) |
+| `DEPLOY_PORT` | variable (optional) | `22` |
+
+The VPS clone must be able to `git fetch origin main` (deploy key with read access, or a machine user).
+
+Manual deploy on the box:
 
 ```bash
 cd ~/neon21
 git pull
-docker compose up --build -d
-pnpm install
-pnpm --filter @neon21/shared build
-pnpm --filter @neon21/web build
-sudo systemctl reload caddy   # only if Caddyfile changed
+bash ./scripts/deploy.sh
 ```
 
 ### Production checklist
