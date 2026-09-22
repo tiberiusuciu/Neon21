@@ -47,3 +47,12 @@ VITE_API_URL=https://api.neon21.tiberiusuciu.io pnpm apk:debug
 
 Local `apps/web/.env` with `localhost` is ignored for APK builds — the phone
 cannot reach your machine that way, and Android is intended to use prod.
+
+### Google sign-in on Android
+
+“Continue with Google” uses a Custom Tab, then returns via the deep link scheme
+`com.neon21.app://` (e.g. `com.neon21.app://auth/callback?token=…`), not the
+public website.
+
+1. **Deploy the API first** — production must include `/auth/google/mobile`.
+2. Pull client changes, then **rebuild the APK**: `pnpm apk:debug`.

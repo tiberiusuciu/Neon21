@@ -2,11 +2,11 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../lib/auth";
-import { api, ApiError } from "../lib/api";
+import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 
 export function LoginPage() {
-  const { login, token, loading } = useAuth();
+  const { login, token, loading, startGoogleSignIn } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -78,8 +78,13 @@ export function LoginPage() {
             <button
               type="button"
               className="btn btn-ghost"
+              disabled={busy}
               onClick={() => {
-                window.location.href = api.googleUrl();
+                void startGoogleSignIn().catch((err) => {
+                  toast.error(
+                    err instanceof Error ? err.message : "Google sign-in failed"
+                  );
+                });
               }}
             >
               Continue with Google

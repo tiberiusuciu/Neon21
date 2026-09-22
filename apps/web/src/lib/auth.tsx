@@ -7,8 +7,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useNavigate } from "react-router-dom";
 import type { PublicUser, Wallet } from "@neon21/shared";
 import { api } from "./api";
+import { isNativeApp, parseAppAuthUrl } from "./native";
 
 const TOKEN_KEY = "neon21_token";
 
@@ -25,6 +27,7 @@ type AuthState = {
   updateName: (name: string) => Promise<void>;
   setTokenFromUrl: (token: string) => Promise<void>;
   setBalanceCents: (n: number) => void;
+  startGoogleSignIn: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -52,6 +55,7 @@ async function loadSession(token: string) {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
   const [token, setToken] = useState<string | null>(() => {
     return takeTokenFromUrl() ?? localStorage.getItem(TOKEN_KEY);
   });
@@ -65,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const session = await loadSession(next);
     setUser(session.user);
     setWallet(session.wallet);
+    return session.user;
   }, []);
 
   const clear = useCallback(() => {
@@ -118,6 +123,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps -- boot once
 
+  useEffect(() => {
+    if (!isNativeApp()) return;
+
+    let handle: { remove: () => Promise<void> } | undefined;
+    let cancelled = false;
+
+    (async () => {
+      const { App: CapApp } = await import("@capacitor/app");
+      const { Browser } = await import("@capacitor/browser");
+      if (cancelled) return;
+
+      handle = await CapApp.addListener("appUrlOpen", async ({ url }) => {
+        const parsed = parseAppAuthUrl(url);
+        if (!parsed) return;
+        try {
+          await Browser.close();
+        } catch {
+          /* already closed */
+        }
+        try {
+          const u = await applyToken(parsed.token);
+          const next =
+            parsed.next === "/onboarding" || !u.nameChosen
+              ? "/onboarding"
+              : parsed.next || "/lobby";
+          navigate(next, { replace: true });
+        } catch (err) {
+          console.error("[Auth] Native Google callback failed:", err);
+          clear();
+          navigate("/login", { replace: true });
+        }
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      void handle?.remove();
+    };
+  }, [applyToken, clear, navigate]);
+
   const login = useCallback(
     async (email: string, password: string) => {
       const res = await api.login({ email, password });
@@ -170,6 +215,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyToken]
   );
 
+  const startGoogleSignIn = useCallback(async () => {
+    if (isNativeApp()) {
+      const { Browser } = await import("@capacitor/browser");
+      await Browser.open({ url: api.googleMobileUrl() });
+      return;
+    }
+    window.location.href = api.googleUrl();
+  }, []);
+
   const setBalanceCents = useCallback((n: number) => {
     setUser((prev) => (prev ? { ...prev, balanceCents: n } : prev));
     setWallet((prev) => (prev ? { ...prev, balanceCents: n } : prev));
@@ -189,6 +243,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateName,
       setTokenFromUrl,
       setBalanceCents,
+      startGoogleSignIn,
     }),
     [
       token,
@@ -203,6 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       updateName,
       setTokenFromUrl,
       setBalanceCents,
+      startGoogleSignIn,
     ]
   );
 

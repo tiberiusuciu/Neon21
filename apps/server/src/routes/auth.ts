@@ -165,9 +165,33 @@ export async function authRoutes(app: FastifyInstance) {
         return reply.status(500).send({ error: "CORS_ORIGIN is not configured" });
       }
       const path = user.nameChosen ? "/lobby" : "/onboarding";
+      const cookieHeader = request.headers.cookie ?? "";
+      const nativeApp =
+        /(?:^|;\s*)neon21_oauth_native=1(?:;|$)/.test(cookieHeader);
+
+      if (nativeApp) {
+        reply.header(
+          "Set-Cookie",
+          "neon21_oauth_native=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax"
+        );
+        const deep = new URL("com.neon21.app://auth/callback");
+        deep.searchParams.set("token", jwt);
+        deep.searchParams.set("next", path);
+        return reply.redirect(deep.toString());
+      }
+
       const redirectUrl = new URL(path, primaryOrigin);
       redirectUrl.searchParams.set("token", jwt);
       return reply.redirect(redirectUrl.toString());
+    });
+
+    // Capacitor entry: mark session, then start the same Google OAuth flow.
+    app.get("/auth/google/mobile", async (_request, reply) => {
+      reply.header(
+        "Set-Cookie",
+        "neon21_oauth_native=1; Path=/; Max-Age=600; HttpOnly; Secure; SameSite=Lax"
+      );
+      return reply.redirect("/auth/google");
     });
   } else {
     app.get("/auth/google", async (_request, reply) => {

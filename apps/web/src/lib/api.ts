@@ -129,6 +129,10 @@ export const api = {
     return `${API_URL}/auth/google`;
   },
 
+  googleMobileUrl() {
+    return `${API_URL}/auth/google/mobile`;
+  },
+
   wallet(token: string) {
     return request<Wallet>("/wallet", { token });
   },
