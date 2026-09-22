@@ -86,8 +86,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           window.location.hash;
         window.history.replaceState({}, "", clean);
         try {
+          console.log("[OAuth Debug] Found token in URL, applying token...", urlToken);
           await applyToken(urlToken);
-        } catch {
+          console.log("[OAuth Debug] Token successfully applied!");
+        } catch (error) {
+          console.error("[OAuth Debug] Failed to apply token during OAuth redirect:", error);
           clear();
         } finally {
           if (!cancelled) setLoading(false);
