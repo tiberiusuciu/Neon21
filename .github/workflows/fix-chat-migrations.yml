@@ -1,0 +1,37 @@
+name: Fix failed chat migrations
+
+# Manual one-shot: clear Prisma P3009 leftovers on the VPS, then recreate API.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  fix:
+    name: Fix chat migrations on VPS
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Run fix script over SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ vars.DEPLOY_PORT || 22 }}
+          script_stop: true
+          command_timeout: 15m
+          script: |
+            set -euo pipefail
+            APP_DIR='${{ secrets.DEPLOY_PATH }}'
+            if [ -z "$APP_DIR" ]; then
+              APP_DIR="$HOME/neon21"
+            fi
+            cd "$APP_DIR"
+            git fetch origin main
+            git checkout main
+            git reset --hard origin/main
+            chmod +x ./scripts/fix-failed-chat-migrations.sh
+            bash ./scripts/fix-failed-chat-migrations.sh
