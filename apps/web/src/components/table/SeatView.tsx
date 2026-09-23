@@ -78,6 +78,7 @@ export function SeatView({
       ]
         .filter(Boolean)
         .join(" ")}
+      data-seat-index={seat.index}
     >
       {auraTier > 0 && <SeatBetAura tier={auraTier} />}
       {waitTimerProgress != null && (

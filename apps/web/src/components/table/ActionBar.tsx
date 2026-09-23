@@ -188,6 +188,7 @@ export function ActionBar({
       "--action-drawer-pad",
       drawer === "open" ? openPad : "5.5rem"
     );
+    window.dispatchEvent(new CustomEvent("neon21:action-drawer"));
     return () => {
       document.documentElement.style.removeProperty("--action-drawer-pad");
     };

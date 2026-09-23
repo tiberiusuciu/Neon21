@@ -23,6 +23,7 @@ import {
 } from "../components/table/RoundHistoryDrawer";
 import { loadRoundHistory, saveRoundHistory } from "../lib/roundHistory";
 import { useToast } from "../lib/toast";
+import { scheduleScrollSeatIntoClearView } from "../lib/scrollSeatIntoClearView";
 
 const HISTORY_MAX = 24;
 
@@ -244,6 +245,74 @@ export function TablePage() {
     seated &&
     phase === "playerTurns" &&
     tableState?.activeSeatIndex === mySeat?.index;
+
+  const prevActiveSeat = useRef<number | null>(null);
+  const prevMySeatIndex = useRef<number | null>(null);
+  const prevPhase = useRef<string | null>(null);
+
+  const focusSeatIndex = useMemo(() => {
+    if (phase === "playerTurns" && tableState?.activeSeatIndex != null) {
+      return tableState.activeSeatIndex;
+    }
+    if (
+      mySeat &&
+      (phase === "betting" || phase === "insurance" || phase === "settle")
+    ) {
+      return mySeat.index;
+    }
+    return mySeat?.index ?? null;
+  }, [phase, tableState?.activeSeatIndex, mySeat]);
+
+  useEffect(() => {
+    const active = tableState?.activeSeatIndex ?? null;
+    const mine = mySeat?.index ?? null;
+    const phaseChanged = phase !== prevPhase.current;
+    let target: number | null = null;
+
+    if (
+      phase === "playerTurns" &&
+      active != null &&
+      (active !== prevActiveSeat.current || phaseChanged)
+    ) {
+      target = active;
+    } else if (
+      mine != null &&
+      (phase === "betting" || phase === "insurance") &&
+      (mine !== prevMySeatIndex.current ||
+        phaseChanged ||
+        prevMySeatIndex.current == null)
+    ) {
+      target = mine;
+    } else if (mine != null && prevMySeatIndex.current == null) {
+      target = mine;
+    }
+
+    prevActiveSeat.current = active;
+    prevMySeatIndex.current = mine;
+    prevPhase.current = phase;
+
+    if (target == null) return;
+    const seatIndex = target;
+    const timeout = window.setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(
+        `[data-seat-index="${seatIndex}"]`
+      );
+      if (el) scheduleScrollSeatIntoClearView(el);
+    }, 60);
+    return () => window.clearTimeout(timeout);
+  }, [phase, tableState?.activeSeatIndex, mySeat?.index]);
+
+  useEffect(() => {
+    const onDrawer = () => {
+      if (focusSeatIndex == null) return;
+      const el = document.querySelector<HTMLElement>(
+        `[data-seat-index="${focusSeatIndex}"]`
+      );
+      if (el) scheduleScrollSeatIntoClearView(el);
+    };
+    window.addEventListener("neon21:action-drawer", onDrawer);
+    return () => window.removeEventListener("neon21:action-drawer", onDrawer);
+  }, [focusSeatIndex]);
 
   const myActiveHand =
     isMyTurn && mySeat && tableState?.activeHandIndex != null
