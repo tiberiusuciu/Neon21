@@ -15,6 +15,7 @@ import { SeatView } from "../components/table/SeatView";
 import { ChipTray } from "../components/table/ChipTray";
 import { ActionBar, type QueuedAction } from "../components/table/ActionBar";
 import { PhaseBanner } from "../components/table/PhaseBanner";
+import { TableChat } from "../components/table/TableChat";
 import { getPhaseBannerCopy } from "../components/table/phaseCopy";
 import {
   RoundHistoryDrawer,
@@ -69,6 +70,8 @@ export function TablePage() {
     split,
     takeInsurance,
     declineInsurance,
+    chatMessages,
+    sendChat,
   } = useGameSocket();
   const { playWin, playSpend } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
@@ -87,12 +90,12 @@ export function TablePage() {
   const celebrateTimer = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!tableId || !connected) return;
+    if (!tableId) return;
     joinTable(tableId);
     return () => {
       leaveTable();
     };
-  }, [tableId, connected, joinTable, leaveTable]);
+  }, [tableId, joinTable, leaveTable]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -679,7 +682,7 @@ export function TablePage() {
   });
 
   const shortcutHint = useMemo(() => {
-    const z = "Z History";
+    const z = "Z History · / Chat";
     if (showActions || showPreActions) {
       const parts = ["Q Hit", "W Hold", "E Double"];
       if (canSplit) parts.push("R Split");
@@ -687,7 +690,7 @@ export function TablePage() {
       return `${parts.join(" · ")}${suffix} · ${z}`;
     }
     if (showInsurance) return `Y / T Take · N Decline · ${z}`;
-    if (showBet) return `Q-E chips · C Clear · D Reuse · ${z}`;
+    if (showBet) return `Q–T chips · C Clear · D Reuse · ${z}`;
     if (!seated) return `1–7 Sit · ${z}`;
     return z;
   }, [showActions, showPreActions, showInsurance, showBet, seated, canSplit]);
@@ -948,6 +951,12 @@ export function TablePage() {
             />
           ) : null
         }
+      />
+
+      <TableChat
+        messages={chatMessages}
+        selfUserId={user?.id ?? null}
+        onSend={sendChat}
       />
 
       {shortcutHint && (

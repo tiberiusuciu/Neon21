@@ -4,6 +4,9 @@ import type {
   TableStateSnapshot,
   WalletUpdate,
   SocketError,
+  TableChatMessage,
+  TableChatHistory,
+  TableChatReceipts,
 } from "@neon21/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
@@ -24,6 +27,8 @@ export type ClientToServerEvents = {
   "action:split": () => void;
   "insurance:take": () => void;
   "insurance:decline": () => void;
+  "table:chat": (payload: { text: string }) => void;
+  "table:chat:read": (payload: { messageId: string }) => void;
 };
 
 export type ServerToClientEvents = {
@@ -31,6 +36,9 @@ export type ServerToClientEvents = {
   "table:state": (payload: TableStateSnapshot) => void;
   "wallet:update": (payload: WalletUpdate) => void;
   "game:error": (payload: SocketError) => void;
+  "table:chat": (payload: TableChatMessage) => void;
+  "table:chat:history": (payload: TableChatHistory) => void;
+  "table:chat:receipts": (payload: TableChatReceipts) => void;
 };
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

@@ -217,6 +217,21 @@ export class TableRoom {
     return this.findSeatIndex(userId) >= 0 || this.spectators.has(userId);
   }
 
+  presentUserIds(): string[] {
+    const ids: string[] = [];
+    for (const seat of this.seats) {
+      if (seat) ids.push(seat.userId);
+    }
+    for (const id of this.spectators.keys()) ids.push(id);
+    return ids;
+  }
+
+  displayName(userId: string): string | null {
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx >= 0) return this.seats[seatIdx]!.name;
+    return this.spectators.get(userId)?.name ?? null;
+  }
+
   join(userId: string, name: string) {
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx >= 0) {

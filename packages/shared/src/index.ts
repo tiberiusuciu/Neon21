@@ -305,3 +305,36 @@ export const LeaderboardResponseSchema = z.object({
   me: LeaderboardEntrySchema.nullable(),
 });
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
+export const TABLE_CHAT_MAX_LEN = 200;
+
+export const TableChatSendSchema = z.object({
+  text: z.string().trim().min(1).max(TABLE_CHAT_MAX_LEN),
+});
+export type TableChatSend = z.infer<typeof TableChatSendSchema>;
+
+export const TableChatReadSchema = z.object({
+  messageId: z.string().min(1),
+});
+export type TableChatRead = z.infer<typeof TableChatReadSchema>;
+
+export const TableChatMessageSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  name: z.string(),
+  text: z.string(),
+  at: z.string(),
+  seenByCount: z.number().int().nonnegative().optional(),
+});
+export type TableChatMessage = z.infer<typeof TableChatMessageSchema>;
+
+export const TableChatHistorySchema = z.object({
+  messages: z.array(TableChatMessageSchema),
+});
+export type TableChatHistory = z.infer<typeof TableChatHistorySchema>;
+
+export const TableChatReceiptsSchema = z.object({
+  messageId: z.string(),
+  seenByCount: z.number().int().nonnegative(),
+});
+export type TableChatReceipts = z.infer<typeof TableChatReceiptsSchema>;

@@ -50,3 +50,15 @@ model Table {
   status       String   @default("open")
   createdAt    DateTime @default(now())
 }
+
+/** tableId is the live game room id (not necessarily a row in Table). */
+model TableChatMessage {
+  id        String   @id @default(cuid())
+  tableId   String
+  userId    String
+  name      String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([tableId, createdAt])
+}

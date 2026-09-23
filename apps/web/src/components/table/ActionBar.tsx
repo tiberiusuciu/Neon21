@@ -79,6 +79,7 @@ export function ActionBar({
 }: Props) {
   const isMobile = useIsNarrow();
   const dragControls = useDragControls();
+  const drawerRef = useRef<HTMLDivElement | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [doubleBurst, setDoubleBurst] = useState(false);
@@ -184,13 +185,36 @@ export function ActionBar({
       document.documentElement.style.removeProperty("--action-drawer-pad");
       return;
     }
-    const openPad = showBet ? "19.5rem" : showInsurance ? "12rem" : "10.5rem";
-    document.documentElement.style.setProperty(
-      "--action-drawer-pad",
-      drawer === "open" ? openPad : "5.5rem"
-    );
-    window.dispatchEvent(new CustomEvent("neon21:action-drawer"));
+
+    const el = drawerRef.current;
+    const apply = () => {
+      const h = el?.getBoundingClientRect().height;
+      if (h && h > 0) {
+        document.documentElement.style.setProperty(
+          "--action-drawer-pad",
+          `${Math.ceil(h)}px`
+        );
+      } else {
+        const fallback =
+          drawer === "peek" ? "5.5rem" : showBet ? "19.5rem" : showInsurance ? "12rem" : "10.5rem";
+        document.documentElement.style.setProperty(
+          "--action-drawer-pad",
+          fallback
+        );
+      }
+      window.dispatchEvent(new CustomEvent("neon21:action-drawer"));
+    };
+
+    apply();
+    const t = window.setTimeout(apply, 380);
+    let ro: ResizeObserver | undefined;
+    if (el && typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(apply);
+      ro.observe(el);
+    }
     return () => {
+      window.clearTimeout(t);
+      ro?.disconnect();
       document.documentElement.style.removeProperty("--action-drawer-pad");
     };
   }, [showDrawer, drawer, showBet, showInsurance]);
@@ -490,6 +514,7 @@ export function ActionBar({
       <AnimatePresence>
         {showDrawer && (
           <motion.div
+            ref={drawerRef}
             className={[
               "action-drawer",
               showActions ? "is-live" : "",

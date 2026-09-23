@@ -1,9 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { Server as SocketIOServer } from "socket.io";
 import { z } from "zod";
+import { TableChatReadSchema, TableChatSendSchema } from "@neon21/shared";
 import { env } from "./env.js";
 import { prisma } from "./lib/prisma.js";
 import { getPool, initPool } from "./game/table-pool.js";
+import {
+  checkChatThrottle,
+  insertChatMessage,
+  loadChatHistory,
+  markChatRead,
+} from "./lib/table-chat.js";
 
 const TableIdSchema = z.object({ tableId: z.string().min(1) });
 const SeatTakeSchema = z.object({ seatIndex: z.number().int().min(0).max(6) });
@@ -73,6 +80,12 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       socket.join(`table:${room.id}`);
       room.join(userId, name);
       socket.emit("table:state", room.getSnapshot());
+      try {
+        const messages = await loadChatHistory(room.id, room.presentUserIds());
+        socket.emit("table:chat:history", { messages });
+      } catch (err) {
+        app.log.error(err, "chat history failed");
+      }
     });
 
     socket.on("table:leave", () => {
@@ -201,6 +214,66 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (!room) return;
       const err = room.declineInsurance(userId);
       if (err) socket.emit("game:error", { message: err });
+    });
+
+    socket.on("table:chat", async (raw) => {
+      const parsed = TableChatSendSchema.safeParse(raw);
+      if (!parsed.success) {
+        socket.emit("game:error", { message: "Invalid message" });
+        return;
+      }
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room || !tableId) {
+        socket.emit("game:error", { message: "Join a table first" });
+        return;
+      }
+      if (!room.isPresent(userId)) {
+        socket.emit("game:error", { message: "Join a table first" });
+        return;
+      }
+      const throttled = checkChatThrottle(tableId, userId);
+      if (throttled) {
+        socket.emit("game:error", { message: throttled });
+        return;
+      }
+      const name =
+        room.displayName(userId) ??
+        (await loadUserName(userId)) ??
+        "Player";
+      try {
+        const msg = await insertChatMessage({
+          tableId,
+          userId,
+          name,
+          text: parsed.data.text,
+        });
+        io.to(`table:${tableId}`).emit("table:chat", msg);
+      } catch (err) {
+        app.log.error(err, "chat send failed");
+        socket.emit("game:error", { message: "Could not send message" });
+      }
+    });
+
+    socket.on("table:chat:read", async (raw) => {
+      const parsed = TableChatReadSchema.safeParse(raw);
+      if (!parsed.success) return;
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room || !tableId || !room.isPresent(userId)) return;
+      try {
+        const receipt = await markChatRead({
+          tableId,
+          userId,
+          messageId: parsed.data.messageId,
+          presentUserIds: room.presentUserIds(),
+        });
+        if (receipt) {
+          io.to(`table:${tableId}`).emit("table:chat:receipts", receipt);
+        }
+      } catch (err) {
+        app.log.error(err, "chat read failed");
+      }
     });
 
     socket.on("disconnect", () => {
