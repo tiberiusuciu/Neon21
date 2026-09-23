@@ -242,6 +242,9 @@ h3 {
   max-width: 7.5rem;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition:
+    color 0.45s var(--ease),
+    text-shadow 0.45s var(--ease);
 }
 
 .balance-pulse {
@@ -267,6 +270,16 @@ h3 {
 
 .balance-spend {
   color: var(--danger);
+}
+
+.balance-push {
+  color: #f0c674;
+  text-shadow: 0 0 14px color-mix(in srgb, #f0c674 50%, transparent);
+}
+
+.balance-push .balance-lerp-up,
+.balance-push .balance-lerp-down {
+  color: #f0c674;
 }
 
 .balance-lerp-up {
@@ -1273,13 +1286,14 @@ h3 {
 @media (max-width: 779px) {
   .seats-arc {
     grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 0.4rem 0.35rem;
+    gap: 0.4rem 0.3rem;
   }
 
   .seats-arc .seat {
     grid-column: span 3;
     min-height: 6.6rem;
-    padding: 0.4rem 0.28rem 1.1rem;
+    padding: 0.35rem 0.18rem 1.05rem;
+    min-width: 0;
   }
 
   .seats-arc .seat:nth-child(5),
@@ -1302,6 +1316,24 @@ h3 {
   }
   .seats-arc .seat:nth-child(6) {
     margin-top: 0.32rem;
+  }
+
+  /* Keep ~2 cards per row inside the active hand box */
+  .seats-arc .seat-hand {
+    padding: 0.28rem 0.14rem 0.22rem;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  .seats-arc .card-row {
+    gap: 0.1rem;
+    width: 100%;
+  }
+
+  .seats-arc .card {
+    width: 1.9rem;
+    height: 2.65rem;
+    font-size: 0.66rem;
   }
 }
 
@@ -1335,8 +1367,10 @@ h3 {
   scroll-margin-top: calc(var(--header-h) + 2rem);
   scroll-margin-bottom: calc(var(--action-drawer-pad, 5.5rem) + 2rem);
   transition:
-    border-color 0.3s var(--ease),
+    border-color 0.65s var(--ease),
     background 0.3s var(--ease),
+    box-shadow 0.65s var(--ease),
+    filter 0.55s var(--ease),
     opacity 0.3s var(--ease);
 }
 
@@ -1489,23 +1523,8 @@ h3 {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent),
-    0 0 16px color-mix(in srgb, var(--accent) 22%, transparent);
-  animation: hand-playing-pulse 1.35s ease-in-out infinite;
+    0 0 14px color-mix(in srgb, var(--accent) 20%, transparent);
   z-index: 2;
-}
-
-@keyframes hand-playing-pulse {
-  0%,
-  100% {
-    box-shadow:
-      0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
-      0 0 12px color-mix(in srgb, var(--accent) 18%, transparent);
-  }
-  50% {
-    box-shadow:
-      0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent),
-      0 0 20px color-mix(in srgb, var(--accent) 30%, transparent);
-  }
 }
 
 .hand-waiting {
@@ -2596,10 +2615,20 @@ h3 {
 }
 
 @media (max-width: 520px) {
-  .card {
+  .dealer-zone .card {
     width: 2rem;
     height: 2.8rem;
     font-size: 0.7rem;
+  }
+
+  .seats-arc .card {
+    width: 1.8rem;
+    height: 2.55rem;
+    font-size: 0.64rem;
+  }
+
+  .seats-arc .seat-hand {
+    padding: 0.24rem 0.1rem 0.18rem;
   }
 
   .felt-measure {
@@ -2608,7 +2637,7 @@ h3 {
 
   .seat {
     min-height: 6.15rem;
-    padding: 0.35rem 0.2rem 1.05rem;
+    padding: 0.35rem 0.14rem 1.05rem;
   }
 }
 
@@ -3114,40 +3143,171 @@ h3 {
   font-weight: 600;
 }
 
-/* —— Seat bet aura (your stake intensity) —— */
+/* —— Seat bet aura (stake intensity) —— */
+@property --aura {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #7cffb2;
+}
+
+@property --aura-2 {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #b8ffe0;
+}
+
 .seat-bet-aura {
   --aura: #7cffb2;
-  --aura-2: #3dff9a;
-  --aura-glow: color-mix(in srgb, var(--aura) 45%, transparent);
+  --aura-2: #b8ffe0;
+  --aura-glow: color-mix(in srgb, var(--aura) 32%, transparent);
+  --bloom-scale: 0.85;
+  --bloom-alpha: 0.18;
   position: absolute;
-  inset: -10px;
+  inset: -3px;
   pointer-events: none;
   z-index: -1;
   overflow: visible;
-  border-radius: 18px;
+  border-radius: 14px;
+  transition:
+    --aura 0.7s var(--ease),
+    --aura-2 0.7s var(--ease),
+    opacity 0.45s var(--ease);
+}
+
+.seat-bet-aura-bloom {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -4%;
+  height: 26%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--aura) calc(var(--bloom-alpha) * 100%), transparent) 0%,
+    transparent 72%
+  );
+  filter: blur(7px);
+  transform: scale(var(--bloom-scale));
+  transform-origin: center bottom;
+  transition:
+    background 0.7s var(--ease),
+    transform 0.55s var(--ease),
+    opacity 0.5s var(--ease);
+  opacity: 1;
+}
+
+/* Double — amber power shell; Split — forked half-rings */
+.seat-bet-aura-double {
+  position: absolute;
+  inset: -2px;
+  border-radius: 15px;
+  border: 1.5px solid color-mix(in srgb, #ffb347 70%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, #ffb347 40%, transparent),
+    inset 0 0 6px color-mix(in srgb, #ffb347 12%, transparent);
+  animation: seat-aura-double-pulse 1.15s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.seat-bet-aura-fork {
+  position: absolute;
+  inset: -1px;
+  border-radius: 14px;
+  border: 1.5px solid transparent;
+  pointer-events: none;
+  opacity: 0.9;
+}
+
+.seat-bet-aura-fork-l {
+  border-color: color-mix(in srgb, #4fd6ff 75%, transparent);
+  clip-path: inset(0 52% 0 0);
+  transform: translateX(-2px);
+  box-shadow: -3px 0 8px color-mix(in srgb, #4fd6ff 28%, transparent);
+  animation: seat-aura-fork-l 2s ease-in-out infinite;
+}
+
+.seat-bet-aura-fork-r {
+  border-color: color-mix(in srgb, #7cffb2 75%, transparent);
+  clip-path: inset(0 0 0 52%);
+  transform: translateX(2px);
+  box-shadow: 3px 0 8px color-mix(in srgb, #7cffb2 28%, transparent);
+  animation: seat-aura-fork-r 2s ease-in-out infinite;
+}
+
+.seat-bet-aura.is-doubled .seat-bet-aura-bloom {
+  filter: blur(7px) saturate(1.2);
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, #ffb347 32%, transparent) 0%,
+    color-mix(in srgb, var(--aura) 20%, transparent) 45%,
+    transparent 72%
+  );
+}
+
+.seat-bet-aura.is-doubled .seat-bet-aura-f {
+  border-radius: 1px;
+}
+
+.seat-bet-aura.is-doubled .seat-bet-aura-f.is-alt {
+  background: #ffb347;
+  box-shadow: 0 0 4px #ffb347, 0 0 8px #ffb34777;
+}
+
+.seat-bet-aura.is-split .seat-bet-aura-bloom {
+  background: radial-gradient(
+      ellipse 38% 50% at 28% 65%,
+      color-mix(in srgb, #4fd6ff 28%, transparent) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      ellipse 38% 50% at 72% 65%,
+      color-mix(in srgb, #7cffb2 28%, transparent) 0%,
+      transparent 70%
+    );
+  filter: blur(7px);
+}
+
+.seat-bet-aura.is-split .seat-bet-aura-ring-outer,
+.seat-bet-aura.is-split .seat-bet-aura-ring-mid,
+.seat-bet-aura.is-split .seat-bet-aura-ring-inner {
+  opacity: 0.28;
+}
+
+.seat-bet-aura.is-doubled.is-split .seat-bet-aura-double {
+  inset: -3px;
+  border-color: color-mix(in srgb, #ff6b8a 65%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, #ff6b8a 40%, transparent),
+    0 0 14px color-mix(in srgb, #ffb347 18%, transparent);
 }
 
 .seat-bet-aura-ring {
   position: absolute;
   inset: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid color-mix(in srgb, var(--aura) 40%, transparent);
   box-shadow:
-    0 0 12px var(--aura-glow),
-    inset 0 0 18px color-mix(in srgb, var(--aura) 12%, transparent);
+    0 0 6px var(--aura-glow),
+    inset 0 0 10px color-mix(in srgb, var(--aura) 10%, transparent);
   animation: seat-aura-breathe 2.8s ease-in-out infinite;
+  transition:
+    border-color 0.7s var(--ease),
+    border-width 0.5s var(--ease),
+    box-shadow 0.7s var(--ease),
+    opacity 0.5s var(--ease),
+    inset 0.5s var(--ease);
 }
 
 .seat-bet-aura-ring-mid {
-  inset: 4px;
-  opacity: 0.65;
+  inset: 3px;
+  opacity: 0.55;
   animation-duration: 2.2s;
   animation-direction: reverse;
 }
 
 .seat-bet-aura-ring-inner {
-  inset: 9px;
-  opacity: 0.4;
+  inset: 6px;
+  opacity: 0.32;
   border-style: dashed;
   animation-duration: 3.4s;
 }
@@ -3163,6 +3323,10 @@ h3 {
   );
   filter: blur(6px);
   animation: seat-aura-core 2.4s ease-in-out infinite;
+  transition:
+    background 0.7s var(--ease),
+    filter 0.55s var(--ease),
+    opacity 0.5s var(--ease);
 }
 
 .seat-bet-aura-floaters {
@@ -3177,19 +3341,24 @@ h3 {
   --delay: 0s;
   --dx: 0;
   --dy: -1;
-  --travel: 18px;
+  --travel: 12px;
   position: absolute;
   border-radius: 50%;
   background: var(--aura);
   box-shadow:
-    0 0 4px var(--aura),
-    0 0 8px color-mix(in srgb, var(--aura) 70%, transparent),
-    0 0 14px color-mix(in srgb, var(--aura-2) 55%, transparent);
+    0 0 3px var(--aura),
+    0 0 6px color-mix(in srgb, var(--aura) 60%, transparent);
   transform: translate(-50%, -50%);
   opacity: 0;
   animation: seat-aura-emit var(--dur) cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
   animation-delay: var(--delay);
   will-change: transform, opacity;
+  transition:
+    background 0.7s var(--ease),
+    box-shadow 0.7s var(--ease),
+    border-radius 0.45s var(--ease),
+    width 0.45s var(--ease),
+    height 0.45s var(--ease);
 }
 
 .seat-bet-aura-f.is-alt {
@@ -3199,119 +3368,238 @@ h3 {
     0 0 10px color-mix(in srgb, var(--aura) 60%, transparent);
 }
 
-/* Tier 1 — $50+ mint */
+/* Dormant particles fade out between tiers (stable DOM). */
+/* Visible: $25→4, $50→12, $100→20, $250→30, $500→38, $1k→44, $5k→48 */
+.seat-bet-aura-t1 .seat-bet-aura-f:nth-child(n + 5),
+.seat-bet-aura-t2 .seat-bet-aura-f:nth-child(n + 13),
+.seat-bet-aura-t3 .seat-bet-aura-f:nth-child(n + 21),
+.seat-bet-aura-t4 .seat-bet-aura-f:nth-child(n + 31),
+.seat-bet-aura-t5 .seat-bet-aura-f:nth-child(n + 39),
+.seat-bet-aura-t6 .seat-bet-aura-f:nth-child(n + 45) {
+  animation: none;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.4s var(--ease),
+    visibility 0.4s;
+}
+
+/* Tier-up spark run + burst */
+.seat-bet-aura-spark {
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 300deg,
+    color-mix(in srgb, var(--aura-2) 90%, #fff) 330deg,
+    var(--aura) 348deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 2px;
+  opacity: 0;
+  animation: seat-aura-spark-run 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.seat-bet-aura-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.seat-bet-aura-burst-p {
+  --bx: 0;
+  --by: -1;
+  --bd: 0s;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin: -2px;
+  border-radius: 50%;
+  background: var(--aura-2);
+  box-shadow: 0 0 6px var(--aura), 0 0 12px var(--aura-2);
+  opacity: 0;
+  animation: seat-aura-burst-out 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  animation-delay: var(--bd);
+}
+
+/* Tier 1 — $25+ whisper (thin ring, almost no particles) */
 .seat-bet-aura-t1 {
-  --aura: #7cffb2;
-  --aura-2: #b8ffe0;
+  --aura: #6ae8a8;
+  --aura-2: #9ef0c8;
+  --bloom-scale: 0.55;
+  --bloom-alpha: 0.06;
+}
+
+.seat-bet-aura-t1 .seat-bet-aura-bloom {
+  opacity: 0.45;
+  filter: blur(14px);
+}
+
+.seat-bet-aura-t1 .seat-bet-aura-ring-outer {
+  opacity: 0.4;
+  border-width: 1px;
+  border-color: color-mix(in srgb, var(--aura) 18%, transparent);
+  box-shadow: 0 0 6px color-mix(in srgb, var(--aura) 10%, transparent);
+  animation-duration: 3.6s;
+}
+
+.seat-bet-aura-t1 .seat-bet-aura-ring-mid,
+.seat-bet-aura-t1 .seat-bet-aura-ring-inner {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.seat-bet-aura-t1 .seat-bet-aura-core {
+  opacity: 0.2;
+  filter: blur(10px);
+  animation: none;
+}
+
+.seat-bet-aura-t1 .seat-bet-aura-f {
+  --travel: 10px;
+  width: 2px !important;
+  height: 2px !important;
+  box-shadow:
+    0 0 2px var(--aura),
+    0 0 5px color-mix(in srgb, var(--aura) 40%, transparent);
+  animation-duration: 2.4s;
 }
 
 .seat-aura-t1 {
-  border-color: color-mix(in srgb, #7cffb2 70%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, #7cffb2 22%, transparent);
+  border-color: color-mix(in srgb, #6ae8a8 32%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, #6ae8a8 8%, transparent);
 }
 
-/* Tier 2 — $100+ cyan */
+/* Tier 2 — $50+ mint */
 .seat-bet-aura-t2 {
-  --aura: #4fd6ff;
-  --aura-2: #a8ecff;
-}
-
-.seat-bet-aura-t2 .seat-bet-aura-f {
-  --travel: 20px;
+  --aura: #7cffb2;
+  --aura-2: #b8ffe0;
+  --bloom-scale: 0.85;
+  --bloom-alpha: 0.18;
 }
 
 .seat-aura-t2 {
-  border-color: color-mix(in srgb, #4fd6ff 75%, transparent);
-  box-shadow:
-    0 0 20px color-mix(in srgb, #4fd6ff 28%, transparent),
-    inset 0 0 20px color-mix(in srgb, #4fd6ff 8%, transparent);
+  border-color: color-mix(in srgb, #7cffb2 70%, transparent);
+  box-shadow: 0 0 8px color-mix(in srgb, #7cffb2 16%, transparent);
 }
 
-/* Tier 3 — $250+ gold */
+/* Tier 3 — $100+ cyan */
 .seat-bet-aura-t3 {
-  --aura: #ffc857;
-  --aura-2: #ffe6a8;
-}
-
-.seat-bet-aura-t3 .seat-bet-aura-ring {
-  animation-duration: 2s;
+  --aura: #4fd6ff;
+  --aura-2: #a8ecff;
+  --bloom-scale: 0.9;
+  --bloom-alpha: 0.18;
 }
 
 .seat-bet-aura-t3 .seat-bet-aura-f {
-  --travel: 24px;
-  border-radius: 2px;
+  --travel: 12px;
 }
 
 .seat-aura-t3 {
+  border-color: color-mix(in srgb, #4fd6ff 75%, transparent);
+  box-shadow:
+    0 0 10px color-mix(in srgb, #4fd6ff 22%, transparent),
+    inset 0 0 12px color-mix(in srgb, #4fd6ff 6%, transparent);
+}
+
+/* Tier 4 — $250+ gold */
+.seat-bet-aura-t4 {
+  --aura: #ffc857;
+  --aura-2: #ffe6a8;
+  --bloom-scale: 0.95;
+  --bloom-alpha: 0.22;
+}
+
+.seat-bet-aura-t4 .seat-bet-aura-ring {
+  animation-duration: 2s;
+}
+
+.seat-bet-aura-t4 .seat-bet-aura-f {
+  --travel: 14px;
+  border-radius: 2px;
+}
+
+.seat-aura-t4 {
   border-color: color-mix(in srgb, #ffc857 80%, transparent);
   box-shadow:
-    0 0 24px color-mix(in srgb, #ffc857 34%, transparent),
-    0 0 48px color-mix(in srgb, #ffc857 14%, transparent),
-    inset 0 0 22px color-mix(in srgb, #ffc857 10%, transparent);
+    0 0 12px color-mix(in srgb, #ffc857 26%, transparent),
+    inset 0 0 14px color-mix(in srgb, #ffc857 8%, transparent);
 }
 
-/* Tier 4 — $500+ rose / ember */
-.seat-bet-aura-t4 {
+/* Tier 5 — $500+ rose / ember */
+.seat-bet-aura-t5 {
   --aura: #ff6b8a;
   --aura-2: #ffb347;
+  --bloom-scale: 1;
+  --bloom-alpha: 0.24;
 }
 
-.seat-bet-aura-t4 .seat-bet-aura-ring-outer {
+.seat-bet-aura-t5 .seat-bet-aura-ring-outer {
   border-width: 1.5px;
   animation: seat-aura-breathe 1.6s ease-in-out infinite,
     seat-aura-spin-border 8s linear infinite;
 }
 
-.seat-bet-aura-t4 .seat-bet-aura-f {
-  --travel: 28px;
+.seat-bet-aura-t5 .seat-bet-aura-f {
+  --travel: 16px;
   box-shadow:
-    0 0 5px var(--aura),
-    0 0 12px var(--aura-2),
-    0 0 20px color-mix(in srgb, var(--aura) 45%, transparent);
+    0 0 4px var(--aura),
+    0 0 8px var(--aura-2);
 }
 
-.seat-bet-aura-t4 .seat-bet-aura-f.is-alt {
+.seat-bet-aura-t5 .seat-bet-aura-f.is-alt {
   border-radius: 1px;
   width: 2px !important;
   height: 6px !important;
 }
 
-.seat-aura-t4 {
+.seat-aura-t5 {
   border-color: color-mix(in srgb, #ff6b8a 85%, transparent);
   box-shadow:
-    0 0 28px color-mix(in srgb, #ff6b8a 38%, transparent),
-    0 0 56px color-mix(in srgb, #ffb347 18%, transparent),
-    inset 0 0 28px color-mix(in srgb, #ff6b8a 12%, transparent);
+    0 0 12px color-mix(in srgb, #ff6b8a 28%, transparent),
+    0 0 20px color-mix(in srgb, #ffb347 12%, transparent),
+    inset 0 0 16px color-mix(in srgb, #ff6b8a 8%, transparent);
   animation: seat-aura-seat-pulse 1.8s ease-in-out infinite;
 }
 
-/* Tier 5 — $1000+ white-hot / prism */
-.seat-bet-aura-t5 {
+/* Tier 6 — $1k+ white-hot / prism */
+.seat-bet-aura-t6 {
   --aura: #ffffff;
   --aura-2: #7cffb2;
+  --bloom-scale: 1.05;
+  --bloom-alpha: 0.28;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-ring-outer {
-  border-width: 2px;
+.seat-bet-aura-t6 .seat-bet-aura-ring-outer {
+  border-width: 1.5px;
   border-color: color-mix(in srgb, #fff 70%, transparent);
   box-shadow:
-    0 0 18px #fff8,
-    0 0 36px color-mix(in srgb, #7cffb2 45%, transparent),
-    0 0 64px color-mix(in srgb, #4fd6ff 30%, transparent),
-    inset 0 0 24px #fff3;
+    0 0 8px #fff6,
+    0 0 16px color-mix(in srgb, #7cffb2 35%, transparent),
+    0 0 24px color-mix(in srgb, #4fd6ff 20%, transparent),
+    inset 0 0 12px #fff2;
   animation: seat-aura-breathe 1.2s ease-in-out infinite,
     seat-aura-prism 4s linear infinite;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-ring-mid {
+.seat-bet-aura-t6 .seat-bet-aura-ring-mid {
   border-color: color-mix(in srgb, #ffc857 55%, transparent);
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-ring-inner {
+.seat-bet-aura-t6 .seat-bet-aura-ring-inner {
   border-color: color-mix(in srgb, #ff6b8a 50%, transparent);
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-core {
+.seat-bet-aura-t6 .seat-bet-aura-core {
   background: radial-gradient(
     circle,
     #fff6 0%,
@@ -3319,39 +3607,112 @@ h3 {
     color-mix(in srgb, #4fd6ff 20%, transparent) 55%,
     transparent 75%
   );
-  filter: blur(8px);
+  filter: blur(6px);
   animation-duration: 1.4s;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-f {
-  --travel: 34px;
+.seat-bet-aura-t6 .seat-bet-aura-f {
+  --travel: 18px;
   background: #fff;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-f:nth-child(3n) {
+.seat-bet-aura-t6 .seat-bet-aura-f:nth-child(3n) {
   background: #7cffb2;
-  box-shadow: 0 0 6px #7cffb2, 0 0 12px #7cffb288;
+  box-shadow: 0 0 4px #7cffb2, 0 0 8px #7cffb288;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-f:nth-child(3n + 1) {
+.seat-bet-aura-t6 .seat-bet-aura-f:nth-child(3n + 1) {
   background: #4fd6ff;
-  box-shadow: 0 0 6px #4fd6ff, 0 0 12px #4fd6ff88;
+  box-shadow: 0 0 4px #4fd6ff, 0 0 8px #4fd6ff88;
 }
 
-.seat-bet-aura-t5 .seat-bet-aura-f:nth-child(3n + 2) {
+.seat-bet-aura-t6 .seat-bet-aura-f:nth-child(3n + 2) {
   background: #ffc857;
   border-radius: 1px;
-  box-shadow: 0 0 6px #ffc857, 0 0 12px #ffc85788;
+  box-shadow: 0 0 4px #ffc857, 0 0 8px #ffc85788;
 }
 
-.seat-aura-t5 {
+.seat-aura-t6 {
   border-color: color-mix(in srgb, #ffffff 80%, transparent);
   box-shadow:
-    0 0 32px #fff5,
-    0 0 48px color-mix(in srgb, #7cffb2 40%, transparent),
-    0 0 72px color-mix(in srgb, #4fd6ff 28%, transparent),
-    inset 0 0 32px color-mix(in srgb, #ffffff 14%, transparent);
+    0 0 12px #fff4,
+    0 0 18px color-mix(in srgb, #7cffb2 28%, transparent),
+    inset 0 0 16px color-mix(in srgb, #ffffff 10%, transparent);
   animation: seat-aura-seat-pulse 1.2s ease-in-out infinite;
+}
+
+/* Tier 7 — $5k+ whale (slow magenta neon) */
+.seat-bet-aura-t7 {
+  --aura: #ff4ec8;
+  --aura-2: #ffb3e6;
+  --bloom-scale: 1.08;
+  --bloom-alpha: 0.3;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-ring-outer {
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, #ff4ec8 72%, #fff);
+  box-shadow:
+    0 0 10px #ff4ec877,
+    0 0 20px color-mix(in srgb, #ffb3e6 32%, transparent),
+    inset 0 0 14px #ffb3e622;
+  animation: seat-aura-breathe 3.4s ease-in-out infinite,
+    seat-aura-prism 11s linear infinite;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-ring-mid {
+  border-color: color-mix(in srgb, #ff7ad8 60%, transparent);
+  animation-duration: 4s;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-ring-inner {
+  border-color: color-mix(in srgb, #ffe0f4 50%, transparent);
+  animation-duration: 4.6s;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-core {
+  background: radial-gradient(
+    circle,
+    #fff6 0%,
+    color-mix(in srgb, #ff4ec8 48%, transparent) 36%,
+    color-mix(in srgb, #ffb3e6 22%, transparent) 58%,
+    transparent 78%
+  );
+  filter: blur(6px);
+  animation-duration: 3.2s;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-f {
+  --travel: 18px;
+  animation-duration: 2.1s;
+  background: #ff4ec8;
+  box-shadow: 0 0 4px #ff4ec8, 0 0 8px #ff4ec888;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-f.is-alt,
+.seat-bet-aura-t7 .seat-bet-aura-f:nth-child(3n) {
+  background: #ffb3e6;
+  box-shadow: 0 0 4px #ffb3e6, 0 0 8px #ffb3e688;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-f:nth-child(3n + 1) {
+  background: #ff4ec8;
+  box-shadow: 0 0 5px #ff4ec8, 0 0 10px #ff4ec899;
+}
+
+.seat-bet-aura-t7 .seat-bet-aura-f:nth-child(3n + 2) {
+  background: #fff;
+  border-radius: 1px;
+  box-shadow: 0 0 4px #fff, 0 0 8px #ff4ec866;
+}
+
+.seat-aura-t7 {
+  border-color: color-mix(in srgb, #ff4ec8 80%, transparent);
+  box-shadow:
+    0 0 12px #ff4ec844,
+    0 0 20px color-mix(in srgb, #ffb3e6 22%, transparent),
+    inset 0 0 16px color-mix(in srgb, #ff4ec8 10%, transparent);
+  animation: seat-aura-seat-pulse 2.8s ease-in-out infinite;
 }
 
 @keyframes seat-aura-breathe {
@@ -3362,7 +3723,7 @@ h3 {
   }
   50% {
     opacity: 1;
-    transform: scale(1.03);
+    transform: scale(1.012);
   }
 }
 
@@ -3381,9 +3742,7 @@ h3 {
 @keyframes seat-aura-emit {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%)
-      translate(0, 0)
-      scale(0.35);
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.35);
   }
   8% {
     opacity: 1;
@@ -3433,18 +3792,93 @@ h3 {
   }
 }
 
+@keyframes seat-aura-spark-run {
+  0% {
+    opacity: 0;
+    transform: rotate(0deg);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes seat-aura-burst-out {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--bx) * 42px), calc(var(--by) * 42px))
+      scale(0.15);
+  }
+}
+
+@keyframes seat-aura-double-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.015);
+  }
+}
+
+@keyframes seat-aura-fork-l {
+  0%,
+  100% {
+    transform: translateX(-2px);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateX(-4px);
+    opacity: 1;
+  }
+}
+
+@keyframes seat-aura-fork-r {
+  0%,
+  100% {
+    transform: translateX(2px);
+    opacity: 0.75;
+  }
+  50% {
+    transform: translateX(4px);
+    opacity: 1;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .seat-bet-aura-ring,
   .seat-bet-aura-core,
   .seat-bet-aura-f,
-  .seat-aura-t4,
-  .seat-aura-t5 {
+  .seat-bet-aura-spark,
+  .seat-bet-aura-burst-p,
+  .seat-bet-aura-double,
+  .seat-bet-aura-fork,
+  .seat-aura-t5,
+  .seat-aura-t6,
+  .seat-aura-t7 {
     animation: none !important;
   }
 
   .seat-bet-aura-f {
     opacity: 0.7;
     transform: translate(-50%, -50%);
+  }
+
+  .seat-bet-aura-spark,
+  .seat-bet-aura-burst {
+    display: none;
   }
 }
 

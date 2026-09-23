@@ -70,9 +70,12 @@ type PlayWinOpts = {
 type CashFxApi = {
   playWin: (amountCents: number, opts?: PlayWinOpts | HTMLElement | null) => void;
   playSpend: (amountCents: number) => void;
+  /** Soft yellow flash when a push returns the stake. */
+  playPush: () => void;
   walletRef: RefObject<HTMLSpanElement>;
   walletPulse: WinTier | null;
   walletSpend: boolean;
+  walletPush: boolean;
   /** Applied to the content plane under the header — never the header itself. */
   shakeClass: string;
 };
@@ -143,6 +146,7 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
   const [spend, setSpend] = useState<SpendFloat | null>(null);
   const [walletPulse, setWalletPulse] = useState<WinTier | null>(null);
   const [walletSpend, setWalletSpend] = useState(false);
+  const [walletPush, setWalletPush] = useState(false);
   const [shake, setShake] = useState<"big" | "mega" | "jackpot" | null>(null);
   const seq = useRef(0);
   const clearTimers = useRef<number[]>([]);
@@ -169,6 +173,11 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
     },
     [clearLater]
   );
+
+  const playPush = useCallback(() => {
+    setWalletPush(true);
+    clearLater(() => setWalletPush(false), 1100);
+  }, [clearLater]);
 
   const playWin = useCallback(
     (amountCents: number, opts?: PlayWinOpts | HTMLElement | null) => {
@@ -308,12 +317,14 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
     () => ({
       playWin,
       playSpend,
+      playPush,
       walletRef,
       walletPulse,
       walletSpend,
+      walletPush,
       shakeClass: shake ? `cash-fx-shake-${shake}` : "",
     }),
-    [playWin, playSpend, walletPulse, walletSpend, shake]
+    [playWin, playSpend, playPush, walletPulse, walletSpend, walletPush, shake]
   );
 
   return (

@@ -36,10 +36,23 @@ export function SeatView({
   const empty = !seat.userId;
   const split = seat.hands.length > 1;
   const prevCount = useRef(seat.hands.length);
+  const prevAuraTier = useRef<number | null>(null);
   const [peeling, setPeeling] = useState(false);
   const [showBurst, setShowBurst] = useState(false);
-  const auraTier =
-    !empty ? betAuraTier(seatStakeCents(seat)) : 0;
+  const [auraCelebrate, setAuraCelebrate] = useState(false);
+  const auraTier = !empty ? betAuraTier(seatStakeCents(seat)) : 0;
+  const anyDoubled = seat.hands.some((h) => h.doubled);
+
+  useEffect(() => {
+    const prev = prevAuraTier.current;
+    prevAuraTier.current = auraTier;
+    if (prev == null) return;
+    if (auraTier > prev && auraTier > 0) {
+      setAuraCelebrate(true);
+      const t = window.setTimeout(() => setAuraCelebrate(false), 950);
+      return () => window.clearTimeout(t);
+    }
+  }, [auraTier]);
 
   useEffect(() => {
     const prev = prevCount.current;
@@ -80,7 +93,14 @@ export function SeatView({
         .join(" ")}
       data-seat-index={seat.index}
     >
-      {auraTier > 0 && <SeatBetAura tier={auraTier} />}
+      {auraTier > 0 ? (
+        <SeatBetAura
+          tier={auraTier}
+          celebrate={auraCelebrate}
+          doubled={anyDoubled}
+          split={split}
+        />
+      ) : null}
       {waitTimerProgress != null && (
         <div
           className={`seat-wait-timer${waitTimerUrgent ? " is-urgent" : ""}`}

@@ -73,7 +73,7 @@ export function TablePage() {
     chatMessages,
     sendChat,
   } = useGameSocket();
-  const { playWin, playSpend } = useCashFx();
+  const { playWin, playSpend, playPush } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
   const balanceCents = wallet?.balanceCents ?? user?.balanceCents ?? 0;
 
@@ -167,10 +167,20 @@ export function TablePage() {
 
     if (celebratedSettle.current) return;
     const net = mySeat.hands.reduce((sum, h) => sum + (h.resultCents ?? 0), 0);
-    if (net <= 0) return;
+    if (net < 0) return;
 
     celebratedSettle.current = true;
     const from = document.querySelector(".seat-you") as HTMLElement | null;
+
+    if (net === 0) {
+      // Stake returned — soft yellow wallet flash (no win confetti).
+      celebrateTimer.current = window.setTimeout(() => {
+        celebrateTimer.current = null;
+        playPush();
+      }, 1000);
+      return;
+    }
+
     const winners = mySeat.hands.filter((h) => (h.resultCents ?? 0) > 0);
     const kind = winners.some((h) => h.isBlackjack)
       ? "blackjack"
@@ -183,7 +193,7 @@ export function TablePage() {
       celebrateTimer.current = null;
       fire();
     }, 1000);
-  }, [phase, mySeat, playWin, tableState?.dealer]);
+  }, [phase, mySeat, playWin, playPush, tableState?.dealer]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {

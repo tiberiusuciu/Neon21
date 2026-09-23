@@ -11,7 +11,7 @@ import { BrandMark } from "./BrandMark";
 
 export function AppHeader() {
   const { user, wallet, claim, refresh } = useAuth();
-  const { walletRef, walletPulse, walletSpend } = useCashFx();
+  const { walletRef, walletPulse, walletSpend, walletPush } = useCashFx();
   const amountRef = useRef<HTMLSpanElement>(null);
   const toast = useToast();
   const [open, setOpen] = useState(false);
@@ -110,6 +110,7 @@ export function AppHeader() {
                 "balance",
                 walletPulse ? `balance-pulse balance-pulse-${walletPulse}` : "",
                 walletSpend ? "balance-spend" : "",
+                walletPush ? "balance-push" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -117,17 +118,21 @@ export function AppHeader() {
               animate={
                 walletPulse
                   ? { scale: [1, 1.18, 1], y: [0, -2, 0] }
-                  : walletSpend
-                    ? { scale: [1, 0.94, 1] }
-                    : { scale: 1 }
+                  : walletPush
+                    ? { scale: [1, 1.06, 1] }
+                    : walletSpend
+                      ? { scale: [1, 0.94, 1] }
+                      : { scale: 1 }
               }
               transition={{
                 duration:
                   walletPulse === "jackpot" || walletPulse === "mega"
                     ? 0.5
-                    : walletSpend
-                      ? 0.35
-                      : 0.4,
+                    : walletPush
+                      ? 0.55
+                      : walletSpend
+                        ? 0.35
+                        : 0.4,
               }}
             >
               <span ref={amountRef} />
