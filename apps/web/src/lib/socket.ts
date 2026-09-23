@@ -15,6 +15,7 @@ export type ClientToServerEvents = {
   "seat:take": (payload: { seatIndex: number }) => void;
   "seat:leave": () => void;
   "bet:add": (payload: { cents: number }) => void;
+  "bet:remove": (payload: { cents: number }) => void;
   "bet:clear": () => void;
   "bet:reuse": () => void;
   "action:hit": () => void;

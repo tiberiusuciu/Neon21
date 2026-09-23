@@ -379,6 +379,28 @@ export class TableRoom {
     return null;
   }
 
+  async removeBet(userId: string, cents: number): Promise<string | null> {
+    return this.enqueueBet(async () => this.removeBetUnlocked(userId, cents));
+  }
+
+  private removeBetUnlocked(
+    userId: string,
+    cents: number
+  ): string | null {
+    if (this.phase !== "betting") return "Not betting";
+    if (!(CHIP_DENOMINATIONS_CENTS as readonly number[]).includes(cents)) {
+      return "Invalid chip";
+    }
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return "Not seated";
+    const seat = this.seats[seatIdx]!;
+    if (seat.pendingBetCents <= 0) return "No bet to remove";
+    seat.pendingBetCents = Math.max(0, seat.pendingBetCents - cents);
+    this.broadcast();
+    this.onBettingActivity();
+    return null;
+  }
+
   async reuseBet(userId: string): Promise<string | null> {
     return this.enqueueBet(() => this.reuseBetUnlocked(userId));
   }

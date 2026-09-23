@@ -31,6 +31,7 @@ type GameSocketApi = {
   takeSeat: (seatIndex: number) => void;
   leaveSeat: () => void;
   addBet: (cents: number) => void;
+  removeBet: (cents: number) => void;
   clearBet: () => void;
   reuseBet: () => void;
   hit: () => void;
@@ -151,6 +152,14 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     [socket]
   );
 
+  const removeBet = useCallback(
+    (cents: number) => {
+      if (!socket) return;
+      emitEvent(socket, "bet:remove", { cents });
+    },
+    [socket]
+  );
+
   const clearBet = useCallback(() => {
     if (!socket) return;
     emitEvent(socket, "bet:clear");
@@ -205,6 +214,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       takeSeat,
       leaveSeat,
       addBet,
+      removeBet,
       clearBet,
       reuseBet,
       hit,
@@ -226,6 +236,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       takeSeat,
       leaveSeat,
       addBet,
+      removeBet,
       clearBet,
       reuseBet,
       hit,

@@ -123,6 +123,22 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (err) socket.emit("game:error", { message: err });
     });
 
+    socket.on("bet:remove", async (raw) => {
+      const parsed = BetAddSchema.safeParse(raw);
+      if (!parsed.success) {
+        socket.emit("game:error", { message: "Invalid bet" });
+        return;
+      }
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) {
+        socket.emit("game:error", { message: "Join a table first" });
+        return;
+      }
+      const err = await room.removeBet(userId, parsed.data.cents);
+      if (err) socket.emit("game:error", { message: err });
+    });
+
     socket.on("bet:clear", () => {
       const tableId = socket.data.tableId as string | undefined;
       const room = tableId ? pool.get(tableId) : undefined;

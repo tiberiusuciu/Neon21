@@ -1853,7 +1853,6 @@ h3 {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  touch-action: none;
   -webkit-user-select: none;
   user-select: none;
   -webkit-touch-callout: none;
@@ -1884,6 +1883,7 @@ h3 {
   border: none;
   background: transparent;
   cursor: pointer;
+  touch-action: none;
 }
 
 .action-drawer-grip {
@@ -1953,6 +1953,7 @@ h3 {
   align-items: center;
   gap: 0.45rem;
   padding-bottom: 0.15rem;
+  touch-action: manipulation;
 }
 
 .action-drawer-info {
@@ -2038,6 +2039,12 @@ h3 {
   color: var(--muted);
 }
 
+.chip-hint {
+  margin: 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+}
+
 .chip-btn-disabled,
 .chip-btn:disabled {
   opacity: 0.35;
@@ -2049,6 +2056,12 @@ h3 {
 .chip-btn-allin {
   border-color: color-mix(in srgb, var(--accent) 80%, var(--line));
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.chip-btn-high {
+  border-color: color-mix(in srgb, #f0c674 70%, var(--line));
+  background: color-mix(in srgb, #f0c674 18%, var(--bg-elevated));
+  color: #f5e6c0;
 }
 
 .chip-allin-tag {
@@ -2092,6 +2105,13 @@ h3 {
   justify-content: center;
   gap: 0.05rem;
   line-height: 1;
+}
+
+.chip-btn.chip-btn-remove {
+  border-color: color-mix(in srgb, var(--danger, #e85d5d) 75%, #fff);
+  background: color-mix(in srgb, var(--danger, #e85d5d) 22%, var(--bg-elevated));
+  color: #ffd0d0;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--danger, #e85d5d) 30%, transparent);
 }
 
 .chip-kbd {
@@ -2334,6 +2354,10 @@ h3 {
 .chip-btn:hover {
   transform: translateY(-1px);
   border-color: var(--accent);
+}
+
+.chip-btn.chip-btn-remove:hover {
+  border-color: color-mix(in srgb, var(--danger, #e85d5d) 90%, #fff);
 }
 
 .chip-actions {

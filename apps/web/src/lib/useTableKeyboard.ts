@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { CHIP_DENOMINATIONS_CENTS } from "@neon21/shared";
+import { visibleChipDenominations } from "@neon21/shared";
 import type { QueuedAction } from "../components/table/ActionBar";
 
 type Args = {
@@ -12,6 +12,7 @@ type Args = {
   canSplit?: boolean;
   canSit: boolean;
   emptySeatIndexes: number[];
+  balanceCents: number;
   onHit: () => void;
   onStand: () => void;
   onDouble: () => void;
@@ -20,6 +21,7 @@ type Args = {
   onTakeInsurance: () => void;
   onDeclineInsurance: () => void;
   onAddBet: (cents: number) => void;
+  onRemoveBet: (cents: number) => void;
   onClearBet: () => void;
   onReuseBet: () => void;
   onSit: (seatIndex: number) => void;
@@ -46,6 +48,7 @@ export function useTableKeyboard({
   canSplit = false,
   canSit,
   emptySeatIndexes,
+  balanceCents,
   onHit,
   onStand,
   onDouble,
@@ -54,6 +57,7 @@ export function useTableKeyboard({
   onTakeInsurance,
   onDeclineInsurance,
   onAddBet,
+  onRemoveBet,
   onClearBet,
   onReuseBet,
   onSit,
@@ -77,12 +81,14 @@ export function useTableKeyboard({
       }
 
       if (showBet) {
-        const chipIdx = "qwe".indexOf(key);
+        const chipIdx = "qwertyu".indexOf(key);
         if (chipIdx >= 0) {
-          const cents = CHIP_DENOMINATIONS_CENTS[chipIdx];
+          const chips = visibleChipDenominations(balanceCents);
+          const cents = chips[chipIdx];
           if (cents != null) {
             e.preventDefault();
-            onAddBet(cents);
+            if (e.shiftKey) onRemoveBet(cents);
+            else onAddBet(cents);
           }
           return;
         }
@@ -173,6 +179,7 @@ export function useTableKeyboard({
     canSplit,
     canSit,
     emptySeatIndexes,
+    balanceCents,
     onHit,
     onStand,
     onDouble,
@@ -181,6 +188,7 @@ export function useTableKeyboard({
     onTakeInsurance,
     onDeclineInsurance,
     onAddBet,
+    onRemoveBet,
     onClearBet,
     onReuseBet,
     onSit,

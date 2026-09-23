@@ -60,6 +60,7 @@ export function TablePage() {
     takeSeat,
     leaveSeat,
     addBet,
+    removeBet,
     clearBet,
     reuseBet,
     hit,
@@ -637,6 +638,14 @@ export function TablePage() {
     [mySeat?.pendingBetCents, balanceCents, addBet, toast]
   );
 
+  const onRemoveBetKb = useCallback(
+    (cents: number) => {
+      if ((mySeat?.pendingBetCents ?? 0) <= 0) return;
+      removeBet(cents);
+    },
+    [mySeat?.pendingBetCents, removeBet]
+  );
+
   useTableKeyboard({
     enabled: connected,
     showBet,
@@ -647,6 +656,7 @@ export function TablePage() {
     canSplit,
     canSit: !seated,
     emptySeatIndexes,
+    balanceCents,
     onHit: hit,
     onStand: stand,
     onDouble: double,
@@ -655,6 +665,7 @@ export function TablePage() {
     onTakeInsurance: onTakeInsuranceKb,
     onDeclineInsurance: onDeclineInsuranceKb,
     onAddBet: onAddBetKb,
+    onRemoveBet: onRemoveBetKb,
     onClearBet: () => {
       if ((mySeat?.pendingBetCents ?? 0) <= 0) return;
       clearBet();
@@ -931,6 +942,7 @@ export function TablePage() {
               balanceCents={balanceCents}
               lastBetCents={mySeat.lastBetCents}
               onAdd={addBet}
+              onRemove={removeBet}
               onClear={clearBet}
               onReuse={reuseBet}
             />

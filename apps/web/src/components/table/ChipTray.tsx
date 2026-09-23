@@ -1,5 +1,9 @@
+import { useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { CHIP_DENOMINATIONS_CENTS, MIN_BET_CENTS } from "@neon21/shared";
+import {
+  MIN_BET_CENTS,
+  visibleChipDenominations,
+} from "@neon21/shared";
 import { formatCents } from "../../lib/format";
 
 type Props = {
@@ -7,20 +11,23 @@ type Props = {
   balanceCents: number;
   lastBetCents?: number;
   onAdd: (cents: number) => void;
+  onRemove: (cents: number) => void;
   onClear: () => void;
   onReuse: () => void;
 };
 
-const CHIP_KEYS = ["Q", "W", "E"] as const;
+const CHIP_KEYS = ["Q", "W", "E", "R", "T", "Y", "U"] as const;
 
 export function ChipTray({
   pendingBetCents,
   balanceCents,
   lastBetCents = 0,
   onAdd,
+  onRemove,
   onClear,
   onReuse,
 }: Props) {
+  const [removing, setRemoving] = useState(false);
   const remaining = Math.max(0, balanceCents - pendingBetCents);
   const canBetAnything =
     remaining >= MIN_BET_CENTS ||
@@ -28,6 +35,26 @@ export function ChipTray({
   const canClear = pendingBetCents > 0;
   const canReuse =
     lastBetCents >= MIN_BET_CENTS && lastBetCents <= balanceCents;
+  const chips = visibleChipDenominations(balanceCents);
+  const longTimer = useRef<number | null>(null);
+  const longFired = useRef(false);
+
+  function clearLong() {
+    if (longTimer.current != null) {
+      window.clearTimeout(longTimer.current);
+      longTimer.current = null;
+    }
+  }
+
+  function applyChip(cents: number, remove: boolean) {
+    if (remove) {
+      if (pendingBetCents <= 0) return;
+      onRemove(cents);
+      return;
+    }
+    if (!canBetAnything) return;
+    onAdd(cents);
+  }
 
   return (
     <div className="chip-tray">
@@ -45,10 +72,11 @@ export function ChipTray({
         </span>
       </motion.div>
       <div className="chip-row">
-        {CHIP_DENOMINATIONS_CENTS.map((c, i) => {
+        {chips.map((c, i) => {
           const fits = c <= remaining;
-          const allIn = !fits && canBetAnything;
-          const disabled = !canBetAnything;
+          const allIn = !fits && canBetAnything && !removing;
+          const canRemove = pendingBetCents > 0;
+          const disabled = removing ? !canRemove : !canBetAnything;
           const keyLabel = CHIP_KEYS[i] ?? String(i + 1);
           return (
             <motion.button
@@ -58,32 +86,75 @@ export function ChipTray({
                 "chip-btn",
                 disabled ? "chip-btn-disabled" : "",
                 allIn ? "chip-btn-allin" : "",
+                removing ? "chip-btn-remove" : "",
+                c >= 50_000 ? "chip-btn-high" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
               whileTap={!disabled ? { scale: 0.88 } : undefined}
               whileHover={!disabled ? { y: -2 } : undefined}
               disabled={disabled}
-              onClick={() => {
-                if (disabled) return;
-                onAdd(c);
+              onPointerDown={(e) => {
+                // Keep drawer drag from stealing chip taps.
+                e.stopPropagation();
+                if (e.button !== 0 || removing) return;
+                longFired.current = false;
+                clearLong();
+                longTimer.current = window.setTimeout(() => {
+                  longFired.current = true;
+                  if (canRemove) applyChip(c, true);
+                }, 380);
+              }}
+              onPointerUp={(e) => {
+                e.stopPropagation();
+                clearLong();
+              }}
+              onPointerLeave={clearLong}
+              onPointerCancel={clearLong}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (canRemove) applyChip(c, true);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (longFired.current) {
+                  longFired.current = false;
+                  return;
+                }
+                applyChip(c, removing || e.shiftKey);
               }}
               title={
-                disabled
-                  ? `Need at least ${formatCents(MIN_BET_CENTS)}`
-                  : allIn
-                    ? `All in ${formatCents(remaining)}`
-                    : `Key ${keyLabel}`
+                removing
+                  ? `Remove ${formatCents(c)}`
+                  : disabled
+                    ? `Need at least ${formatCents(MIN_BET_CENTS)}`
+                    : allIn
+                      ? `All in ${formatCents(remaining)}`
+                      : `Add ${formatCents(c)} (${keyLabel})`
               }
             >
-              <span>{c / 100}</span>
+              <span>
+                {removing ? "−" : ""}
+                {c / 100}
+              </span>
               {allIn && <span className="chip-allin-tag">all in</span>}
-              <kbd className="kbd chip-kbd">{keyLabel}</kbd>
+              {!removing && <kbd className="kbd chip-kbd">{keyLabel}</kbd>}
             </motion.button>
           );
         })}
       </div>
       <div className="chip-actions">
+        <motion.button
+          type="button"
+          className={`btn btn-sm${removing ? "" : " btn-ghost"}`}
+          whileTap={{ scale: 0.95 }}
+          aria-pressed={removing}
+          disabled={!canClear && !removing}
+          onClick={() => setRemoving((v) => !v)}
+        >
+          {removing ? "Done" : "Remove"}
+        </motion.button>
         <motion.button
           type="button"
           className="btn btn-sm btn-ghost"
@@ -92,6 +163,7 @@ export function ChipTray({
           title={canClear ? undefined : "No bet to clear"}
           onClick={() => {
             if (!canClear) return;
+            setRemoving(false);
             onClear();
           }}
         >
@@ -111,6 +183,7 @@ export function ChipTray({
           }
           onClick={() => {
             if (!canReuse) return;
+            setRemoving(false);
             onReuse();
           }}
         >

@@ -95,8 +95,19 @@ export const ClaimResponseSchema = z.object({
 });
 export type ClaimResponse = z.infer<typeof ClaimResponseSchema>;
 
-export const CHIP_DENOMINATIONS_CENTS = [500, 2500, 10000] as const;
+export const CHIP_DENOMINATIONS_CENTS = [
+  500, 1000, 2500, 5000, 10000, 50000, 100000,
+] as const;
 export type ChipDenominationCents = (typeof CHIP_DENOMINATIONS_CENTS)[number];
+
+/** Big chips only appear once bankroll can use them. */
+export function visibleChipDenominations(
+  balanceCents: number
+): ChipDenominationCents[] {
+  return CHIP_DENOMINATIONS_CENTS.filter(
+    (c) => c <= 10_000 || balanceCents >= c
+  );
+}
 
 export const MIN_BET_CENTS = 500;
 export const SEAT_CAPACITY = 7;

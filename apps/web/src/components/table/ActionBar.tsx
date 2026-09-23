@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useDragControls } from "framer-motion";
 
 export type QueuedAction = "hit" | "stand" | "double" | "split";
 
@@ -78,6 +78,7 @@ export function ActionBar({
   chipTray,
 }: Props) {
   const isMobile = useIsNarrow();
+  const dragControls = useDragControls();
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [doubleBurst, setDoubleBurst] = useState(false);
@@ -183,7 +184,7 @@ export function ActionBar({
       document.documentElement.style.removeProperty("--action-drawer-pad");
       return;
     }
-    const openPad = showBet ? "16rem" : showInsurance ? "12rem" : "10.5rem";
+    const openPad = showBet ? "19.5rem" : showInsurance ? "12rem" : "10.5rem";
     document.documentElement.style.setProperty(
       "--action-drawer-pad",
       drawer === "open" ? openPad : "5.5rem"
@@ -506,6 +507,8 @@ export function ActionBar({
             exit={{ y: "100%" }}
             transition={{ type: "spring", stiffness: 380, damping: 36 }}
             drag="y"
+            dragControls={dragControls}
+            dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.05, bottom: 0.55 }}
             onDragEnd={(_, info) => {
@@ -525,6 +528,10 @@ export function ActionBar({
               aria-label={
                 drawer === "open" ? "Collapse panel" : "Expand panel"
               }
+              onPointerDown={(e) => {
+                if (drawerLocked) return;
+                dragControls.start(e);
+              }}
               onClick={() => {
                 if (drawerLocked) return;
                 peekPinnedRef.current = false;
