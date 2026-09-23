@@ -468,8 +468,8 @@ export function ActionBar({
   }
 
   const showChrome =
-    !!displayFlash ||
-    (!isMobile && (showBet || showInsurance || showPlayRow));
+    !isMobile &&
+    (!!displayFlash || showBet || showInsurance || showPlayRow);
 
   return (
     <>

@@ -318,6 +318,23 @@ export function TablePage() {
     return () => window.removeEventListener("neon21:action-drawer", onDrawer);
   }, [focusSeatIndex]);
 
+  useEffect(() => {
+    if (focusSeatIndex == null) return;
+    const el = document.querySelector<HTMLElement>(
+      `[data-seat-index="${focusSeatIndex}"]`
+    );
+    if (!el || typeof ResizeObserver === "undefined") return;
+    let lastH = el.getBoundingClientRect().height;
+    const ro = new ResizeObserver(() => {
+      const h = el.getBoundingClientRect().height;
+      if (Math.abs(h - lastH) < 4) return;
+      lastH = h;
+      scheduleScrollSeatIntoClearView(el);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [focusSeatIndex]);
+
   const myActiveHand =
     isMyTurn && mySeat && tableState?.activeHandIndex != null
       ? mySeat.hands[tableState.activeHandIndex] ?? null
@@ -833,30 +850,24 @@ export function TablePage() {
           >
             <div className="zone-label">
               Dealer
-              <span
-                className={[
-                  "zone-live-tag",
-                  phase === "insurance" ? "zone-insurance-tag" : "",
-                  phase !== "insurance" &&
-                  phase !== "dealer" &&
-                  phase !== "dealing"
-                    ? "is-hidden"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-                aria-hidden={
-                  phase !== "insurance" &&
-                  phase !== "dealer" &&
-                  phase !== "dealing"
-                }
-              >
-                {phase === "insurance"
-                  ? "Ace up"
-                  : phase === "dealing"
-                    ? "dealing"
-                    : "playing"}
-              </span>
+              {(phase === "insurance" ||
+                phase === "dealer" ||
+                phase === "dealing") && (
+                <span
+                  className={[
+                    "zone-live-tag",
+                    phase === "insurance" ? "zone-insurance-tag" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                >
+                  {phase === "insurance"
+                    ? "Ace up"
+                    : phase === "dealing"
+                      ? "dealing"
+                      : "playing"}
+                </span>
+              )}
             </div>
             <div className="card-row">
               {(tableState?.dealer.cards ?? []).map((c, i) => (

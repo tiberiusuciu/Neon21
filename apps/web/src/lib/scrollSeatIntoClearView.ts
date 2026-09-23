@@ -1,15 +1,18 @@
-/** Scroll so `el` sits fully above the action drawer (and below the header). */
+/** Scroll so `el` sits fully above the action drawer / chat chrome (and below the header). */
 export function scrollSeatIntoClearView(el: HTMLElement) {
   const header = document.querySelector<HTMLElement>(".header");
   const drawer = document.querySelector<HTMLElement>(".action-drawer");
+  const chat = document.querySelector<HTMLElement>(".table-chat");
   const topInset = (header?.getBoundingClientRect().bottom ?? 56) + 12;
   const drawerTop = drawer?.getBoundingClientRect().top ?? window.innerHeight;
-  const bottomLimit = drawerTop - 20;
+  const chatTop = chat?.getBoundingClientRect().top ?? drawerTop;
+  // Chat pill sits above the drawer; keep seat clear of whichever is higher.
+  const bottomLimit = Math.min(drawerTop, chatTop) - 28;
 
   const rect = el.getBoundingClientRect();
   let delta = 0;
 
-  // Prefer: seat bottom just above the drawer.
+  // Prefer: seat bottom just above the chrome.
   if (rect.bottom > bottomLimit) {
     delta = rect.bottom - bottomLimit;
   } else if (rect.top < topInset) {

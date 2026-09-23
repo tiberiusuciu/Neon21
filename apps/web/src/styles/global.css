@@ -1195,10 +1195,6 @@ h3 {
   text-align: center;
 }
 
-.zone-live-tag.is-hidden {
-  visibility: hidden;
-}
-
 .seats-arc {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
@@ -1396,6 +1392,7 @@ h3 {
   gap: 0.2rem;
   position: relative;
   border-radius: 8px;
+  padding: 0.35rem 0.4rem 0.3rem;
   transition:
     outline-color 0.25s var(--ease),
     background 0.25s var(--ease);
@@ -1472,20 +1469,14 @@ h3 {
 
 .hand-win {
   outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  border-radius: 8px;
-  padding: 0.15rem;
 }
 
 .hand-lose {
   outline: 1px solid color-mix(in srgb, var(--danger) 45%, transparent);
-  border-radius: 8px;
-  padding: 0.15rem;
 }
 
 .hand-push {
   outline: 1px solid color-mix(in srgb, #f0c674 50%, transparent);
-  border-radius: 8px;
-  padding: 0.15rem;
 }
 
 .hand-meta {
