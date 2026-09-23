@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useAuth } from "../lib/auth";
 import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
-import { formatCents, formatCountdown } from "../lib/format";
+import { formatCents, formatCountdown, formatHeaderCents } from "../lib/format";
 import { useCashFx } from "../lib/cashFx";
 import { BrandMark } from "./BrandMark";
 
@@ -108,6 +108,7 @@ export function AppHeader() {
               ]
                 .filter(Boolean)
                 .join(" ")}
+              title={formatCents(balance)}
               animate={
                 walletPulse
                   ? { scale: [1, 1.18, 1], y: [0, -2, 0] }
@@ -124,7 +125,7 @@ export function AppHeader() {
                       : 0.4,
               }}
             >
-              {formatCents(balance)}
+              {formatHeaderCents(balance)}
             </motion.span>
             <button
               type="button"
