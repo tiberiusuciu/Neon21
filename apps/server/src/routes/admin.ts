@@ -2,13 +2,25 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import {
   AdminTopUpBodySchema,
   AdminResetStatsBodySchema,
+  AdminSetJackpotBodySchema,
+  AdminGrantVoucherBodySchema,
   type AdminUserRow,
+  type AdminHandOutcome,
 } from "@neon21/shared";
 import { prisma } from "../lib/prisma.js";
 import { isAdminEmail } from "../lib/auth.js";
 import { getSeasonWindow } from "../lib/season.js";
 import { recomputeUserStats } from "../game/stats.js";
 import { env } from "../env.js";
+import { getPool } from "../game/table-pool.js";
+import {
+  countOpenVouchers,
+  getAdjustmentsSumCents,
+  getAvailablePotCents,
+  getClaimsSumCents,
+  getGrossTakeCents,
+  setAvailablePotCents,
+} from "../lib/jackpot.js";
 
 function toAdminUser(u: {
   id: string;
@@ -39,7 +51,100 @@ async function requireAdmin(
   return true;
 }
 
+/** Fill null balanceAfterCents by walking newest→oldest from current wallet. */
+function withBalances(
+  rows: {
+    id: string;
+    resultCents: number;
+    betCents: number;
+    isBlackjack: boolean;
+    doubled: boolean;
+    bust: boolean;
+    isInsurance: boolean;
+    balanceAfterCents: number | null;
+    createdAt: Date;
+  }[],
+  currentBalanceCents: number
+): AdminHandOutcome[] {
+  let cursor = currentBalanceCents;
+  const out: AdminHandOutcome[] = [];
+  for (const r of rows) {
+    let balanceAfterCents = r.balanceAfterCents;
+    let balanceApproximate = false;
+    if (balanceAfterCents == null) {
+      balanceAfterCents = cursor;
+      balanceApproximate = true;
+    } else {
+      cursor = balanceAfterCents;
+    }
+    out.push({
+      id: r.id,
+      resultCents: r.resultCents,
+      betCents: r.betCents,
+      isBlackjack: r.isBlackjack,
+      doubled: r.doubled,
+      bust: r.bust,
+      isInsurance: r.isInsurance,
+      balanceAfterCents,
+      balanceApproximate,
+      createdAt: r.createdAt.toISOString(),
+    });
+    cursor = cursor - r.resultCents;
+  }
+  return out;
+}
+
 export async function adminRoutes(app: FastifyInstance) {
+  app.get(
+    "/admin/jackpot",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const [takeCents, grossTakeCents, claimsSumCents, adjustmentsCents] =
+        await Promise.all([
+          getAvailablePotCents(),
+          getGrossTakeCents(),
+          getClaimsSumCents(),
+          getAdjustmentsSumCents(),
+        ]);
+      return {
+        takeCents,
+        grossTakeCents,
+        claimsSumCents,
+        adjustmentsCents,
+      };
+    }
+  );
+
+  app.post(
+    "/admin/jackpot/set-pot",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const parsed = AdminSetJackpotBodySchema.safeParse(request.body);
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const targetCents = Math.round(parsed.data.dollars * 100);
+      const result = await setAvailablePotCents(
+        targetCents,
+        `admin:${request.user.email}`
+      );
+
+      if (result.deltaCents !== 0) {
+        try {
+          getPool().emitJackpotDelta(result.deltaCents);
+        } catch {
+          // Socket pool not up yet — HTTP response still ok.
+        }
+      }
+
+      return result;
+    }
+  );
+
   app.get(
     "/admin/users",
     { preHandler: [app.authenticate] },
@@ -76,6 +181,105 @@ export async function adminRoutes(app: FastifyInstance) {
     }
   );
 
+  app.get(
+    "/admin/users/:userId/hands",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const { userId } = request.params as { userId: string };
+      const rawLimit = Number((request.query as { limit?: string }).limit);
+      const rawOffset = Number((request.query as { offset?: string }).offset);
+      const limit = Number.isFinite(rawLimit)
+        ? Math.min(200, Math.max(1, Math.floor(rawLimit)))
+        : 80;
+      const offset = Number.isFinite(rawOffset)
+        ? Math.max(0, Math.floor(rawOffset))
+        : 0;
+
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { id: true, balanceCents: true },
+      });
+      if (!user) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      const [total, rows, openVouchers] = await Promise.all([
+        prisma.handOutcome.count({ where: { userId } }),
+        prisma.handOutcome.findMany({
+          where: { userId },
+          orderBy: { createdAt: "desc" },
+          skip: offset,
+          take: limit,
+          select: {
+            id: true,
+            resultCents: true,
+            betCents: true,
+            isBlackjack: true,
+            doubled: true,
+            bust: true,
+            isInsurance: true,
+            balanceAfterCents: true,
+            createdAt: true,
+          },
+        }),
+        countOpenVouchers(userId),
+      ]);
+
+      // Reconstruct only works cleanly from offset 0 (current wallet as tip).
+      const seedBalance =
+        offset === 0
+          ? user.balanceCents
+          : (rows[0]?.balanceAfterCents ?? user.balanceCents);
+
+      return {
+        userId,
+        balanceCents: user.balanceCents,
+        openVouchers,
+        total,
+        hands: withBalances(rows, seedBalance),
+      };
+    }
+  );
+
+  app.post(
+    "/admin/users/:userId/grant-voucher",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const parsed = AdminGrantVoucherBodySchema.safeParse(request.body ?? {});
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const existing = await prisma.user.findUnique({ where: { id: userId } });
+      if (!existing) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      const granted = parsed.data.count;
+      await prisma.spinVoucher.createMany({
+        data: Array.from({ length: granted }, () => ({
+          userId,
+          status: "open",
+        })),
+      });
+
+      const openVouchers = await countOpenVouchers(userId);
+
+      try {
+        await getPool().refreshUserSpinProgress(userId);
+      } catch {
+        // Socket pool not up yet — HTTP response still ok.
+      }
+
+      return { userId, granted, openVouchers };
+    }
+  );
+
   app.post(
     "/admin/users/:userId/topup",
     { preHandler: [app.authenticate] },
@@ -89,8 +293,8 @@ export async function adminRoutes(app: FastifyInstance) {
 
       const { userId } = request.params as { userId: string };
       const cents = Math.round(parsed.data.dollars * 100);
-      if (cents <= 0) {
-        return reply.status(400).send({ error: "Amount must be positive" });
+      if (cents === 0) {
+        return reply.status(400).send({ error: "Amount must be non-zero" });
       }
 
       const existing = await prisma.user.findUnique({ where: { id: userId } });
@@ -98,9 +302,16 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: "User not found" });
       }
 
+      // Don't let admin debit below zero.
+      const applied =
+        cents < 0 ? Math.max(cents, -existing.balanceCents) : cents;
+      if (applied === 0) {
+        return reply.status(400).send({ error: "Balance is already zero" });
+      }
+
       const user = await prisma.user.update({
         where: { id: userId },
-        data: { balanceCents: { increment: cents } },
+        data: { balanceCents: { increment: applied } },
         select: {
           id: true,
           name: true,
@@ -111,7 +322,13 @@ export async function adminRoutes(app: FastifyInstance) {
         },
       });
 
-      return { user: toAdminUser(user), creditedCents: cents };
+      try {
+        getPool().emitWalletUpdate(userId, user.balanceCents, applied);
+      } catch {
+        // Socket pool not up yet (tests / early boot) — HTTP response still ok.
+      }
+
+      return { user: toAdminUser(user), creditedCents: applied };
     }
   );
 

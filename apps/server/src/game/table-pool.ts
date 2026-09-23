@@ -30,6 +30,36 @@ export class TablePool {
     this.io.to("lobby").emit("lobby:tables", { tables: this.list() });
   }
 
+  /** Push balance to a connected user's sockets (`user:${id}` room). */
+  emitWalletUpdate(
+    userId: string,
+    balanceCents: number,
+    creditedCents?: number
+  ) {
+    const payload =
+      creditedCents != null && creditedCents !== 0
+        ? { balanceCents, creditedCents }
+        : { balanceCents };
+    this.io.to(`user:${userId}`).emit("wallet:update", payload);
+    if (balanceCents <= 0) {
+      for (const room of this.tables.values()) {
+        void room.kickIfBroke(userId);
+      }
+    }
+  }
+
+  emitJackpotDelta(deltaCents: number) {
+    if (deltaCents === 0) return;
+    this.io.to("jackpot").emit("jackpot:delta", { deltaCents });
+  }
+
+  /** Push updated spin voucher counts to any table where the user is seated. */
+  async refreshUserSpinProgress(userId: string) {
+    await Promise.all(
+      [...this.tables.values()].map((room) => room.notifyVoucherGranted(userId))
+    );
+  }
+
   private createTable(): TableRoom {
     const id = randomUUID();
     const name = `Table ${this.nextNumber++}`;
@@ -39,16 +69,20 @@ export class TablePool {
       },
       onLobbyChanged: () => this.broadcastLobby(),
       onWalletUpdate: (userId, balanceCents) => {
-        this.io.to(`user:${userId}`).emit("wallet:update", { balanceCents });
-        if (balanceCents <= 0) {
-          for (const room of this.tables.values()) {
-            void room.kickIfBroke(userId);
-          }
-        }
+        this.emitWalletUpdate(userId, balanceCents);
       },
       onSeatedChanged: (tableId) => this.handleSeatedChanged(tableId),
       onNotice: (userId, message) => {
         this.io.to(`user:${userId}`).emit("game:error", { message });
+      },
+      onJackpotDelta: (deltaCents) => {
+        this.io.to("jackpot").emit("jackpot:delta", { deltaCents });
+      },
+      onJackpotClaim: (claim) => {
+        this.io.to("jackpot").emit("jackpot:claim", claim);
+      },
+      onJackpotWin: (win) => {
+        this.io.emit("jackpot:win", win);
       },
     });
     this.tables.set(id, room);

@@ -1,13 +1,43 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import type { AdminUserRow } from "@neon21/shared";
+import type {
+  AdminHandHistoryResponse,
+  AdminHandOutcome,
+  AdminJackpotResponse,
+  AdminUserRow,
+} from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { formatCents } from "../lib/format";
 
 type ResetPeriod = "season" | "alltime" | "custom";
+
+const HANDS_PAGE = 80;
+
+function handTag(h: AdminHandOutcome): { text: string; cls: string } {
+  if (h.isInsurance) {
+    if (h.resultCents > 0) return { text: "Ins+", cls: "tag-win" };
+    if (h.resultCents < 0) return { text: "Ins−", cls: "tag-loss" };
+    return { text: "Ins", cls: "tag-push" };
+  }
+  if (h.isBlackjack && h.resultCents > 0) return { text: "BJ", cls: "tag-bj" };
+  if (h.resultCents > 0) return { text: "Win", cls: "tag-win" };
+  if (h.resultCents < 0) return { text: "Loss", cls: "tag-loss" };
+  return { text: "Push", cls: "tag-push" };
+}
+
+function formatHandTime(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
 
 export function AdminPage() {
   const { user, token, loading } = useAuth();
@@ -23,6 +53,16 @@ export function AdminPage() {
   const [to, setTo] = useState("");
   const [resetting, setResetting] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [jackpot, setJackpot] = useState<AdminJackpotResponse | null>(null);
+  const [jackpotDollars, setJackpotDollars] = useState("");
+  const [settingJackpot, setSettingJackpot] = useState(false);
+  const [loadingJackpot, setLoadingJackpot] = useState(false);
+  const [granting, setGranting] = useState(false);
+  const [openVouchers, setOpenVouchers] = useState(0);
+  const [hands, setHands] = useState<AdminHandOutcome[]>([]);
+  const [handsTotal, setHandsTotal] = useState(0);
+  const [loadingHands, setLoadingHands] = useState(false);
+  const [loadingMoreHands, setLoadingMoreHands] = useState(false);
 
   const loadUsers = useCallback(
     async (q: string) => {
@@ -42,10 +82,73 @@ export function AdminPage() {
     [token, toast]
   );
 
+  const loadJackpot = useCallback(async () => {
+    if (!token) return;
+    setLoadingJackpot(true);
+    try {
+      const res = await api.adminJackpot(token);
+      setJackpot(res);
+      setJackpotDollars((res.takeCents / 100).toFixed(2));
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load jackpot"
+      );
+    } finally {
+      setLoadingJackpot(false);
+    }
+  }, [token, toast]);
+
+  const applyHandHistory = useCallback((res: AdminHandHistoryResponse) => {
+    setOpenVouchers(res.openVouchers);
+    setHands(res.hands);
+    setHandsTotal(res.total);
+    setSelected((prev) =>
+      prev && prev.id === res.userId
+        ? { ...prev, balanceCents: res.balanceCents }
+        : prev
+    );
+  }, []);
+
+  const loadHands = useCallback(
+    async (userId: string) => {
+      if (!token) return;
+      setLoadingHands(true);
+      setHands([]);
+      setHandsTotal(0);
+      try {
+        const res = await api.adminHandHistory(token, userId, {
+          limit: HANDS_PAGE,
+          offset: 0,
+        });
+        applyHandHistory(res);
+      } catch (err) {
+        toast.error(
+          err instanceof ApiError ? err.message : "Failed to load hand history"
+        );
+      } finally {
+        setLoadingHands(false);
+      }
+    },
+    [token, toast, applyHandHistory]
+  );
+
   useEffect(() => {
     if (!user?.isAdmin || !token) return;
     void loadUsers("");
-  }, [user?.isAdmin, token, loadUsers]);
+    void loadJackpot();
+  }, [user?.isAdmin, token, loadUsers, loadJackpot]);
+
+  useEffect(() => {
+    if (!selected?.id || !token) {
+      setHands([]);
+      setHandsTotal(0);
+      setOpenVouchers(0);
+      return;
+    }
+    void loadHands(selected.id);
+    // Reload only when switching players (loadHands churns with toast).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selected?.id, token]);
 
   if (loading) {
     return <p className="muted">Loading…</p>;
@@ -60,12 +163,52 @@ export function AdminPage() {
     await loadUsers(query);
   }
 
+  async function onSetJackpot(e: FormEvent) {
+    e.preventDefault();
+    if (!token) return;
+    const amount = Number(jackpotDollars);
+    if (!Number.isFinite(amount) || amount < 0) {
+      toast.error("Enter a non-negative dollar amount");
+      return;
+    }
+    setSettingJackpot(true);
+    try {
+      const res = await api.adminSetJackpot(token, { dollars: amount });
+      setJackpot((prev) =>
+        prev
+          ? {
+              ...prev,
+              takeCents: res.takeCents,
+              adjustmentsCents: prev.adjustmentsCents + res.deltaCents,
+            }
+          : {
+              takeCents: res.takeCents,
+              grossTakeCents: 0,
+              claimsSumCents: 0,
+              adjustmentsCents: res.deltaCents,
+            }
+      );
+      setJackpotDollars((res.takeCents / 100).toFixed(2));
+      toast.success(
+        res.deltaCents === 0
+          ? `Jackpot already ${formatCents(res.takeCents)}`
+          : `Jackpot set to ${formatCents(res.takeCents)}`
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to set jackpot"
+      );
+    } finally {
+      setSettingJackpot(false);
+    }
+  }
+
   async function onTopUp(e: FormEvent) {
     e.preventDefault();
     if (!token || !selected) return;
     const amount = Number(dollars);
-    if (!Number.isFinite(amount) || amount <= 0) {
-      toast.error("Enter a positive dollar amount");
+    if (!Number.isFinite(amount) || amount === 0) {
+      toast.error("Enter a non-zero dollar amount (negative to remove)");
       return;
     }
     setTopping(true);
@@ -76,12 +219,53 @@ export function AdminPage() {
         prev.map((u) => (u.id === res.user.id ? res.user : u))
       );
       toast.success(
-        `Credited ${formatCents(res.creditedCents)} to ${res.user.name}`
+        res.creditedCents > 0
+          ? `Credited ${formatCents(res.creditedCents)} to ${res.user.name}`
+          : `Removed ${formatCents(-res.creditedCents)} from ${res.user.name}`
       );
     } catch (err) {
-      toast.error(err instanceof ApiError ? err.message : "Top-up failed");
+      toast.error(err instanceof ApiError ? err.message : "Adjust failed");
     } finally {
       setTopping(false);
+    }
+  }
+
+  async function onGrantVoucher() {
+    if (!token || !selected) return;
+    setGranting(true);
+    try {
+      const res = await api.adminGrantVoucher(token, selected.id, { count: 1 });
+      setOpenVouchers(res.openVouchers);
+      toast.success(
+        `Granted 1 spin ticket · ${res.openVouchers} open`
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to grant voucher"
+      );
+    } finally {
+      setGranting(false);
+    }
+  }
+
+  async function onLoadMoreHands() {
+    if (!token || !selected || loadingMoreHands) return;
+    if (hands.length >= handsTotal) return;
+    setLoadingMoreHands(true);
+    try {
+      const res = await api.adminHandHistory(token, selected.id, {
+        limit: HANDS_PAGE,
+        offset: hands.length,
+      });
+      setHands((prev) => [...prev, ...res.hands]);
+      setHandsTotal(res.total);
+      setOpenVouchers(res.openVouchers);
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load more hands"
+      );
+    } finally {
+      setLoadingMoreHands(false);
     }
   }
 
@@ -121,6 +305,7 @@ export function AdminPage() {
       toast.success(
         `Removed ${res.deletedOutcomes} hand(s). Stats recomputed.`
       );
+      await loadHands(selected.id);
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Reset failed");
     } finally {
@@ -161,7 +346,51 @@ export function AdminPage() {
       transition={{ duration: 0.25 }}
     >
       <h1 className="page-title">Admin</h1>
-      <p className="page-sub">Top up wallets and reset player stats.</p>
+      <p className="page-sub">Jackpot vault, wallets, and player stats.</p>
+
+      <section className="settings-block admin-jackpot">
+        <h2 className="admin-section-title">Jackpot pool</h2>
+        {loadingJackpot && !jackpot ? (
+          <p className="muted">Loading vault…</p>
+        ) : jackpot ? (
+          <>
+            <p style={{ margin: "0 0 0.35rem" }}>
+              Available <strong>{formatCents(jackpot.takeCents)}</strong>
+            </p>
+            <p
+              className="muted"
+              style={{ margin: "0 0 0.75rem", fontSize: "0.8rem" }}
+            >
+              From losses {formatCents(jackpot.grossTakeCents)} · Claims{" "}
+              {formatCents(jackpot.claimsSumCents)} · Adjustments{" "}
+              {formatCents(jackpot.adjustmentsCents)}
+            </p>
+            <form className="form admin-jackpot-form" onSubmit={onSetJackpot}>
+              <div className="field">
+                <label htmlFor="admin-jackpot">Set available (USD)</label>
+                <input
+                  id="admin-jackpot"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  required
+                  value={jackpotDollars}
+                  onChange={(e) => setJackpotDollars(e.target.value)}
+                />
+              </div>
+              <button
+                type="submit"
+                className="btn btn-sm"
+                disabled={settingJackpot}
+              >
+                {settingJackpot ? "Saving…" : "Set pot"}
+              </button>
+            </form>
+          </>
+        ) : (
+          <p className="muted">Could not load jackpot.</p>
+        )}
+      </section>
 
       <form className="form admin-search" onSubmit={onSearch}>
         <div className="field">
@@ -190,9 +419,7 @@ export function AdminPage() {
                 <button
                   type="button"
                   className={
-                    selected?.id === u.id
-                      ? "admin-user active"
-                      : "admin-user"
+                    selected?.id === u.id ? "admin-user active" : "admin-user"
                   }
                   onClick={() => setSelected(u)}
                 >
@@ -209,7 +436,7 @@ export function AdminPage() {
 
         <div className="admin-detail settings-block">
           {!selected && (
-            <p className="muted">Select a player to top up or reset stats.</p>
+            <p className="muted">Select a player to inspect or adjust.</p>
           )}
           {selected && (
             <>
@@ -221,27 +448,43 @@ export function AdminPage() {
                 <p style={{ margin: "0.5rem 0 0" }}>
                   Balance {formatCents(selected.balanceCents)} · Net{" "}
                   {formatCents(selected.netProfitCents)} · {selected.handsPlayed}{" "}
-                  hands
+                  hands · {openVouchers} spin
+                  {openVouchers === 1 ? "" : "s"}
                 </p>
               </div>
 
               <form className="form" onSubmit={onTopUp}>
                 <div className="field">
-                  <label htmlFor="admin-topup">Top up (USD)</label>
+                  <label htmlFor="admin-topup">Adjust balance (USD)</label>
                   <input
                     id="admin-topup"
                     type="number"
-                    min="0.01"
                     step="0.01"
                     required
                     value={dollars}
                     onChange={(e) => setDollars(e.target.value)}
+                    placeholder="100 or -50"
                   />
+                  <p
+                    className="muted"
+                    style={{ margin: "0.35rem 0 0", fontSize: "0.8rem" }}
+                  >
+                    Use a negative amount to remove funds.
+                  </p>
                 </div>
                 <button type="submit" className="btn" disabled={topping}>
-                  {topping ? "Crediting…" : "Add funds"}
+                  {topping ? "Updating…" : "Apply"}
                 </button>
               </form>
+
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={granting}
+                onClick={() => void onGrantVoucher()}
+              >
+                {granting ? "Granting…" : "Grant spin ticket"}
+              </button>
 
               <form className="form" onSubmit={onResetStats}>
                 <p
@@ -309,6 +552,74 @@ export function AdminPage() {
               >
                 {deleting ? "Deleting…" : "Delete user"}
               </button>
+
+              <section className="admin-hands">
+                <h2 className="admin-section-title">Hand history</h2>
+                <p
+                  className="muted"
+                  style={{ margin: "0 0 0.65rem", fontSize: "0.8rem" }}
+                >
+                  P/L, bet, and balance after each settle
+                  {handsTotal > 0 ? ` · ${handsTotal} total` : ""}
+                </p>
+                {loadingHands ? (
+                  <p className="muted">Loading hands…</p>
+                ) : hands.length === 0 ? (
+                  <p className="muted">No hands recorded.</p>
+                ) : (
+                  <>
+                    <ul className="admin-hand-list">
+                      {hands.map((h) => {
+                        const tag = handTag(h);
+                        const pnlCls =
+                          h.resultCents > 0
+                            ? "admin-hand-win"
+                            : h.resultCents < 0
+                              ? "admin-hand-loss"
+                              : "admin-hand-push";
+                        return (
+                          <li key={h.id} className="admin-hand-row">
+                            <span className={`stats-tag admin-hand-tag ${tag.cls}`}>
+                              {tag.text}
+                            </span>
+                            <span className={`admin-hand-pnl ${pnlCls}`}>
+                              {h.resultCents > 0 ? "+" : ""}
+                              {formatCents(h.resultCents)}
+                            </span>
+                            <span className="muted admin-hand-bet">
+                              bet {formatCents(h.betCents)}
+                              {h.doubled ? " · 2×" : ""}
+                              {h.bust ? " · bust" : ""}
+                            </span>
+                            <span className="admin-hand-bal">
+                              bal{" "}
+                              {h.balanceAfterCents == null
+                                ? "—"
+                                : formatCents(h.balanceAfterCents)}
+                              {h.balanceApproximate ? "~" : ""}
+                            </span>
+                            <span className="muted admin-hand-time">
+                              {formatHandTime(h.createdAt)}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {hands.length < handsTotal && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-sm"
+                        disabled={loadingMoreHands}
+                        onClick={() => void onLoadMoreHands()}
+                      >
+                        {loadingMoreHands
+                          ? "Loading…"
+                          : `Load more (${handsTotal - hands.length} left)`}
+                      </button>
+                    )}
+                  </>
+                )}
+              </section>
             </>
           )}
         </div>

@@ -7,12 +7,17 @@ import type {
   TableChatMessage,
   TableChatHistory,
   TableChatReceipts,
+  JackpotDelta,
+  JackpotClaimEntry,
+  JackpotWinBroadcast,
 } from "@neon21/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 export type ClientToServerEvents = {
   "lobby:subscribe": () => void;
+  "jackpot:subscribe": () => void;
+  "jackpot:unsubscribe": () => void;
   "table:join": (payload: { tableId: string }) => void;
   "table:leave": () => void;
   "seat:take": (payload: { seatIndex: number }) => void;
@@ -27,8 +32,26 @@ export type ClientToServerEvents = {
   "action:split": () => void;
   "insurance:take": () => void;
   "insurance:decline": () => void;
+  "spin:claim": () => void;
+  "spin:go": () => void;
+  "spin:cancel": () => void;
+  "spin:done": () => void;
   "table:chat": (payload: { text: string }) => void;
   "table:chat:read": (payload: { messageId: string }) => void;
+  "debug:setBet": (payload: { cents: number }) => void;
+  "debug:stackCards": (payload: { cards: string[] }) => void;
+  "debug:clearStack": () => void;
+  "debug:spawnBot": (payload: {
+    seatIndex: number;
+    name?: string;
+    betCents: number;
+  }) => void;
+  "debug:clearBots": () => void;
+  "debug:dealNow": () => void;
+  "debug:setBotsHold": (payload: { hold: boolean }) => void;
+  "debug:setTimerPaused": (payload: { paused: boolean }) => void;
+  "debug:grantVoucher": (payload?: { count?: number }) => void;
+  "debug:setSpinBias": (payload: { tileIndex: number | null }) => void;
 };
 
 export type ServerToClientEvents = {
@@ -39,6 +62,9 @@ export type ServerToClientEvents = {
   "table:chat": (payload: TableChatMessage) => void;
   "table:chat:history": (payload: TableChatHistory) => void;
   "table:chat:receipts": (payload: TableChatReceipts) => void;
+  "jackpot:delta": (payload: JackpotDelta) => void;
+  "jackpot:claim": (payload: JackpotClaimEntry) => void;
+  "jackpot:win": (payload: JackpotWinBroadcast) => void;
 };
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { PublicSeat } from "@neon21/shared";
+import type { PublicSeat, TableSpinState } from "@neon21/shared";
 import { formatCents } from "../../lib/format";
 import { PlayingCard } from "./PlayingCard";
 import { HandValueBadge } from "./HandValueBadge";
@@ -9,6 +9,7 @@ import {
   betAuraTier,
   seatStakeCents,
 } from "./SeatBetAura";
+import { SpinWheel } from "./SpinWheel";
 
 type Props = {
   seat: PublicSeat;
@@ -19,7 +20,15 @@ type Props = {
   canSit?: boolean;
   waitTimerProgress?: number | null;
   waitTimerUrgent?: boolean;
+  showSpinCta?: boolean;
+  spinCtaDisabled?: boolean;
+  spin?: TableSpinState | null;
   onSit: () => void;
+  onClaimSpin?: () => void;
+  onSpinGo?: () => void;
+  onSpinCancel?: () => void;
+  onSpinDone?: () => void;
+  onSpinReveal?: (spin: TableSpinState) => void;
 };
 
 export function SeatView({
@@ -31,7 +40,15 @@ export function SeatView({
   canSit = true,
   waitTimerProgress = null,
   waitTimerUrgent = false,
+  showSpinCta = false,
+  spinCtaDisabled = false,
+  spin = null,
   onSit,
+  onClaimSpin,
+  onSpinGo,
+  onSpinCancel,
+  onSpinDone,
+  onSpinReveal,
 }: Props) {
   const empty = !seat.userId;
   const split = seat.hands.length > 1;
@@ -88,6 +105,7 @@ export function SeatView({
         split ? "seat-split" : "",
         !seat.connected && seat.userId ? "seat-away" : "",
         auraTier > 0 ? `seat-aura-t${auraTier}` : "",
+        spin ? "seat-has-spin" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -131,6 +149,69 @@ export function SeatView({
             {isYou && <span className="seat-you-tag">(You)</span>}
             {!seat.connected && <span className="seat-away-tag">away</span>}
           </div>
+          {(seat.bjTowardSpin != null || (seat.spinVouchers ?? 0) > 0) && (
+            <div
+              className={`seat-bj-meter${(seat.spinVouchers ?? 0) > 0 ? " has-voucher" : ""}`}
+              title="Blackjacks toward jackpot spin"
+              aria-label={`${seat.bjTowardSpin ?? 0} of 5 blackjacks toward spin`}
+            >
+              {Array.from({ length: 5 }, (_, i) => (
+                <span
+                  key={i}
+                  className={`seat-bj-pip${i < (seat.bjTowardSpin ?? 0) || (seat.spinVouchers ?? 0) > 0 ? " is-lit" : ""}`}
+                />
+              ))}
+              {(seat.spinVouchers ?? 0) > 0 && (
+                <span className="seat-bj-voucher">×{seat.spinVouchers}</span>
+              )}
+            </div>
+          )}
+          {showSpinCta && onClaimSpin && (
+            <button
+              type="button"
+              className={`btn btn-sm seat-spin-cta${spinCtaDisabled ? " is-disabled" : ""}`}
+              disabled={spinCtaDisabled}
+              title={
+                spinCtaDisabled
+                  ? "Jackpot pot is empty"
+                  : "Spend a voucher to spin the house jackpot"
+              }
+              onClick={onClaimSpin}
+            >
+              <span className="seat-spin-cta-clip" aria-hidden>
+                <span className="seat-spin-cta-glow" />
+                <span className="seat-spin-cta-shine" />
+              </span>
+              <span className="seat-spin-cta-particles" aria-hidden>
+                {Array.from({ length: 14 }, (_, i) => (
+                  <i
+                    key={i}
+                    style={
+                      {
+                        ["--i"]: i,
+                        ["--a"]: `${(i / 14) * 360 + (i % 3) * 17}deg`,
+                        ["--d"]: `${10 + (i % 5) * 5}px`,
+                        ["--s"]: `${1.2 + (i % 4) * 0.55}px`,
+                        ["--dur"]: `${1.6 + (i % 5) * 0.35}s`,
+                        ["--del"]: `${(i * 0.13) % 1.8}s`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </span>
+              <span className="seat-spin-cta-label">Spin jackpot</span>
+            </button>
+          )}
+          {spin && onSpinGo && (
+            <SpinWheel
+              spin={spin}
+              isSpinner={isYou}
+              onSpin={onSpinGo}
+              onCancel={isYou ? onSpinCancel : undefined}
+              onReveal={onSpinReveal}
+              onAnimDone={isYou ? onSpinDone : undefined}
+            />
+          )}
           {seat.pendingBetCents > 0 && (
             <div className="seat-bet">{formatCents(seat.pendingBetCents)}</div>
           )}

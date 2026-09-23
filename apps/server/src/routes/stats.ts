@@ -44,6 +44,7 @@ export async function statsRoutes(app: FastifyInstance) {
           isBlackjack: r.isBlackjack,
           doubled: r.doubled,
           bust: r.bust,
+          isInsurance: r.isInsurance,
           createdAt: r.createdAt.toISOString(),
         })),
       };

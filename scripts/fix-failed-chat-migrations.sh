@@ -26,15 +26,27 @@ echo "==> Removing failed/obsolete chat migration rows"
 docker compose exec -T db sh -c \
   'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "
 DELETE FROM \"_prisma_migrations\"
-WHERE migration_name IN (
+WHERE finished_at IS NULL
+  AND migration_name IN (
   '\''20240923010000_chat_message_kind'\'',
+  '\''20240923000000_table_chat'\'',
   '\''20260923000000_table_chat'\'',
   '\''20260923010000_chat_drop_table_fk'\''
 );
-SELECT migration_name, finished_at, rolled_back_at, logs
-FROM \"_prisma_migrations\"
-ORDER BY started_at;
 "'
+
+# If TableChatMessage already exists (from an older chat migration), mark the
+# current create migration applied instead of re-running CREATE TABLE.
+EXISTS="$(docker compose exec -T db sh -c \
+  'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT to_regclass('\''public.\"TableChatMessage\"'\'')"' \
+  | tr -d '[:space:]')"
+
+if [[ "$EXISTS" == "TableChatMessage" ]] || [[ "$EXISTS" == *"TableChatMessage"* ]]; then
+  echo "==> TableChatMessage present — ensuring 20240923000000_table_chat is marked applied"
+  docker compose run --rm --entrypoint sh server -c \
+    'cd /app/apps/server && npx prisma migrate resolve --applied 20240923000000_table_chat' \
+    || true
+fi
 
 echo "==> Rebuilding API so migrate deploy can apply 20240923000000_table_chat"
 docker compose up -d --build --force-recreate server

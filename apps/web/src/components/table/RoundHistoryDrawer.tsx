@@ -29,6 +29,8 @@ export type RoundHistoryEntry = {
   at: number;
   netCents: number;
   betCents: number;
+  insuranceCents?: number;
+  insuranceNetCents?: number;
   hands: RoundHandSummary[];
   dealerCards: HistoryCard[];
   dealerValueLabel: string;
@@ -169,6 +171,28 @@ export function RoundHistoryDrawer({ open, entries, onClose }: Props) {
 
                     <div className="history-row-meta">
                       Bet {formatCents(row.betCents)}
+                      {row.insuranceCents != null && row.insuranceCents > 0 ? (
+                        <>
+                          {" · "}
+                          Ins {formatCents(row.insuranceCents)}
+                          {row.insuranceNetCents != null ? (
+                            <span
+                              className={
+                                row.insuranceNetCents > 0
+                                  ? " is-pos"
+                                  : row.insuranceNetCents < 0
+                                    ? " is-neg"
+                                    : ""
+                              }
+                            >
+                              {" "}
+                              (
+                              {row.insuranceNetCents > 0 ? "+" : ""}
+                              {formatCents(row.insuranceNetCents)})
+                            </span>
+                          ) : null}
+                        </>
+                      ) : null}
                     </div>
                   </li>
                 ))}

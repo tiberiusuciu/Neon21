@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import type { PublicSeat, TablePhase } from "@neon21/shared";
+import type { PublicSeat, TablePhase, TableSpinState } from "@neon21/shared";
 import { MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { useGameSocket } from "../lib/SocketProvider";
+import { onEvent } from "../lib/socket";
+import { api } from "../lib/api";
 import { useTableKeyboard } from "../lib/useTableKeyboard";
 import { useCashFx } from "../lib/cashFx";
-import { formatCountdown } from "../lib/format";
+import { formatCents, formatCountdown } from "../lib/format";
 import { useAutoHeight } from "../lib/useAutoHeight";
 import { PlayingCard } from "../components/table/PlayingCard";
 import { HandValueBadge } from "../components/table/HandValueBadge";
@@ -16,6 +18,7 @@ import { ChipTray } from "../components/table/ChipTray";
 import { ActionBar, type QueuedAction } from "../components/table/ActionBar";
 import { PhaseBanner } from "../components/table/PhaseBanner";
 import { TableChat } from "../components/table/TableChat";
+import { TableDebugPanel } from "../components/table/TableDebugPanel";
 import { getPhaseBannerCopy } from "../components/table/phaseCopy";
 import {
   RoundHistoryDrawer,
@@ -27,6 +30,8 @@ import { useToast } from "../lib/toast";
 import { scheduleScrollSeatIntoClearView } from "../lib/scrollSeatIntoClearView";
 
 const HISTORY_MAX = 24;
+const SHOW_TABLE_DEBUG =
+  import.meta.env.VITE_STAGING === "true" || import.meta.env.DEV;
 
 const PHASE_LABEL: Record<TablePhase, string> = {
   betting: "Betting",
@@ -45,17 +50,19 @@ const EMPTY_SEATS: PublicSeat[] = Array.from({ length: SEAT_CAPACITY }, (_, i) =
   lastBetCents: 0,
   hands: [],
   insuranceCents: 0,
+  insuranceResolved: false,
   connected: false,
 }));
 
 export function TablePage() {
   const { tableId } = useParams<{ tableId: string }>();
   const navigate = useNavigate();
-  const { user, wallet } = useAuth();
+  const { user, wallet, token } = useAuth();
   const toast = useToast();
   const {
     connected,
     tableState,
+    socket,
     joinTable,
     leaveTable,
     takeSeat,
@@ -70,20 +77,28 @@ export function TablePage() {
     split,
     takeInsurance,
     declineInsurance,
+    claimSpin,
+    goSpin,
+    cancelSpin,
+    spinDone,
     chatMessages,
     sendChat,
+    subscribeJackpot,
+    unsubscribeJackpot,
   } = useGameSocket();
   const { playWin, playSpend, playPush } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
   const balanceCents = wallet?.balanceCents ?? user?.balanceCents ?? 0;
+  const [jackpotTakeCents, setJackpotTakeCents] = useState(0);
+  const jackpotTakeRef = useRef(0);
 
   const [now, setNow] = useState(() => Date.now());
-  const [insuranceDecided, setInsuranceDecided] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>(() =>
     tableId ? loadRoundHistory(tableId) : []
   );
   const celebratedSettle = useRef(false);
+  const celebratedSpin = useRef<string | null>(null);
   const spentBetRound = useRef(false);
   const spentInsuranceRound = useRef(false);
   const loggedSettle = useRef(false);
@@ -96,6 +111,48 @@ export function TablePage() {
       leaveTable();
     };
   }, [tableId, joinTable, leaveTable]);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api.jackpot(token);
+        if (cancelled) return;
+        jackpotTakeRef.current = res.takeCents;
+        setJackpotTakeCents(res.takeCents);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    subscribeJackpot();
+    return () => unsubscribeJackpot();
+  }, [subscribeJackpot, unsubscribeJackpot]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const offDelta = onEvent(socket, "jackpot:delta", ({ deltaCents }) => {
+      if (deltaCents === 0) return;
+      const next = Math.max(0, jackpotTakeRef.current + deltaCents);
+      jackpotTakeRef.current = next;
+      setJackpotTakeCents(next);
+    });
+    const offClaim = onEvent(socket, "jackpot:claim", (claim) => {
+      const next = Math.max(0, jackpotTakeRef.current - claim.payoutCents);
+      jackpotTakeRef.current = next;
+      setJackpotTakeCents(next);
+    });
+    return () => {
+      offDelta();
+      offClaim();
+    };
+  }, [socket]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -116,9 +173,6 @@ export function TablePage() {
   const endsAt = tableState?.phaseEndsAt ?? null;
 
   const phase: TablePhase = tableState?.phase ?? "betting";
-  useEffect(() => {
-    if (phase !== "insurance") setInsuranceDecided(false);
-  }, [phase]);
 
   const mySeat = useMemo(() => {
     if (!tableState || !user) return null;
@@ -151,13 +205,24 @@ export function TablePage() {
         cards: toHistoryCards(h.cards),
       }));
       const dealer = tableState?.dealer;
+      const dealerCards = toHistoryCards(dealer?.cards ?? []);
+      const dealerBj =
+        dealerCards.length === 2 &&
+        (dealer?.value?.soft === 21 || dealer?.value?.hard === 21);
+      const insuranceCents = mySeat.insuranceCents;
+      // Insurance stake already left the wallet; win pays 2:1 profit (+2×).
+      const insuranceNetCents =
+        insuranceCents > 0 ? (dealerBj ? insuranceCents * 2 : -insuranceCents) : 0;
+      const handNet = hands.reduce((s, h) => s + h.resultCents, 0);
       const entry: RoundHistoryEntry = {
         id: `${Date.now()}-${hands.map((h) => h.resultCents).join(",")}`,
         at: Date.now(),
-        netCents: hands.reduce((s, h) => s + h.resultCents, 0),
+        netCents: handNet + insuranceNetCents,
         betCents: hands.reduce((s, h) => s + h.betCents, 0),
+        insuranceCents: insuranceCents > 0 ? insuranceCents : undefined,
+        insuranceNetCents: insuranceCents > 0 ? insuranceNetCents : undefined,
         hands,
-        dealerCards: toHistoryCards(dealer?.cards ?? []),
+        dealerCards,
         dealerValueLabel: dealer?.value
           ? dealer.value.label || handValueLabel(dealer.value)
           : "—",
@@ -166,7 +231,17 @@ export function TablePage() {
     }
 
     if (celebratedSettle.current) return;
-    const net = mySeat.hands.reduce((sum, h) => sum + (h.resultCents ?? 0), 0);
+    const dealer = tableState?.dealer;
+    const dealerCards = toHistoryCards(dealer?.cards ?? []);
+    const dealerBj =
+      dealerCards.length === 2 &&
+      (dealer?.value?.soft === 21 || dealer?.value?.hard === 21);
+    const insuranceCents = mySeat.insuranceCents;
+    const insuranceNetCents =
+      insuranceCents > 0 ? (dealerBj ? insuranceCents * 2 : -insuranceCents) : 0;
+    const net =
+      mySeat.hands.reduce((sum, h) => sum + (h.resultCents ?? 0), 0) +
+      insuranceNetCents;
     if (net < 0) return;
 
     celebratedSettle.current = true;
@@ -194,6 +269,25 @@ export function TablePage() {
       fire();
     }, 1000);
   }, [phase, mySeat, playWin, playPush, tableState?.dealer]);
+
+  const spin = tableState?.spin ?? null;
+
+  const onSpinReveal = useCallback(
+    (s: TableSpinState) => {
+      if (s.userId !== user?.id) return;
+      const key = `${s.tileIndex}-${s.payoutCents}-${s.potBeforeCents}`;
+      if (celebratedSpin.current === key) return;
+      celebratedSpin.current = key;
+      if ((s.payoutCents ?? 0) <= 0) return;
+      const from = document.querySelector(".seat-you") as HTMLElement | null;
+      playWin(s.payoutCents!, { kind: "blackjack", fromEl: from });
+    },
+    [user?.id, playWin]
+  );
+
+  useEffect(() => {
+    if (!spin) celebratedSpin.current = null;
+  }, [spin]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -471,12 +565,19 @@ export function TablePage() {
       ? tableState.activeHandIndex + 1
       : null;
 
+  const insuranceCostCents = useMemo(() => {
+    if (!mySeat?.hands[0]) return 0;
+    return Math.floor(mySeat.hands[0].betCents / 2);
+  }, [mySeat]);
+
+  const canAffordInsurance =
+    insuranceCostCents > 0 && balanceCents >= insuranceCostCents;
+
   const showInsurance =
     seated &&
     phase === "insurance" &&
     dealerHasAce &&
-    !insuranceDecided &&
-    (mySeat?.insuranceCents ?? 0) === 0;
+    !mySeat?.insuranceResolved;
 
   const statusLine = useMemo(() => {
     if (phase === "playerTurns") {
@@ -541,13 +642,10 @@ export function TablePage() {
   }, [actionHand, balanceCents]);
   const canSplit = useMemo(() => {
     if (!actionHand || !mySeat) return false;
-    if (mySeat.hands.length >= 4) return false;
     if (actionHand.cards.length !== 2) return false;
     const [a, b] = actionHand.cards;
     if (!a || !b || "hidden" in a || "hidden" in b) return false;
     if (!("rank" in a) || !("rank" in b) || a.rank !== b.rank) return false;
-    // Match server: no re-split aces
-    if (a.rank === "A" && mySeat.hands.length > 1) return false;
     return balanceCents >= actionHand.betCents;
   }, [actionHand, mySeat, balanceCents]);
 
@@ -631,12 +729,16 @@ export function TablePage() {
   );
 
   const onTakeInsuranceKb = useCallback(() => {
-    setInsuranceDecided(true);
+    if (!canAffordInsurance) {
+      toast.error(
+        `Need ${formatCents(insuranceCostCents)} in chips for insurance`
+      );
+      return;
+    }
     takeInsurance();
-  }, [takeInsurance]);
+  }, [canAffordInsurance, insuranceCostCents, takeInsurance, toast]);
 
   const onDeclineInsuranceKb = useCallback(() => {
-    setInsuranceDecided(true);
     declineInsurance();
   }, [declineInsurance]);
 
@@ -728,7 +830,7 @@ export function TablePage() {
 
   return (
     <motion.div
-      className="table-page"
+      className={`table-page${spin ? " is-spin-spotlight" : ""}${spin?.phase === "result" ? " is-spin-active" : ""}`}
       initial={{ y: 8 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25 }}
@@ -832,6 +934,7 @@ export function TablePage() {
       <motion.div
         className={[
           "felt",
+          spin ? "felt-spin" : "",
           phase === "dealer" ? "felt-dealer" : "",
           phase === "dealing" ? "felt-dealing" : "",
           phase === "insurance" ? "felt-insurance" : "",
@@ -914,6 +1017,22 @@ export function TablePage() {
                     waitTimerProgress={showWaitTimer ? timerProgress : null}
                     waitTimerUrgent={showWaitTimer && timerUrgent}
                     canSit={balanceCents > 0}
+                    showSpinCta={
+                      seatIsYou &&
+                      phase === "betting" &&
+                      !spin &&
+                      seat.pendingBetCents <= 0 &&
+                      (seat.spinVouchers ?? 0) > 0
+                    }
+                    spinCtaDisabled={jackpotTakeCents <= 0}
+                    spin={
+                      spin && spin.seatIndex === seat.index ? spin : null
+                    }
+                    onClaimSpin={claimSpin}
+                    onSpinGo={goSpin}
+                    onSpinCancel={cancelSpin}
+                    onSpinDone={spinDone}
+                    onSpinReveal={onSpinReveal}
                     onSit={() => {
                       if (balanceCents <= 0) {
                         toast.error("Need chips to sit — claim from the lobby");
@@ -951,14 +1070,10 @@ export function TablePage() {
         onDouble={double}
         onSplit={split}
         onQueue={onQueue}
-        onTakeInsurance={() => {
-          setInsuranceDecided(true);
-          takeInsurance();
-        }}
-        onDeclineInsurance={() => {
-          setInsuranceDecided(true);
-          declineInsurance();
-        }}
+        onTakeInsurance={onTakeInsuranceKb}
+        onDeclineInsurance={onDeclineInsuranceKb}
+        insuranceCostCents={insuranceCostCents}
+        canAffordInsurance={canAffordInsurance}
         chipTray={
           mySeat ? (
             <ChipTray
@@ -979,6 +1094,8 @@ export function TablePage() {
         selfUserId={user?.id ?? null}
         onSend={sendChat}
       />
+
+      {SHOW_TABLE_DEBUG ? <TableDebugPanel /> : null}
 
       {shortcutHint && (
         <p className="kbd-hints desktop-only" aria-hidden>

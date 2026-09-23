@@ -131,6 +131,14 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       socket.emit("lobby:tables", { tables: pool.list() });
     });
 
+    socket.on("jackpot:subscribe", () => {
+      socket.join("jackpot");
+    });
+
+    socket.on("jackpot:unsubscribe", () => {
+      socket.leave("jackpot");
+    });
+
     socket.on("table:join", async (raw) => {
       const parsed = TableIdSchema.safeParse(raw);
       if (!parsed.success) {
@@ -313,6 +321,37 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (err) socket.emit("game:error", { message: err });
     });
 
+    socket.on("spin:claim", async () => {
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) return;
+      const err = await room.claimSpin(userId);
+      if (err) socket.emit("game:error", { message: err });
+    });
+
+    socket.on("spin:go", async () => {
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) return;
+      const err = await room.goSpin(userId);
+      if (err) socket.emit("game:error", { message: err });
+    });
+
+    socket.on("spin:cancel", () => {
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) return;
+      const err = room.cancelSpin(userId);
+      if (err) socket.emit("game:error", { message: err });
+    });
+
+    socket.on("spin:done", () => {
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) return;
+      room.notifySpinDone(userId);
+    });
+
     socket.on("table:chat", async (raw) => {
       const parsed = TableChatSendSchema.safeParse(raw);
       if (!parsed.success) {
@@ -372,6 +411,159 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
         app.log.error(err, "chat read failed");
       }
     });
+
+    if (env.tableDebugEnabled) {
+      const DebugSetBetSchema = z.object({
+        cents: z.number().int().min(0).max(100_000_000),
+      });
+      const DebugStackSchema = z.object({
+        cards: z.array(z.string().min(2).max(4)).max(52),
+      });
+      const DebugBotSchema = z.object({
+        seatIndex: z.number().int().min(0).max(6),
+        name: z.string().trim().min(1).max(24).optional(),
+        betCents: z.number().int().positive().max(100_000_000),
+      });
+
+      function debugRoom() {
+        const tableId = socket.data.tableId as string | undefined;
+        return tableId ? pool.get(tableId) : undefined;
+      }
+
+      socket.on("debug:setBet", (raw) => {
+        const parsed = DebugSetBetSchema.safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid debug bet" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = room.debugSetBet(userId, parsed.data.cents);
+        if (err) socket.emit("game:error", { message: err });
+      });
+
+      socket.on("debug:stackCards", (raw) => {
+        const parsed = DebugStackSchema.safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid card list" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = room.debugStackCards(parsed.data.cards);
+        if (err) socket.emit("game:error", { message: err });
+      });
+
+      socket.on("debug:clearStack", () => {
+        const room = debugRoom();
+        if (!room) return;
+        room.debugClearStack();
+      });
+
+      socket.on("debug:spawnBot", (raw) => {
+        const parsed = DebugBotSchema.safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid bot spawn" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = room.debugSpawnBot(parsed.data);
+        if (err) socket.emit("game:error", { message: err });
+      });
+
+      socket.on("debug:clearBots", () => {
+        const room = debugRoom();
+        if (!room) return;
+        room.debugClearBots();
+      });
+
+      socket.on("debug:dealNow", () => {
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = room.debugDealNow();
+        if (err) socket.emit("game:error", { message: err });
+      });
+
+      socket.on("debug:setBotsHold", (raw) => {
+        const parsed = z.object({ hold: z.boolean() }).safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid bots-hold flag" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        room.debugSetBotsHold(parsed.data.hold);
+      });
+
+      socket.on("debug:setTimerPaused", (raw) => {
+        const parsed = z.object({ paused: z.boolean() }).safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid timer-pause flag" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        room.debugSetTimerPaused(parsed.data.paused);
+      });
+
+      socket.on("debug:grantVoucher", async (raw) => {
+        const parsed = z
+          .object({ count: z.number().int().min(1).max(10).optional() })
+          .safeParse(raw ?? {});
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid voucher grant" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = await room.debugGrantVoucher(
+          userId,
+          parsed.data.count ?? 1
+        );
+        if (err) socket.emit("game:error", { message: err });
+      });
+
+      socket.on("debug:setSpinBias", (raw) => {
+        const parsed = z
+          .object({
+            tileIndex: z.number().int().min(0).max(99).nullable(),
+          })
+          .safeParse(raw);
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid spin bias" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = room.debugSetSpinBias(parsed.data.tileIndex);
+        if (err) socket.emit("game:error", { message: err });
+      });
+    }
 
     socket.on("disconnect", () => {
       const tableId = socket.data.tableId as string | undefined;

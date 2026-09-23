@@ -18,6 +18,8 @@ type Props = {
   handBusted?: boolean;
   timerProgress?: number | null;
   timerUrgent?: boolean;
+  insuranceCostCents?: number;
+  canAffordInsurance?: boolean;
   onHit: () => void;
   onStand: () => void;
   onDouble: () => void;
@@ -68,6 +70,8 @@ export function ActionBar({
   handBusted = false,
   timerProgress = null,
   timerUrgent = false,
+  insuranceCostCents = 0,
+  canAffordInsurance = true,
   onHit,
   onStand,
   onDouble,
@@ -278,15 +282,22 @@ export function ActionBar({
     <div className="insurance-panel">
       <div className="insurance-panel-copy">
         <strong>Insurance</strong>
-        <span>Half your bet · pays 2:1 if dealer has blackjack</span>
+        <span>
+          {insuranceCostCents > 0
+            ? `$${(insuranceCostCents / 100).toFixed(2)} · pays 2:1 if dealer blackjack`
+            : "Half your bet · pays 2:1 if dealer has blackjack"}
+        </span>
+        {!canAffordInsurance ? (
+          <span className="insurance-panel-warn">Not enough chips left</span>
+        ) : null}
       </div>
       <div className="action-row insurance-row">
         <motion.button
           type="button"
           className="btn btn-insurance-take"
-          whileHover={!busy ? { scale: 1.03 } : undefined}
-          whileTap={!busy ? { scale: 0.94 } : undefined}
-          disabled={busy}
+          whileHover={!busy && canAffordInsurance ? { scale: 1.03 } : undefined}
+          whileTap={!busy && canAffordInsurance ? { scale: 0.94 } : undefined}
+          disabled={busy || !canAffordInsurance}
           onClick={() =>
             act("Insurance taken", onTakeInsurance, { collapse: true })
           }

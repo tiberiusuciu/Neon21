@@ -1,6 +1,12 @@
 import type {
+  AdminGrantVoucherBody,
+  AdminGrantVoucherResponse,
+  AdminHandHistoryResponse,
+  AdminJackpotResponse,
   AdminResetStatsBody,
   AdminResetStatsResponse,
+  AdminSetJackpotBody,
+  AdminSetJackpotResponse,
   AdminTopUpBody,
   AdminTopUpResponse,
   AdminUsersResponse,
@@ -8,6 +14,7 @@ import type {
   GameTable,
   LeaderboardResponse,
   LeaderboardScope,
+  JackpotResponse,
   LoginBody,
   PublicUser,
   RegisterBody,
@@ -159,9 +166,55 @@ export const api = {
     );
   },
 
+  jackpot(token: string) {
+    return request<JackpotResponse>("/jackpot", { token });
+  },
+
+  adminJackpot(token: string) {
+    return request<AdminJackpotResponse>("/admin/jackpot", { token });
+  },
+
+  adminSetJackpot(token: string, body: AdminSetJackpotBody) {
+    return request<AdminSetJackpotResponse>("/admin/jackpot/set-pot", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
   adminUsers(token: string, q = "") {
     const qs = q.trim() ? `?q=${encodeURIComponent(q.trim())}` : "";
     return request<AdminUsersResponse>(`/admin/users${qs}`, { token });
+  },
+
+  adminHandHistory(
+    token: string,
+    userId: string,
+    opts: { limit?: number; offset?: number } = {}
+  ) {
+    const params = new URLSearchParams();
+    if (opts.limit != null) params.set("limit", String(opts.limit));
+    if (opts.offset != null) params.set("offset", String(opts.offset));
+    const qs = params.toString() ? `?${params}` : "";
+    return request<AdminHandHistoryResponse>(
+      `/admin/users/${userId}/hands${qs}`,
+      { token }
+    );
+  },
+
+  adminGrantVoucher(
+    token: string,
+    userId: string,
+    body: AdminGrantVoucherBody = { count: 1 }
+  ) {
+    return request<AdminGrantVoucherResponse>(
+      `/admin/users/${userId}/grant-voucher`,
+      {
+        method: "POST",
+        token,
+        body: JSON.stringify(body),
+      }
+    );
   },
 
   adminTopUp(token: string, userId: string, body: AdminTopUpBody) {

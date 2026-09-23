@@ -21,7 +21,6 @@ export interface HandState {
   stood: boolean;
   doubled: boolean;
   fromSplit: boolean;
-  fromSplitAces: boolean;
   resultCents: number | null;
 }
 
@@ -35,6 +34,8 @@ export interface SeatState {
   insuranceResolved: boolean;
   missedRounds: number;
   connected: boolean;
+  bjTowardSpin: number;
+  spinVouchers: number;
 }
 
 export interface Spectator {
@@ -47,13 +48,39 @@ export interface DealerState {
   holeRevealed: boolean;
 }
 
+export type ActiveSpin = {
+  userId: string;
+  seatIndex: number;
+  name: string;
+  voucherId: string;
+  phase: "offer" | "result";
+  remainingBettingMs: number;
+  /** Epoch ms when offer auto-spins (phase === "offer"). */
+  offerEndsAt?: number;
+  tileIndex?: number;
+  label?: string;
+  kind?: "percent" | "flat";
+  pctBps?: number;
+  payoutCents?: number;
+  potBeforeCents?: number;
+};
+
 export type RoomCallbacks = {
   broadcastState: (snapshot: TableStateSnapshot) => void;
   onLobbyChanged: () => void;
   onWalletUpdate: (userId: string, balanceCents: number) => void;
   onSeatedChanged: (tableId: string) => void;
   onNotice: (userId: string, message: string) => void;
+  /** 5% of player losses this round (wins never reduce the vault). */
+  onJackpotDelta: (deltaCents: number) => void;
+  onJackpotClaim: (claim: import("@neon21/shared").JackpotClaimEntry) => void;
+  onJackpotWin: (win: import("@neon21/shared").JackpotWinBroadcast) => void;
 };
+
+/** Synthetic seats spawned by staging table debug — no real wallet. */
+export function isDebugSeatUser(userId: string): boolean {
+  return userId.startsWith("debug:");
+}
 
 export const BETTING_MS = 20_000;
 export const ALL_BET_CLAMP_MS = 5_000;
@@ -68,5 +95,12 @@ export const SETTLE_MS = 3_000;
 export const EMPTY_DELETE_MS = 10_000;
 export const SHOE_DECKS = 6;
 export const RESHUFFLE_RATIO = 0.25;
-/** Max hands per seat after re-splits (1 original + up to 3 splits). */
-export const MAX_SPLIT_HANDS = 4;
+/** Auto `spin:go` if spinner doesn't click. */
+export const SPIN_OFFER_MS = 22_000;
+/** Client urgency window before auto-spin. */
+export const SPIN_OFFER_URGENT_MS = 5_000;
+/** Max wait for client `spin:done` after wheel starts (animation ~5.8s). */
+export const SPIN_DONE_TIMEOUT_MS = 8_500;
+/** Brief hold showing the payout on the seat before clearing spin. */
+export const SPIN_REVEAL_HOLD_MS = 1_400;
+export const SPIN_RESUME_MIN_MS = 5_000;

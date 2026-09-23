@@ -12,6 +12,7 @@ import { LobbyPage } from "./pages/LobbyPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { StatsPage } from "./pages/StatsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
+import { JackpotPage } from "./pages/JackpotPage";
 import { TablePage } from "./pages/TablePage";
 import { AdminPage } from "./pages/AdminPage";
 import { AppBridgePage } from "./pages/AppBridgePage";
@@ -36,6 +37,7 @@ function AppRoutes() {
           <Route element={<NamedRoute />}>
             <Route path="/lobby" element={<LobbyPage />} />
             <Route path="/stats" element={<StatsPage />} />
+            <Route path="/jackpot" element={<JackpotPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/admin" element={<AdminPage />} />

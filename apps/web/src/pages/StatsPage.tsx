@@ -11,6 +11,11 @@ function formatWinRate(rate: number): string {
 }
 
 function outcomeLabel(h: HandOutcome): { text: string; cls: string } {
+  if (h.isInsurance) {
+    if (h.resultCents > 0) return { text: "Ins", cls: "tag-win" };
+    if (h.resultCents < 0) return { text: "Ins", cls: "tag-loss" };
+    return { text: "Ins", cls: "tag-push" };
+  }
   if (h.isBlackjack && h.resultCents > 0) return { text: "BJ", cls: "tag-bj" };
   if (h.resultCents > 0) return { text: "Win", cls: "tag-win" };
   if (h.resultCents < 0) return { text: "Loss", cls: "tag-loss" };

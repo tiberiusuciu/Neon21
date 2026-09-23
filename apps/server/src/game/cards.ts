@@ -86,26 +86,86 @@ export function canSplit(cards: Card[]): boolean {
   return cards.length === 2 && cards[0].rank === cards[1].rank;
 }
 
+/** Parse tokens like AS, 10H, TH, KD (rank then suit). */
+export function parseDebugCardToken(token: string): Card | null {
+  const t = token.trim().toUpperCase().replace(/\s/g, "");
+  if (!t) return null;
+  let rankStr: string;
+  let suitStr: string;
+  if (t.startsWith("10")) {
+    rankStr = "10";
+    suitStr = t.slice(2);
+  } else if (t[0] === "T" && t.length >= 2) {
+    rankStr = "10";
+    suitStr = t.slice(1);
+  } else {
+    rankStr = t[0]!;
+    suitStr = t.slice(1);
+  }
+  if (!(RANKS as string[]).includes(rankStr)) return null;
+  if (!(SUITS as string[]).includes(suitStr)) return null;
+  return { rank: rankStr as Rank, suit: suitStr as Suit };
+}
+
+export function parseDebugCardList(raw: string[]): { cards: Card[]; error?: string } {
+  const cards: Card[] = [];
+  for (const token of raw) {
+    const card = parseDebugCardToken(token);
+    if (!card) return { cards: [], error: `Invalid card "${token}" (use AS, 10H, KD…)` };
+    cards.push(card);
+  }
+  return { cards };
+}
+
 export class Shoe {
   private cards: Card[] = [];
   private totalSize = 0;
+  /** Scripted draws (FIFO) — used by staging table debug. */
+  private inject: Card[] = [];
 
   constructor() {
-    this.reset();
+    this.reshuffle();
   }
 
-  reset() {
+  /** New shuffled shoe; keeps any pending inject queue. */
+  private reshuffle() {
     this.cards = createShoe();
     this.totalSize = this.cards.length;
   }
 
+  reset() {
+    this.reshuffle();
+    this.inject = [];
+  }
+
+  /** Replace the scripted draw queue (next `draw()` calls consume these first). */
+  stackNext(cards: Card[]) {
+    this.inject = [...cards];
+  }
+
+  clearInject() {
+    this.inject = [];
+  }
+
+  injectRemaining(): number {
+    return this.inject.length;
+  }
+
+  /** Peek upcoming scripted cards (debug UI). */
+  injectPreview(limit = 12): Card[] {
+    return this.inject.slice(0, limit);
+  }
+
   draw(): Card {
+    if (this.inject.length > 0) {
+      return this.inject.shift()!;
+    }
     if (this.cards.length === 0 || needsReshuffle(this.cards.length, this.totalSize)) {
-      this.reset();
+      this.reshuffle();
     }
     const card = this.cards.pop();
     if (!card) {
-      this.reset();
+      this.reshuffle();
       return this.cards.pop()!;
     }
     return card;

@@ -1,16 +1,48 @@
 import type { CSSProperties } from "react";
 
-/** $25, $50, $100, $250, $500, $1k, $5k */
+/** $25 … $5k … $10k … $1M */
 export const BET_AURA_THRESHOLDS_CENTS = [
-  2_500, 5_000, 10_000, 25_000, 50_000, 100_000, 500_000,
+  2_500, // $25
+  5_000, // $50
+  10_000, // $100
+  25_000, // $250
+  50_000, // $500
+  100_000, // $1k
+  500_000, // $5k
+  1_000_000, // $10k
+  2_500_000, // $25k
+  5_000_000, // $50k
+  10_000_000, // $100k
+  50_000_000, // $500k
+  100_000_000, // $1M
 ] as const;
 
-export type BetAuraTier = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+export type BetAuraTier =
+  | 0
+  | 1
+  | 2
+  | 3
+  | 4
+  | 5
+  | 6
+  | 7
+  | 8
+  | 9
+  | 10
+  | 11
+  | 12
+  | 13;
 
 const PARTICLE_COUNT = 48;
 const BURST_COUNT = 14;
 
 export function betAuraTier(cents: number): BetAuraTier {
+  if (cents >= 100_000_000) return 13;
+  if (cents >= 50_000_000) return 12;
+  if (cents >= 10_000_000) return 11;
+  if (cents >= 5_000_000) return 10;
+  if (cents >= 2_500_000) return 9;
+  if (cents >= 1_000_000) return 8;
   if (cents >= 500_000) return 7;
   if (cents >= 100_000) return 6;
   if (cents >= 50_000) return 5;
@@ -64,7 +96,6 @@ const PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => {
 
 type Props = {
   tier: BetAuraTier;
-  /** One-shot spark + burst while parent holds this true (~1s). */
   celebrate?: boolean;
   doubled?: boolean;
   split?: boolean;
@@ -78,6 +109,7 @@ export function SeatBetAura({
 }: Props) {
   if (tier < 1) return null;
 
+  const travelBoost = Math.min(tier, 8);
   const mods = [
     celebrate ? "is-celebrating" : "",
     doubled ? "is-doubled" : "",
@@ -97,6 +129,18 @@ export function SeatBetAura({
       <span className="seat-bet-aura-ring seat-bet-aura-ring-mid" />
       <span className="seat-bet-aura-ring seat-bet-aura-ring-inner" />
       <span className="seat-bet-aura-core" />
+
+      {tier >= 8 ? <span className="seat-bet-aura-prestige" /> : null}
+      {tier >= 11 ? (
+        <span className="seat-bet-aura-rays">
+          <span />
+          <span />
+          <span />
+          <span />
+        </span>
+      ) : null}
+      {tier >= 12 ? <span className="seat-bet-aura-veil" /> : null}
+      {tier >= 13 ? <span className="seat-bet-aura-corona" /> : null}
 
       {doubled && <span className="seat-bet-aura-double" />}
       {split && (
@@ -121,7 +165,7 @@ export function SeatBetAura({
                 "--delay": `${p.delay}s`,
                 "--dx": p.dx,
                 "--dy": p.dy,
-                "--travel": `${p.travelBase + tier + (doubled ? 6 : 0)}px`,
+                "--travel": `${p.travelBase + travelBoost + (doubled ? 6 : 0)}px`,
               } as CSSProperties
             }
           />

@@ -47,13 +47,19 @@ export const AdminUsersResponseSchema = z.object({
 export type AdminUsersResponse = z.infer<typeof AdminUsersResponseSchema>;
 
 export const AdminTopUpBodySchema = z.object({
-  dollars: z.number().positive().max(1_000_000),
+  /** Positive adds funds; negative removes. Zero rejected. */
+  dollars: z
+    .number()
+    .min(-1_000_000)
+    .max(1_000_000)
+    .refine((n) => Number.isFinite(n) && n !== 0, "Amount must be non-zero"),
 });
 export type AdminTopUpBody = z.infer<typeof AdminTopUpBodySchema>;
 
 export const AdminTopUpResponseSchema = z.object({
   user: AdminUserRowSchema,
-  creditedCents: z.number().int().positive(),
+  /** Signed: positive credit, negative debit (may be clamped to available balance). */
+  creditedCents: z.number().int().refine((n) => n !== 0),
 });
 export type AdminTopUpResponse = z.infer<typeof AdminTopUpResponseSchema>;
 
@@ -77,6 +83,74 @@ export const AdminResetStatsResponseSchema = z.object({
 });
 export type AdminResetStatsResponse = z.infer<
   typeof AdminResetStatsResponseSchema
+>;
+
+export const AdminJackpotResponseSchema = z.object({
+  takeCents: z.number().int().nonnegative(),
+  grossTakeCents: z.number().int(),
+  claimsSumCents: z.number().int().nonnegative(),
+  adjustmentsCents: z.number().int(),
+});
+export type AdminJackpotResponse = z.infer<typeof AdminJackpotResponseSchema>;
+
+export const AdminSetJackpotBodySchema = z.object({
+  /** Absolute vault amount in dollars (≥ 0). */
+  dollars: z
+    .number()
+    .min(0)
+    .max(100_000_000)
+    .refine((n) => Number.isFinite(n), "Invalid amount"),
+});
+export type AdminSetJackpotBody = z.infer<typeof AdminSetJackpotBodySchema>;
+
+export const AdminSetJackpotResponseSchema = z.object({
+  takeCents: z.number().int().nonnegative(),
+  previousTakeCents: z.number().int().nonnegative(),
+  deltaCents: z.number().int(),
+});
+export type AdminSetJackpotResponse = z.infer<
+  typeof AdminSetJackpotResponseSchema
+>;
+
+export const AdminGrantVoucherBodySchema = z.object({
+  count: z.number().int().min(1).max(10).optional().default(1),
+});
+export type AdminGrantVoucherBody = z.infer<typeof AdminGrantVoucherBodySchema>;
+
+export const AdminGrantVoucherResponseSchema = z.object({
+  userId: z.string(),
+  granted: z.number().int().positive(),
+  openVouchers: z.number().int().nonnegative(),
+});
+export type AdminGrantVoucherResponse = z.infer<
+  typeof AdminGrantVoucherResponseSchema
+>;
+
+export const AdminHandOutcomeSchema = z.object({
+  id: z.string(),
+  resultCents: z.number().int(),
+  betCents: z.number().int(),
+  isBlackjack: z.boolean(),
+  doubled: z.boolean(),
+  bust: z.boolean(),
+  isInsurance: z.boolean(),
+  /** Wallet after this hand settled; may be reconstructed for legacy rows. */
+  balanceAfterCents: z.number().int().nullable(),
+  /** True when balanceAfter was inferred, not stored. */
+  balanceApproximate: z.boolean().optional(),
+  createdAt: z.string(),
+});
+export type AdminHandOutcome = z.infer<typeof AdminHandOutcomeSchema>;
+
+export const AdminHandHistoryResponseSchema = z.object({
+  userId: z.string(),
+  balanceCents: z.number().int(),
+  openVouchers: z.number().int().nonnegative(),
+  hands: z.array(AdminHandOutcomeSchema),
+  total: z.number().int().nonnegative(),
+});
+export type AdminHandHistoryResponse = z.infer<
+  typeof AdminHandHistoryResponseSchema
 >;
 
 export const WalletSchema = z.object({
@@ -181,7 +255,12 @@ export const PublicSeatSchema = z.object({
   lastBetCents: z.number().int(),
   hands: z.array(PublicHandSchema),
   insuranceCents: z.number().int(),
+  insuranceResolved: z.boolean(),
   connected: z.boolean(),
+  /** Blackjacks in last 24h toward next spin voucher (0–4). */
+  bjTowardSpin: z.number().int().min(0).max(4).optional(),
+  /** Open spin vouchers stacked. */
+  spinVouchers: z.number().int().nonnegative().optional(),
 });
 export type PublicSeat = z.infer<typeof PublicSeatSchema>;
 
@@ -201,6 +280,25 @@ export const TablePhaseSchema = z.enum([
 ]);
 export type TablePhase = z.infer<typeof TablePhaseSchema>;
 
+export const TableSpinPhaseSchema = z.enum(["offer", "result"]);
+export type TableSpinPhase = z.infer<typeof TableSpinPhaseSchema>;
+
+export const TableSpinStateSchema = z.object({
+  seatIndex: z.number().int(),
+  userId: z.string(),
+  name: z.string(),
+  phase: TableSpinPhaseSchema,
+  /** Epoch ms when offer auto-spins. */
+  offerEndsAt: z.number().optional(),
+  tileIndex: z.number().int().optional(),
+  label: z.string().optional(),
+  kind: z.enum(["percent", "flat"]).optional(),
+  pctBps: z.number().int().optional(),
+  payoutCents: z.number().int().optional(),
+  potBeforeCents: z.number().int().optional(),
+});
+export type TableSpinState = z.infer<typeof TableSpinStateSchema>;
+
 export const TableStateSnapshotSchema = z.object({
   tableId: z.string(),
   name: z.string(),
@@ -213,6 +311,15 @@ export const TableStateSnapshotSchema = z.object({
   spectatorCount: z.number().int(),
   minBetCents: z.number().int(),
   chipDenominations: z.array(z.number().int()),
+  /** Present when ALLOW_TABLE_DEBUG is on. */
+  debugStack: z.array(z.string()).optional(),
+  debugBotsHold: z.boolean().optional(),
+  /** Forced next spin tile index; null/omit = random. */
+  debugSpinBias: z.number().int().nullable().optional(),
+  /** Phase timer frozen (staging debug). */
+  debugTimerPaused: z.boolean().optional(),
+  /** Active jackpot spin on this table (spectatable). */
+  spin: TableSpinStateSchema.nullable().optional(),
 });
 export type TableStateSnapshot = z.infer<typeof TableStateSnapshotSchema>;
 
@@ -240,6 +347,8 @@ export type TablesResponse = z.infer<typeof TablesResponseSchema>;
 
 export const WalletUpdateSchema = z.object({
   balanceCents: z.number().int(),
+  /** Present for admin adjust (signed: + credit / − debit). */
+  creditedCents: z.number().int().optional(),
 });
 export type WalletUpdate = z.infer<typeof WalletUpdateSchema>;
 
@@ -255,6 +364,7 @@ export const HandOutcomeSchema = z.object({
   isBlackjack: z.boolean(),
   doubled: z.boolean(),
   bust: z.boolean(),
+  isInsurance: z.boolean().optional().default(false),
   createdAt: z.string(),
 });
 export type HandOutcome = z.infer<typeof HandOutcomeSchema>;
@@ -306,6 +416,52 @@ export const LeaderboardResponseSchema = z.object({
   me: LeaderboardEntrySchema.nullable(),
 });
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
+
+/** Available jackpot pot (5% of losses since epoch − spin claims). */
+export const JackpotClaimEntrySchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  userName: z.string(),
+  tableId: z.string(),
+  tableName: z.string(),
+  tileIndex: z.number().int(),
+  kind: z.enum(["percent", "flat"]),
+  pctBps: z.number().int(),
+  payoutCents: z.number().int(),
+  potBeforeCents: z.number().int(),
+  label: z.string(),
+  createdAt: z.string(),
+});
+export type JackpotClaimEntry = z.infer<typeof JackpotClaimEntrySchema>;
+
+export const JackpotResponseSchema = z.object({
+  takeCents: z.number().int(),
+  grossTakeCents: z.number().int(),
+  claims: z.array(JackpotClaimEntrySchema),
+});
+export type JackpotResponse = z.infer<typeof JackpotResponseSchema>;
+
+export const JackpotDeltaSchema = z.object({
+  deltaCents: z.number().int(),
+});
+export type JackpotDelta = z.infer<typeof JackpotDeltaSchema>;
+
+export const JackpotClaimEventSchema = JackpotClaimEntrySchema;
+export type JackpotClaimEvent = z.infer<typeof JackpotClaimEventSchema>;
+
+export const JackpotWinBroadcastSchema = z.object({
+  userId: z.string(),
+  name: z.string(),
+  tableId: z.string(),
+  tableName: z.string(),
+  kind: z.enum(["percent", "flat"]),
+  pctBps: z.number().int(),
+  payoutCents: z.number().int(),
+  label: z.string(),
+});
+export type JackpotWinBroadcast = z.infer<typeof JackpotWinBroadcastSchema>;
+
+export * from "./jackpotWheel.js";
 
 export const TABLE_CHAT_MAX_LEN = 200;
 

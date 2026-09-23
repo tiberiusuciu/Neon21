@@ -2,6 +2,9 @@ import {
   CHIP_DENOMINATIONS_CENTS,
   MIN_BET_CENTS,
   SEAT_CAPACITY,
+  pickWheelTile,
+  pickWheelTileAt,
+  payoutForTile,
   type LobbyTable,
   type PublicCard,
   type PublicHand,
@@ -16,6 +19,7 @@ import {
   evaluateHand,
   isBlackjack,
   isSoft17OrMore,
+  parseDebugCardList,
 } from "./cards.js";
 import {
   ACTION_PAUSE_MS,
@@ -25,9 +29,14 @@ import {
   DEALER_BUST_PAUSE_MS,
   SETTLE_WIN_PAYOUT_MS,
   INSURANCE_MS,
-  MAX_SPLIT_HANDS,
   SETTLE_MS,
+  SPIN_OFFER_MS,
+  SPIN_DONE_TIMEOUT_MS,
+  SPIN_REVEAL_HOLD_MS,
+  SPIN_RESUME_MIN_MS,
   TURN_MS,
+  isDebugSeatUser,
+  type ActiveSpin,
   type DealerState,
   type HandState,
   type RoomCallbacks,
@@ -35,7 +44,15 @@ import {
   type Spectator,
 } from "./types.js";
 import { InsufficientFundsError, debitCents, getBalanceCents, creditCents } from "./wallet.js";
-import { recordHandOutcomesSafe, type HandOutcomeInput } from "./stats.js";
+import { recordHandOutcomes, recordHandOutcomesSafe, type HandOutcomeInput } from "./stats.js";
+import { env } from "../env.js";
+import { prisma } from "../lib/prisma.js";
+import {
+  getAvailablePotCents,
+  getSpinSeatProgress,
+  jackpotTakeFromLosses,
+  maybeGrantSpinVouchers,
+} from "../lib/jackpot.js";
 
 function emptyHand(betCents: number): HandState {
   return {
@@ -44,7 +61,6 @@ function emptyHand(betCents: number): HandState {
     stood: false,
     doubled: false,
     fromSplit: false,
-    fromSplitAces: false,
     resultCents: null,
   };
 }
@@ -67,6 +83,19 @@ export class TableRoom {
   private turnResolve: (() => void) | null = null;
   private insuranceWait: (() => void) | null = null;
   private cb: RoomCallbacks;
+  /** Staging: bots stand immediately instead of waiting out the turn timer. */
+  private debugBotsHold = true;
+  /** Staging: force next jackpot spin tile (null = random). */
+  private debugSpinBias: number | null = null;
+  /** Staging: freeze phase timers until resumed. */
+  private debugTimerPaused = false;
+  private scheduledFn: (() => void) | null = null;
+  private pausedRemainingMs: number | null = null;
+  private spin: ActiveSpin | null = null;
+  private spinDoneWait: {
+    userId: string;
+    resolve: () => void;
+  } | null = null;
 
   constructor(id: string, name: string, cb: RoomCallbacks) {
     this.id = id;
@@ -102,7 +131,7 @@ export class TableRoom {
   }
 
   getSnapshot(): TableStateSnapshot {
-    return {
+    const snap: TableStateSnapshot = {
       tableId: this.id,
       name: this.name,
       phase: this.phase,
@@ -114,7 +143,31 @@ export class TableRoom {
       spectatorCount: this.spectators.size,
       minBetCents: MIN_BET_CENTS,
       chipDenominations: [...CHIP_DENOMINATIONS_CENTS],
+      spin: this.spin
+        ? {
+            seatIndex: this.spin.seatIndex,
+            userId: this.spin.userId,
+            name: this.spin.name,
+            phase: this.spin.phase,
+            offerEndsAt: this.spin.offerEndsAt,
+            tileIndex: this.spin.tileIndex,
+            label: this.spin.label,
+            kind: this.spin.kind,
+            pctBps: this.spin.pctBps,
+            payoutCents: this.spin.payoutCents,
+            potBeforeCents: this.spin.potBeforeCents,
+          }
+        : null,
     };
+    if (env.tableDebugEnabled) {
+      snap.debugStack = this.shoe.injectPreview(24).map(
+        (c) => `${c.rank}${c.suit}`
+      );
+      snap.debugBotsHold = this.debugBotsHold;
+      snap.debugSpinBias = this.debugSpinBias;
+      snap.debugTimerPaused = this.debugTimerPaused;
+    }
+    return snap;
   }
 
   private publicSeat(index: number, seat: SeatState | null): PublicSeat {
@@ -127,6 +180,7 @@ export class TableRoom {
         lastBetCents: 0,
         hands: [],
         insuranceCents: 0,
+        insuranceResolved: false,
         connected: false,
       };
     }
@@ -138,7 +192,10 @@ export class TableRoom {
       lastBetCents: seat.lastBetCents,
       hands: seat.hands.map((h) => this.publicHand(h)),
       insuranceCents: seat.insuranceCents,
+      insuranceResolved: seat.insuranceResolved,
       connected: seat.connected,
+      bjTowardSpin: seat.bjTowardSpin,
+      spinVouchers: seat.spinVouchers,
     };
   }
 
@@ -182,15 +239,59 @@ export class TableRoom {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    this.scheduledFn = null;
+    this.pausedRemainingMs = null;
   }
 
   private schedule(ms: number, fn: () => void) {
-    this.clearTimer();
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+    this.scheduledFn = fn;
+    if (env.tableDebugEnabled && this.debugTimerPaused) {
+      this.pausedRemainingMs = Math.max(0, ms);
+      this.phaseEndsAt = null;
+      return;
+    }
+    this.pausedRemainingMs = null;
     const gen = this.generation;
-    const ends = Date.now() + ms;
-    this.phaseEndsAt = ends;
+    this.phaseEndsAt = Date.now() + ms;
     this.timer = setTimeout(() => {
       this.timer = null;
+      this.scheduledFn = null;
+      this.pausedRemainingMs = null;
+      if (this.destroyed || this.generation !== gen) return;
+      fn();
+    }, ms);
+  }
+
+  private pausePhaseTimer() {
+    if (this.timer && this.phaseEndsAt != null) {
+      this.pausedRemainingMs = Math.max(0, this.phaseEndsAt - Date.now());
+      clearTimeout(this.timer);
+      this.timer = null;
+      this.phaseEndsAt = null;
+    }
+  }
+
+  private resumePhaseTimer() {
+    if (!this.scheduledFn) return;
+    const ms = Math.max(0, this.pausedRemainingMs ?? 0);
+    const fn = this.scheduledFn;
+    this.pausedRemainingMs = null;
+    if (ms <= 0) {
+      this.scheduledFn = null;
+      this.phaseEndsAt = null;
+      fn();
+      return;
+    }
+    const gen = this.generation;
+    this.phaseEndsAt = Date.now() + ms;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.scheduledFn = null;
+      this.pausedRemainingMs = null;
       if (this.destroyed || this.generation !== gen) return;
       fn();
     }, ms);
@@ -298,8 +399,11 @@ export class TableRoom {
       insuranceResolved: false,
       missedRounds: 0,
       connected: true,
+      bjTowardSpin: 0,
+      spinVouchers: 0,
     };
     this.broadcast();
+    void this.refreshSeatSpinProgress(userId).then(() => this.broadcast());
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
 
@@ -313,6 +417,20 @@ export class TableRoom {
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";
     const seat = this.seats[seatIdx]!;
+
+    if (this.spin?.userId === userId) {
+      if (this.spin.phase === "result") return "Cannot leave during spin";
+      this.clearTimer();
+      const remaining = this.spin.remainingBettingMs;
+      this.spin = null;
+      this.seats[seatIdx] = null;
+      this.spectators.set(userId, { userId, name: seat.name });
+      this.resumeBettingAfterSpin(remaining);
+      this.cb.onSeatedChanged(this.id);
+      this.cb.onLobbyChanged();
+      return null;
+    }
+
     this.seats[seatIdx] = null;
     this.spectators.set(userId, { userId, name: seat.name });
     this.broadcast();
@@ -323,6 +441,7 @@ export class TableRoom {
 
   /** Kick if broke and not mid-hand (betting with no cards dealt yet). */
   async kickIfBroke(userId: string): Promise<boolean> {
+    if (isDebugSeatUser(userId)) return false;
     if (this.phase !== "betting") return false;
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return false;
@@ -450,6 +569,10 @@ export class TableRoom {
   /** Any bet change restarts the short “about to begin” window. */
   private onBettingActivity() {
     if (this.phase !== "betting") return;
+    if (this.spin) {
+      this.broadcast();
+      return;
+    }
     this.allBetClamped = true;
     this.schedule(ALL_BET_CLAMP_MS, () => void this.lockBetsAndDeal());
     this.broadcast();
@@ -465,6 +588,7 @@ export class TableRoom {
     for (let i = 0; i < this.seats.length; i++) {
       const seat = this.seats[i];
       if (!seat) continue;
+      if (isDebugSeatUser(seat.userId)) continue;
       const bal = await getBalanceCents(seat.userId);
       if ((bal ?? 0) > 0) continue;
       this.spectators.set(seat.userId, {
@@ -507,6 +631,7 @@ export class TableRoom {
   }
 
   private async lockBetsAndDeal() {
+    if (this.spin) return;
     const gen = this.generation;
     const toKick: number[] = [];
 
@@ -514,6 +639,13 @@ export class TableRoom {
       const seat = this.seats[i];
       if (!seat) continue;
       if (seat.pendingBetCents >= MIN_BET_CENTS) {
+        if (isDebugSeatUser(seat.userId)) {
+          seat.lastBetCents = seat.pendingBetCents;
+          seat.hands = [emptyHand(seat.pendingBetCents)];
+          seat.missedRounds = 0;
+          seat.pendingBetCents = 0;
+          continue;
+        }
         try {
           const bal = await debitCents(seat.userId, seat.pendingBetCents);
           if (!this.alive(gen)) return;
@@ -739,10 +871,20 @@ export class TableRoom {
           this.broadcast();
         }
 
-        if (hand.fromSplitAces || bestTotal(hand.cards) === 21) {
+        if (bestTotal(hand.cards) === 21) {
           hand.stood = true;
           this.broadcast();
           await this.delay(ACTION_PAUSE_MS);
+          continue;
+        }
+
+        if (isDebugSeatUser(seat.userId) && this.debugBotsHold) {
+          hand.stood = true;
+          this.activeSeatIndex = si;
+          this.activeHandIndex = hi;
+          this.broadcast();
+          await this.delay(ACTION_PAUSE_MS);
+          if (!this.alive(gen)) return;
           continue;
         }
 
@@ -822,7 +964,7 @@ export class TableRoom {
   hit(userId: string): string | null {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
-    if (ctx.hand.stood || ctx.hand.fromSplitAces) return "Cannot hit";
+    if (ctx.hand.stood) return "Cannot hit";
     ctx.hand.cards.push(this.shoe.draw());
     const v = evaluateHand(ctx.hand.cards);
     if (v.bust || bestTotal(ctx.hand.cards) === 21) {
@@ -851,7 +993,7 @@ export class TableRoom {
   async double(userId: string): Promise<string | null> {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
-    if (ctx.hand.stood || ctx.hand.fromSplitAces) return "Cannot double";
+    if (ctx.hand.stood) return "Cannot double";
     if (ctx.hand.cards.length !== 2) return "Cannot double";
     try {
       const bal = await debitCents(userId, ctx.hand.betCents);
@@ -872,11 +1014,7 @@ export class TableRoom {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
     if (ctx.hand.stood) return "Cannot split";
-    if (ctx.hand.fromSplitAces) return "Cannot re-split aces";
-    if (ctx.seat.hands.length >= MAX_SPLIT_HANDS) return "Max splits reached";
     if (!canSplit(ctx.hand.cards)) return "Cannot split";
-    const isAces = ctx.hand.cards[0].rank === "A";
-    if (isAces && ctx.hand.fromSplit) return "Cannot re-split aces";
     try {
       const bal = await debitCents(userId, ctx.hand.betCents);
       this.cb.onWalletUpdate(userId, bal);
@@ -889,7 +1027,6 @@ export class TableRoom {
         stood: false,
         doubled: false,
         fromSplit: true,
-        fromSplitAces: isAces,
         resultCents: null,
       };
       const right: HandState = {
@@ -898,18 +1035,10 @@ export class TableRoom {
         stood: false,
         doubled: false,
         fromSplit: true,
-        fromSplitAces: isAces,
         resultCents: null,
       };
       ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
       this.activeHandIndex = ctx.handIndex;
-
-      if (isAces) {
-        left.cards.push(this.shoe.draw());
-        left.stood = true;
-        this.completeTurnAction();
-        return null;
-      }
 
       left.cards.push(this.shoe.draw());
       this.schedule(TURN_MS, () => {
@@ -957,6 +1086,8 @@ export class TableRoom {
 
   private recordRoundStats() {
     const byUser = new Map<string, HandOutcomeInput[]>();
+    let lossAbsCents = 0;
+    const dealerBj = isBlackjack(this.dealer.cards);
     for (const seat of this.seats) {
       if (!seat?.hands.length) continue;
       const batch: HandOutcomeInput[] = [];
@@ -969,15 +1100,293 @@ export class TableRoom {
           doubled: hand.doubled,
           bust: evaluateHand(hand.cards).bust,
         });
+        if (!isDebugSeatUser(seat.userId) && hand.resultCents < 0) {
+          lossAbsCents += -hand.resultCents;
+        }
+      }
+      if (seat.insuranceCents > 0) {
+        const insResult = dealerBj
+          ? seat.insuranceCents * 2
+          : -seat.insuranceCents;
+        batch.push({
+          resultCents: insResult,
+          betCents: seat.insuranceCents,
+          isBlackjack: false,
+          doubled: false,
+          bust: false,
+          isInsurance: true,
+        });
+        if (!isDebugSeatUser(seat.userId) && insResult < 0) {
+          lossAbsCents += -insResult;
+        }
       }
       if (batch.length === 0) continue;
+      if (isDebugSeatUser(seat.userId)) continue;
       const existing = byUser.get(seat.userId);
       if (existing) existing.push(...batch);
       else byUser.set(seat.userId, batch);
     }
     for (const [userId, hands] of byUser) {
-      recordHandOutcomesSafe(userId, hands);
+      if (hands.some((h) => h.isBlackjack)) {
+        void recordHandOutcomes(userId, hands)
+          .then(() => this.afterBlackjackSettle(userId))
+          .catch((err) =>
+            console.error("[stats] recordHandOutcomes failed", userId, err)
+          );
+      } else {
+        recordHandOutcomesSafe(userId, hands);
+      }
     }
+    const deltaCents = jackpotTakeFromLosses(lossAbsCents);
+    if (deltaCents > 0) {
+      this.cb.onJackpotDelta(deltaCents);
+    }
+  }
+
+  private async afterBlackjackSettle(userId: string) {
+    try {
+      await maybeGrantSpinVouchers(userId);
+      await this.refreshSeatSpinProgress(userId);
+      this.broadcast();
+    } catch (err) {
+      console.error("[jackpot] voucher grant failed", userId, err);
+    }
+  }
+
+  private async refreshSeatSpinProgress(userId: string) {
+    if (isDebugSeatUser(userId)) return;
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return;
+    const prog = await getSpinSeatProgress(userId);
+    const seat = this.seats[seatIdx];
+    if (!seat || seat.userId !== userId) return;
+    seat.bjTowardSpin = prog.bjTowardSpin;
+    seat.spinVouchers = prog.spinVouchers;
+  }
+
+  /** Refresh seat voucher lights after an external grant (admin / HTTP). */
+  async notifyVoucherGranted(userId: string): Promise<void> {
+    await this.refreshSeatSpinProgress(userId);
+    if (this.findSeatIndex(userId) >= 0) this.broadcast();
+  }
+
+  /** Player starts a jackpot spin during betting (pauses the table). */
+  async claimSpin(userId: string): Promise<string | null> {
+    if (this.phase !== "betting") return "Only during betting";
+    if (this.spin) return "A spin is already in progress";
+    if (isDebugSeatUser(userId)) return "Not available";
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return "Not seated";
+    const seat = this.seats[seatIdx]!;
+    if (seat.pendingBetCents > 0) return "Clear your bet before spinning";
+
+    const voucher = await prisma.spinVoucher.findFirst({
+      where: { userId, status: "open" },
+      orderBy: { createdAt: "asc" },
+    });
+    if (!voucher) return "No spin voucher";
+
+    const available = await getAvailablePotCents();
+    if (available <= 0) return "Jackpot pot is empty";
+
+    const remaining = this.phaseEndsAt
+      ? Math.max(0, this.phaseEndsAt - Date.now())
+      : BETTING_MS;
+    this.clearTimer();
+    this.phaseEndsAt = null;
+    const offerEndsAt = Date.now() + SPIN_OFFER_MS;
+    this.spin = {
+      userId,
+      seatIndex: seatIdx,
+      name: seat.name,
+      voucherId: voucher.id,
+      phase: "offer",
+      remainingBettingMs: remaining,
+      offerEndsAt,
+    };
+    this.broadcast();
+    const gen = this.generation;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      if (this.destroyed || this.generation !== gen) return;
+      void this.goSpin(userId);
+    }, SPIN_OFFER_MS);
+    return null;
+  }
+
+  /** Cancel offer — keep voucher and resume betting. */
+  cancelSpin(userId: string): string | null {
+    if (!this.spin || this.spin.userId !== userId) return "Not your spin";
+    if (this.spin.phase !== "offer") return "Too late to cancel";
+    this.clearTimer();
+    const remaining = this.spin.remainingBettingMs;
+    this.spin = null;
+    if (this.phase === "betting" && !this.destroyed) {
+      const ms = Math.max(SPIN_RESUME_MIN_MS, remaining);
+      this.schedule(ms, () => void this.lockBetsAndDeal());
+    }
+    this.broadcast();
+    return null;
+  }
+
+  /** Spinner clicks to spin the wheel. */
+  async goSpin(userId: string): Promise<string | null> {
+    if (!this.spin || this.spin.userId !== userId) return "Not your spin";
+    if (this.spin.phase !== "offer") return "Already spinning";
+    this.clearTimer();
+
+    const potBefore = await getAvailablePotCents();
+    if (potBefore <= 0) {
+      this.spin = null;
+      this.resumeBettingAfterSpin(SPIN_RESUME_MIN_MS);
+      return "Jackpot pot is empty";
+    }
+
+    const { tileIndex, tile } =
+      this.debugSpinBias != null
+        ? pickWheelTileAt(this.debugSpinBias)
+        : pickWheelTile();
+    const payoutCents = payoutForTile(tile, potBefore);
+    const kind = tile.kind;
+    const pctBps = tile.kind === "percent" ? tile.pctBps : 0;
+    const label = tile.label;
+    const voucherId = this.spin.voucherId;
+    const seatIdx = this.spin.seatIndex;
+    const name = this.spin.name;
+    const gen = this.generation;
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const v = await tx.spinVoucher.findUnique({ where: { id: voucherId } });
+        if (!v || v.status !== "open" || v.userId !== userId) {
+          throw new Error("Voucher gone");
+        }
+        await tx.spinVoucher.update({
+          where: { id: voucherId },
+          data: { status: "used", usedAt: new Date() },
+        });
+        await tx.jackpotClaim.create({
+          data: {
+            userId,
+            userName: name,
+            tableId: this.id,
+            tableName: this.name,
+            voucherId,
+            tileIndex,
+            kind,
+            pctBps,
+            payoutCents,
+            potBeforeCents: potBefore,
+          },
+        });
+      });
+    } catch (err) {
+      console.error("[jackpot] spin commit failed", err);
+      this.spin = null;
+      this.resumeBettingAfterSpin(SPIN_RESUME_MIN_MS);
+      return "Spin failed";
+    }
+
+    if (!this.alive(gen)) return null;
+
+    // Broadcast tile only — withhold payout/label until the wheel animation finishes.
+    this.spin = {
+      ...this.spin,
+      phase: "result",
+      tileIndex,
+      offerEndsAt: undefined,
+    };
+    this.broadcast();
+
+    const claimEntry = {
+      id: voucherId,
+      userId,
+      userName: name,
+      tableId: this.id,
+      tableName: this.name,
+      tileIndex,
+      kind: kind as "percent" | "flat",
+      pctBps,
+      payoutCents,
+      potBeforeCents: potBefore,
+      label,
+      createdAt: new Date().toISOString(),
+    };
+    const claimRow = await prisma.jackpotClaim.findUnique({
+      where: { voucherId },
+    });
+    if (claimRow) {
+      claimEntry.id = claimRow.id;
+      claimEntry.createdAt = claimRow.createdAt.toISOString();
+    }
+
+    const remaining = this.spin.remainingBettingMs;
+    await this.waitForSpinAnimationDone(userId);
+    if (!this.alive(gen) || !this.spin || this.spin.userId !== userId) {
+      return null;
+    }
+
+    this.spin = {
+      ...this.spin,
+      label,
+      kind,
+      pctBps,
+      payoutCents,
+      potBeforeCents: potBefore,
+    };
+    this.broadcast();
+
+    if (payoutCents > 0) {
+      const bal = await creditCents(userId, payoutCents);
+      this.cb.onWalletUpdate(userId, bal);
+    }
+    this.cb.onJackpotClaim(claimEntry);
+    this.cb.onJackpotWin({
+      userId,
+      name,
+      tableId: this.id,
+      tableName: this.name,
+      kind: kind as "percent" | "flat",
+      pctBps,
+      payoutCents,
+      label,
+    });
+
+    await this.refreshSeatSpinProgress(userId);
+    await this.delay(SPIN_REVEAL_HOLD_MS);
+    if (!this.alive(gen)) return null;
+    this.spin = null;
+    this.resumeBettingAfterSpin(remaining);
+    return null;
+  }
+
+  /** Client signals the seat wheel animation finished. */
+  notifySpinDone(userId: string): void {
+    if (!this.spinDoneWait || this.spinDoneWait.userId !== userId) return;
+    const { resolve } = this.spinDoneWait;
+    this.spinDoneWait = null;
+    resolve();
+  }
+
+  private waitForSpinAnimationDone(userId: string): Promise<void> {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (this.spinDoneWait?.userId === userId) this.spinDoneWait = null;
+        resolve();
+      };
+      this.spinDoneWait = { userId, resolve: finish };
+      setTimeout(finish, SPIN_DONE_TIMEOUT_MS);
+    });
+  }
+
+  private resumeBettingAfterSpin(remainingBettingMs: number) {
+    if (this.phase !== "betting" || this.destroyed) return;
+    const ms = Math.max(SPIN_RESUME_MIN_MS, remainingBettingMs);
+    this.schedule(ms, () => void this.lockBetsAndDeal());
+    this.broadcast();
   }
 
   private async runSettle(gen: number) {
@@ -1002,7 +1411,9 @@ export class TableRoom {
         if (playerBj && !dealerBj) {
           const win = Math.floor(hand.betCents * 2.5);
           hand.resultCents = win - hand.betCents;
-          deferredPayouts.push({ userId: seat.userId, cents: win });
+          if (!isDebugSeatUser(seat.userId)) {
+            deferredPayouts.push({ userId: seat.userId, cents: win });
+          }
           continue;
         }
 
@@ -1014,7 +1425,9 @@ export class TableRoom {
         if (dealerVal.bust) {
           const win = hand.betCents * 2;
           hand.resultCents = hand.betCents;
-          deferredPayouts.push({ userId: seat.userId, cents: win });
+          if (!isDebugSeatUser(seat.userId)) {
+            deferredPayouts.push({ userId: seat.userId, cents: win });
+          }
           continue;
         }
 
@@ -1022,19 +1435,22 @@ export class TableRoom {
         if (playerTotal > dealerTotal) {
           const win = hand.betCents * 2;
           hand.resultCents = hand.betCents;
-          deferredPayouts.push({ userId: seat.userId, cents: win });
+          if (!isDebugSeatUser(seat.userId)) {
+            deferredPayouts.push({ userId: seat.userId, cents: win });
+          }
         } else if (playerTotal < dealerTotal) {
           hand.resultCents = -hand.betCents;
         } else {
           hand.resultCents = 0;
-          const bal = await creditCents(seat.userId, hand.betCents);
-          if (!this.alive(gen)) return;
-          this.cb.onWalletUpdate(seat.userId, bal);
+          if (!isDebugSeatUser(seat.userId)) {
+            const bal = await creditCents(seat.userId, hand.betCents);
+            if (!this.alive(gen)) return;
+            this.cb.onWalletUpdate(seat.userId, bal);
+          }
         }
       }
     }
 
-    this.recordRoundStats();
     this.broadcast();
 
     if (deferredPayouts.length > 0) {
@@ -1052,6 +1468,10 @@ export class TableRoom {
       }
     }
 
+    // After wallet settles so HandOutcome.balanceAfterCents is post-payout.
+    this.recordRoundStats();
+    this.broadcast();
+
     await this.ejectBrokePlayers();
     if (!this.alive(gen)) return;
 
@@ -1059,5 +1479,142 @@ export class TableRoom {
       if (!this.alive(gen)) return;
       this.startBetting();
     });
+  }
+
+  // —— Staging debug (ALLOW_TABLE_DEBUG) ——
+
+  debugSetBet(userId: string, cents: number): string | null {
+    if (this.phase !== "betting") return "Not betting";
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return "Not seated";
+    if (cents < 0) return "Invalid bet";
+    if (cents > 0 && cents < MIN_BET_CENTS) {
+      return `Minimum bet is $${(MIN_BET_CENTS / 100).toFixed(0)}`;
+    }
+    const seat = this.seats[seatIdx]!;
+    seat.pendingBetCents = cents;
+    if (cents > 0) this.onBettingActivity();
+    else this.broadcast();
+    return null;
+  }
+
+  debugSpawnBot(opts: {
+    seatIndex: number;
+    name?: string;
+    betCents: number;
+  }): string | null {
+    if (this.phase !== "betting") return "Not betting";
+    const { seatIndex, betCents } = opts;
+    if (seatIndex < 0 || seatIndex >= SEAT_CAPACITY) return "Invalid seat";
+    if (this.seats[seatIndex]) return "Seat taken";
+    if (betCents < MIN_BET_CENTS) {
+      return `Minimum bet is $${(MIN_BET_CENTS / 100).toFixed(0)}`;
+    }
+    const name = (opts.name?.trim() || `Bot ${seatIndex + 1}`).slice(0, 24);
+    this.seats[seatIndex] = {
+      userId: `debug:bot-${seatIndex}-${Date.now()}`,
+      name,
+      pendingBetCents: betCents,
+      lastBetCents: betCents,
+      hands: [],
+      insuranceCents: 0,
+      insuranceResolved: false,
+      missedRounds: 0,
+      connected: true,
+      bjTowardSpin: 0,
+      spinVouchers: 0,
+    };
+    this.onBettingActivity();
+    this.cb.onSeatedChanged(this.id);
+    this.cb.onLobbyChanged();
+    return null;
+  }
+
+  debugClearBots(): number {
+    let n = 0;
+    for (let i = 0; i < this.seats.length; i++) {
+      const seat = this.seats[i];
+      if (!seat || !isDebugSeatUser(seat.userId)) continue;
+      this.seats[i] = null;
+      n += 1;
+    }
+    if (n > 0) {
+      this.broadcast();
+      this.cb.onSeatedChanged(this.id);
+      this.cb.onLobbyChanged();
+    }
+    return n;
+  }
+
+  debugStackCards(tokens: string[]): string | null {
+    const parsed = parseDebugCardList(tokens);
+    if (parsed.error) return parsed.error;
+    this.shoe.stackNext(parsed.cards);
+    this.broadcast();
+    return null;
+  }
+
+  debugClearStack(): void {
+    this.shoe.clearInject();
+    this.broadcast();
+  }
+
+  debugStackRemaining(): number {
+    return this.shoe.injectRemaining();
+  }
+
+  debugSetBotsHold(hold: boolean): void {
+    this.debugBotsHold = hold;
+    this.broadcast();
+  }
+
+  debugSetTimerPaused(paused: boolean): void {
+    if (paused === this.debugTimerPaused) {
+      this.broadcast();
+      return;
+    }
+    this.debugTimerPaused = paused;
+    if (paused) this.pausePhaseTimer();
+    else this.resumePhaseTimer();
+    this.broadcast();
+  }
+
+  debugSetSpinBias(tileIndex: number | null): string | null {
+    if (tileIndex == null) {
+      this.debugSpinBias = null;
+      this.broadcast();
+      return null;
+    }
+    if (!Number.isInteger(tileIndex) || tileIndex < 0 || tileIndex > 99) {
+      return "Bias must be 0–99 or null";
+    }
+    this.debugSpinBias = tileIndex;
+    this.broadcast();
+    return null;
+  }
+
+  async debugGrantVoucher(
+    userId: string,
+    count = 1
+  ): Promise<string | null> {
+    if (isDebugSeatUser(userId)) return "Not for bots";
+    const n = Math.min(10, Math.max(1, Math.floor(count)));
+    await prisma.spinVoucher.createMany({
+      data: Array.from({ length: n }, () => ({
+        userId,
+        status: "open",
+      })),
+    });
+    await this.refreshSeatSpinProgress(userId);
+    this.broadcast();
+    return null;
+  }
+
+  debugDealNow(): string | null {
+    if (this.phase !== "betting") return "Not betting";
+    this.clearTimer();
+    this.phaseEndsAt = null;
+    void this.lockBetsAndDeal();
+    return null;
   }
 }

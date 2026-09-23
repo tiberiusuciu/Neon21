@@ -70,6 +70,9 @@ export function AppHeader() {
       <NavLink to="/stats" onClick={() => setOpen(false)}>
         Stats
       </NavLink>
+      <NavLink to="/jackpot" onClick={() => setOpen(false)}>
+        Jackpot
+      </NavLink>
       <NavLink to="/leaderboard" onClick={() => setOpen(false)}>
         Leaderboard
       </NavLink>

@@ -1,0 +1,20 @@
+---
+description: After finishing requested changes, commit locally with conventional commits; never push; no AI credit
+alwaysApply: true
+---
+
+# Auto-commit after changes
+
+When a user request that involves code/config changes is **done**, create a **local git commit** for that work. Do **not** `git push` — the user pushes when ready.
+
+## Message
+
+- Use [Conventional Commits](https://www.conventionalcommits.org/): `feat:`, `fix:`, `chore:`, `refactor:`, `docs:`, `style:`, etc.
+- Describe what changed and why in plain language.
+- **Never** credit AI / Cursor / Copilot or say the commit was auto-generated.
+
+## Protocol
+
+Follow the existing git commit workflow (status + diff + log, stage relevant files, HEREDOC message, verify status). Do not commit secrets. Do not force-push or amend unless the usual amend rules allow it.
+
+Finishing the requested work implies commit; do not wait for a separate “please commit” unless the user said not to commit.

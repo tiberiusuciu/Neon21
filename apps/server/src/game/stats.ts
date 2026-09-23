@@ -7,11 +7,13 @@ export type HandOutcomeInput = {
   isBlackjack: boolean;
   doubled: boolean;
   bust: boolean;
+  isInsurance?: boolean;
 };
 
 type OutcomeLike = {
   resultCents: number;
   isBlackjack: boolean;
+  isInsurance?: boolean;
 };
 
 export function aggregateOutcomes(hands: OutcomeLike[]) {
@@ -22,16 +24,24 @@ export function aggregateOutcomes(hands: OutcomeLike[]) {
   let biggestWinCents = 0;
   let biggestLossCents = 0;
   let netProfitCents = 0;
+  let handsPlayed = 0;
 
   for (const h of hands) {
     netProfitCents += h.resultCents;
     if (h.resultCents > 0) {
-      wins++;
       if (h.resultCents > biggestWinCents) biggestWinCents = h.resultCents;
     } else if (h.resultCents < 0) {
-      losses++;
       const abs = -h.resultCents;
       if (abs > biggestLossCents) biggestLossCents = abs;
+    }
+
+    if (h.isInsurance) continue;
+
+    handsPlayed++;
+    if (h.resultCents > 0) {
+      wins++;
+    } else if (h.resultCents < 0) {
+      losses++;
     } else {
       pushes++;
     }
@@ -39,7 +49,7 @@ export function aggregateOutcomes(hands: OutcomeLike[]) {
   }
 
   return {
-    handsPlayed: hands.length,
+    handsPlayed,
     wins,
     losses,
     pushes,
@@ -57,7 +67,7 @@ export async function recomputeUserStats(
 ) {
   const outcomes = await tx.handOutcome.findMany({
     where: { userId },
-    select: { resultCents: true, isBlackjack: true },
+    select: { resultCents: true, isBlackjack: true, isInsurance: true },
   });
   const stats = aggregateOutcomes(outcomes);
   await tx.user.update({
@@ -96,6 +106,7 @@ export async function recordHandOutcomes(
       },
     });
 
+    const balanceAfterCents = user.balanceCents;
     await tx.handOutcome.createMany({
       data: hands.map((h) => ({
         userId,
@@ -104,6 +115,8 @@ export async function recordHandOutcomes(
         isBlackjack: h.isBlackjack,
         doubled: h.doubled,
         bust: h.bust,
+        isInsurance: h.isInsurance ?? false,
+        balanceAfterCents,
       })),
     });
   });

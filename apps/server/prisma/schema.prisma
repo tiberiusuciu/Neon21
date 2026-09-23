@@ -8,39 +8,88 @@ datasource db {
 }
 
 model User {
-  id               String        @id @default(cuid())
+  id               String         @id @default(cuid())
   name             String
-  nameChosen       Boolean       @default(false)
-  email            String        @unique
+  nameChosen       Boolean        @default(false)
+  email            String         @unique
   passwordHash     String?
-  googleId         String?       @unique
-  balanceCents     Int           @default(10000)
+  googleId         String?        @unique
+  balanceCents     Int            @default(10000)
   lastClaimAt      DateTime?
-  handsPlayed      Int           @default(0)
-  wins             Int           @default(0)
-  losses           Int           @default(0)
-  pushes           Int           @default(0)
-  blackjacks       Int           @default(0)
-  biggestWinCents  Int           @default(0)
-  biggestLossCents Int           @default(0)
-  netProfitCents   Int           @default(0)
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  handsPlayed      Int            @default(0)
+  wins             Int            @default(0)
+  losses           Int            @default(0)
+  pushes           Int            @default(0)
+  blackjacks       Int            @default(0)
+  biggestWinCents  Int            @default(0)
+  biggestLossCents Int            @default(0)
+  netProfitCents   Int            @default(0)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   handOutcomes     HandOutcome[]
+  spinVouchers     SpinVoucher[]
+  jackpotClaims    JackpotClaim[]
 }
 
 model HandOutcome {
-  id          String   @id @default(cuid())
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  resultCents Int
-  betCents    Int
-  isBlackjack Boolean  @default(false)
-  doubled     Boolean  @default(false)
-  bust        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resultCents      Int
+  betCents         Int
+  isBlackjack      Boolean  @default(false)
+  doubled          Boolean  @default(false)
+  bust             Boolean  @default(false)
+  /** Side bet — counted in net/jackpot, not in handsPlayed W/L. */
+  isInsurance      Boolean  @default(false)
+  /** Wallet balance after this outcome settled (null on legacy rows). */
+  balanceAfterCents Int?
+  createdAt        DateTime @default(now())
 
   @@index([userId, createdAt])
+  @@index([userId, isBlackjack, createdAt])
+}
+
+model SpinVoucher {
+  id        String        @id @default(cuid())
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    String        @default("open")
+  createdAt DateTime      @default(now())
+  usedAt    DateTime?
+  claim     JackpotClaim?
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+model JackpotClaim {
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName       String
+  tableId        String
+  tableName      String
+  voucherId      String      @unique
+  voucher        SpinVoucher @relation(fields: [voucherId], references: [id])
+  tileIndex      Int
+  kind           String
+  pctBps         Int         @default(0)
+  payoutCents    Int
+  potBeforeCents Int
+  createdAt      DateTime    @default(now())
+
+  @@index([createdAt])
+}
+
+/** Admin (or system) ledger rows so available pot can be set without faking losses/claims. */
+model JackpotAdjustment {
+  id         String   @id @default(cuid())
+  deltaCents Int
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Table {

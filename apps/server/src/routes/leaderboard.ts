@@ -96,6 +96,7 @@ async function seasonRows(startsAt: Date, endsAt: Date): Promise<AggRow[]> {
       userId: true,
       resultCents: true,
       isBlackjack: true,
+      isInsurance: true,
       user: { select: { name: true } },
     },
   });
@@ -117,11 +118,14 @@ async function seasonRows(startsAt: Date, endsAt: Date): Promise<AggRow[]> {
       };
       byUser.set(o.userId, row);
     }
-    row.handsPlayed++;
     row.netProfitCents += o.resultCents;
+    if (o.resultCents > row.biggestWinCents) {
+      row.biggestWinCents = o.resultCents;
+    }
+    if (o.isInsurance) continue;
+    row.handsPlayed++;
     if (o.resultCents > 0) {
       row.wins++;
-      if (o.resultCents > row.biggestWinCents) row.biggestWinCents = o.resultCents;
     } else if (o.resultCents < 0) {
       row.losses++;
     } else {
