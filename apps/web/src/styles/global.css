@@ -2560,21 +2560,36 @@ h3 {
   overflow-x: clip;
 }
 
-.cash-fx-shake-big {
+html.cash-fx-shake-big {
   animation: cash-shake-big 0.42s var(--ease);
 }
 
-.cash-fx-shake-mega {
+html.cash-fx-shake-mega {
   animation: cash-shake-mega 0.7s var(--ease);
 }
 
-.cash-fx-shake-jackpot {
+html.cash-fx-shake-jackpot {
   animation: cash-shake-jackpot 0.48s var(--ease);
 }
 
-html.cash-fx-shaking,
-html.cash-fx-shaking body {
-  overflow: hidden;
+/* Desktop only: lock scroll so Y-shake doesn’t flash a scrollbar. */
+@media (pointer: fine) {
+  html.cash-fx-shaking,
+  html.cash-fx-shaking body {
+    overflow: hidden;
+  }
+}
+
+@media (pointer: coarse) {
+  html.cash-fx-shake-big {
+    animation-name: cash-shake-big-touch;
+  }
+  html.cash-fx-shake-mega {
+    animation-name: cash-shake-mega-touch;
+  }
+  html.cash-fx-shake-jackpot {
+    animation-name: cash-shake-jackpot-touch;
+  }
 }
 
 @keyframes cash-shake-big {
@@ -2646,6 +2661,75 @@ html.cash-fx-shaking body {
   }
   85% {
     transform: translate3d(3px, -1px, 0);
+  }
+}
+
+@keyframes cash-shake-big-touch {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  20% {
+    transform: translate3d(-7px, 2px, 0);
+  }
+  40% {
+    transform: translate3d(7px, -3px, 0);
+  }
+  60% {
+    transform: translate3d(-5px, 3px, 0);
+  }
+  80% {
+    transform: translate3d(4px, -2px, 0);
+  }
+}
+
+@keyframes cash-shake-mega-touch {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  12% {
+    transform: translate3d(-10px, 3px, 0) rotate(-0.45deg);
+  }
+  28% {
+    transform: translate3d(11px, -4px, 0) rotate(0.5deg);
+  }
+  44% {
+    transform: translate3d(-9px, 4px, 0) rotate(-0.35deg);
+  }
+  60% {
+    transform: translate3d(8px, -3px, 0) rotate(0.3deg);
+  }
+  76% {
+    transform: translate3d(-5px, 2px, 0) rotate(-0.15deg);
+  }
+  88% {
+    transform: translate3d(4px, -2px, 0);
+  }
+}
+
+@keyframes cash-shake-jackpot-touch {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  10% {
+    transform: translate3d(-12px, 4px, 0) rotate(-0.65deg);
+  }
+  25% {
+    transform: translate3d(13px, -5px, 0) rotate(0.7deg);
+  }
+  40% {
+    transform: translate3d(-11px, 4px, 0) rotate(-0.5deg);
+  }
+  55% {
+    transform: translate3d(9px, -3px, 0) rotate(0.4deg);
+  }
+  70% {
+    transform: translate3d(-6px, 3px, 0) rotate(-0.25deg);
+  }
+  85% {
+    transform: translate3d(4px, -2px, 0);
   }
 }
 
@@ -2785,9 +2869,9 @@ html.cash-fx-shaking body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cash-fx-shake-big,
-  .cash-fx-shake-mega,
-  .cash-fx-shake-jackpot,
+  html.cash-fx-shake-big,
+  html.cash-fx-shake-mega,
+  html.cash-fx-shake-jackpot,
   .cash-fx-firework,
   .cash-fx-spark {
     animation: none;

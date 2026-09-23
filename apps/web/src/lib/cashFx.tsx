@@ -141,7 +141,6 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
   const [spend, setSpend] = useState<SpendFloat | null>(null);
   const [walletPulse, setWalletPulse] = useState<WinTier | null>(null);
   const [walletSpend, setWalletSpend] = useState(false);
-  const [shake, setShake] = useState<WinTier | null>(null);
   const seq = useRef(0);
   const clearTimers = useRef<number[]>([]);
 
@@ -266,14 +265,28 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
         tier === "jackpot" || tier === "mega" || tier === "big"
           ? tier
           : null;
-      if (shakeTier) {
-        setShake(shakeTier);
-        document.documentElement.classList.add("cash-fx-shaking");
+      if (shakeTier && !reduced) {
+        const shakeClass =
+          shakeTier === "jackpot"
+            ? "cash-fx-shake-jackpot"
+            : shakeTier === "mega"
+              ? "cash-fx-shake-mega"
+              : "cash-fx-shake-big";
+        const root = document.documentElement;
+        root.classList.add("cash-fx-shaking", shakeClass);
         const shakeMs =
           shakeTier === "jackpot" ? 480 : shakeTier === "mega" ? 560 : 380;
+        if (typeof navigator.vibrate === "function") {
+          navigator.vibrate(
+            shakeTier === "jackpot"
+              ? [28, 36, 28, 36, 55]
+              : shakeTier === "mega"
+                ? [22, 30, 22, 30, 22]
+                : [18, 28, 18]
+          );
+        }
         clearLater(() => {
-          setShake(null);
-          document.documentElement.classList.remove("cash-fx-shaking");
+          root.classList.remove("cash-fx-shaking", shakeClass);
         }, shakeMs);
       }
 
@@ -298,18 +311,7 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
 
   return (
     <CashFxContext.Provider value={api}>
-      <div
-        className={[
-          "cash-fx-root",
-          shake === "jackpot" ? "cash-fx-shake-jackpot" : "",
-          shake === "mega" ? "cash-fx-shake-mega" : "",
-          shake === "big" ? "cash-fx-shake-big" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
-        {children}
-      </div>
+      <div className="cash-fx-root">{children}</div>
       <CashFxOverlay burst={burst} spend={spend} />
     </CashFxContext.Provider>
   );

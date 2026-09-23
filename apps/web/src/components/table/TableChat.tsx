@@ -73,7 +73,9 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
     if (seeded.current) return;
     if (!feed.length) return;
     seeded.current = true;
-    lastReadId.current = feed[feed.length - 1]!.id;
+    const tail = feed[feed.length - 1]!.id;
+    lastReadId.current = tail;
+    lastPeekId.current = tail;
   }, [feed]);
 
   useEffect(() => {
@@ -98,8 +100,13 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
     if (open || !feed.length) return;
     const latest = feed[feed.length - 1]!;
     if (latest.id === lastPeekId.current) return;
+    const prevId = lastPeekId.current;
+    const prevIdx =
+      prevId == null ? -1 : feed.findIndex((m) => m.id === prevId);
+    const fresh = prevIdx >= 0 ? feed.slice(prevIdx + 1) : [latest];
     lastPeekId.current = latest.id;
-    setPeeks(feed.slice(-2));
+    if (!fresh.length) return;
+    setPeeks(fresh.slice(-2));
     setPeekVisible(true);
     const hide = window.setTimeout(() => setPeekVisible(false), PEEK_MS);
     const clear = window.setTimeout(() => setPeeks([]), PEEK_MS + 400);
