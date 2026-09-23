@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../lib/auth";
@@ -6,11 +6,13 @@ import { ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { formatCents, formatCountdown, formatHeaderCents } from "../lib/format";
 import { useCashFx } from "../lib/cashFx";
+import { useAnimatedCents } from "../lib/useAnimatedCents";
 import { BrandMark } from "./BrandMark";
 
 export function AppHeader() {
   const { user, wallet, claim, refresh } = useAuth();
   const { walletRef, walletPulse, walletSpend } = useCashFx();
+  const amountRef = useRef<HTMLSpanElement>(null);
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
@@ -18,6 +20,9 @@ export function AppHeader() {
 
   const canClaim = wallet?.canClaim === true;
   const balance = wallet?.balanceCents ?? user?.balanceCents ?? 0;
+  useAnimatedCents(balance, amountRef, {
+    format: formatHeaderCents,
+  });
   const nextClaimAt = wallet?.nextClaimAt
     ? Date.parse(wallet.nextClaimAt)
     : NaN;
@@ -125,7 +130,7 @@ export function AppHeader() {
                       : 0.4,
               }}
             >
-              {formatHeaderCents(balance)}
+              <span ref={amountRef} />
             </motion.span>
             <button
               type="button"

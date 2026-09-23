@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { TABLE_CHAT_MAX_LEN, type TableChatMessage } from "@neon21/shared";
 
 type Props = {
@@ -15,6 +16,9 @@ type Props = {
 };
 
 const PEEK_MS = 4500;
+const PEEK_MAX = 2;
+
+type Peek = { id: string; msg: TableChatMessage };
 
 function formatChatTime(iso: string): string {
   const d = new Date(iso);
@@ -51,23 +55,89 @@ function withoutOwnPresence(
   );
 }
 
+function PeekLine({
+  msg,
+  selfUserId,
+}: {
+  msg: TableChatMessage;
+  selfUserId: string | null;
+}) {
+  const mine = selfUserId != null && msg.userId === selfUserId;
+  const system = msg.kind === "system";
+  return (
+    <div
+      className={`table-chat-line${mine ? " is-mine" : ""}${system ? " is-system" : ""}`}
+    >
+      {system ? (
+        <span className="table-chat-system">
+          {msg.name} {msg.text}
+        </span>
+      ) : (
+        <>
+          <span className="table-chat-name">{msg.name}</span>
+          <span className="table-chat-text">{msg.text}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
 export function TableChat({ messages, selfUserId, onSend }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  const [peeks, setPeeks] = useState<TableChatMessage[]>([]);
-  const [peekVisible, setPeekVisible] = useState(false);
+  const [peeks, setPeeks] = useState<Peek[]>([]);
   const [unread, setUnread] = useState(0);
   const feedRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const lastPeekId = useRef<string | null>(null);
   const lastReadId = useRef<string | null>(null);
   const seeded = useRef(false);
+  const peekTimers = useRef(new Map<string, number>());
 
   const feed = useMemo(
     () => withoutOwnPresence(messages, selfUserId),
     [messages, selfUserId]
   );
   const visible = feed.slice(-8);
+
+  function clearPeekTimer(id: string) {
+    const t = peekTimers.current.get(id);
+    if (t == null) return;
+    window.clearTimeout(t);
+    peekTimers.current.delete(id);
+  }
+
+  function clearAllPeeks() {
+    for (const id of peekTimers.current.keys()) clearPeekTimer(id);
+    setPeeks([]);
+  }
+
+  function schedulePeekDismiss(id: string) {
+    clearPeekTimer(id);
+    peekTimers.current.set(
+      id,
+      window.setTimeout(() => {
+        peekTimers.current.delete(id);
+        setPeeks((prev) => prev.filter((p) => p.id !== id));
+      }, PEEK_MS)
+    );
+  }
+
+  function enqueuePeeks(incoming: TableChatMessage[]) {
+    for (const msg of incoming) {
+      setPeeks((prev) => {
+        const without = prev.filter((p) => p.id !== msg.id);
+        let next = without;
+        while (next.length >= PEEK_MAX) {
+          const oldest = next[0]!;
+          clearPeekTimer(oldest.id);
+          next = next.slice(1);
+        }
+        return [...next, { id: msg.id, msg }];
+      });
+      schedulePeekDismiss(msg.id);
+    }
+  }
 
   useEffect(() => {
     if (seeded.current) return;
@@ -89,6 +159,7 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
     inputRef.current?.focus();
     lastReadId.current = feed[feed.length - 1]?.id ?? lastReadId.current;
     setUnread(0);
+    clearAllPeeks();
   }, [open, feed]);
 
   useEffect(() => {
@@ -106,14 +177,7 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
     const fresh = prevIdx >= 0 ? feed.slice(prevIdx + 1) : [latest];
     lastPeekId.current = latest.id;
     if (!fresh.length) return;
-    setPeeks(fresh.slice(-2));
-    setPeekVisible(true);
-    const hide = window.setTimeout(() => setPeekVisible(false), PEEK_MS);
-    const clear = window.setTimeout(() => setPeeks([]), PEEK_MS + 400);
-    return () => {
-      window.clearTimeout(hide);
-      window.clearTimeout(clear);
-    };
+    enqueuePeeks(fresh);
   }, [feed, open]);
 
   useEffect(() => {
@@ -131,14 +195,20 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
       }
       if (e.key === "/" || e.key === "?") {
         e.preventDefault();
-        setPeekVisible(false);
-        setPeeks([]);
+        clearAllPeeks();
         setOpen(true);
       }
     }
     window.addEventListener("keydown", onGlobalKey);
     return () => window.removeEventListener("keydown", onGlobalKey);
   }, []);
+
+  useEffect(
+    () => () => {
+      for (const id of peekTimers.current.keys()) clearPeekTimer(id);
+    },
+    []
+  );
 
   function submit(e?: FormEvent) {
     e?.preventDefault();
@@ -157,8 +227,7 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
   }
 
   function openChat() {
-    setPeekVisible(false);
-    setPeeks([]);
+    clearAllPeeks();
     setOpen(true);
   }
 
@@ -227,34 +296,27 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
         </>
       ) : (
         <>
-          {peeks.length > 0 && (
-            <div
-              className={`table-chat-peeks${peekVisible ? " is-on" : ""}`}
-              aria-live="polite"
-            >
-              {peeks.map((m) => {
-                const mine = selfUserId != null && m.userId === selfUserId;
-                const system = m.kind === "system";
-                return (
-                  <div
-                    key={m.id}
-                    className={`table-chat-line${mine ? " is-mine" : ""}${system ? " is-system" : ""}`}
-                  >
-                    {system ? (
-                      <span className="table-chat-system">
-                        {m.name} {m.text}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="table-chat-name">{m.name}</span>
-                        <span className="table-chat-text">{m.text}</span>
-                      </>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          <div className="table-chat-peeks" aria-live="polite">
+            <AnimatePresence initial={false} mode="popLayout">
+              {peeks.map((p) => (
+                <motion.div
+                  key={p.id}
+                  className="table-chat-peek-item"
+                  layout
+                  initial={{ opacity: 0, x: -28 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -16 }}
+                  transition={{
+                    opacity: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+                    x: { duration: 0.38, ease: [0.22, 1, 0.36, 1] },
+                    layout: { duration: 0.32, ease: [0.22, 1, 0.36, 1] },
+                  }}
+                >
+                  <PeekLine msg={p.msg} selfUserId={selfUserId} />
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
           <button
             type="button"
             className="table-chat-pill"

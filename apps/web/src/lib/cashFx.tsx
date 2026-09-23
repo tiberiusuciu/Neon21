@@ -73,6 +73,8 @@ type CashFxApi = {
   walletRef: RefObject<HTMLSpanElement>;
   walletPulse: WinTier | null;
   walletSpend: boolean;
+  /** Applied to the content plane under the header — never the header itself. */
+  shakeClass: string;
 };
 
 const CashFxContext = createContext<CashFxApi | null>(null);
@@ -141,6 +143,7 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
   const [spend, setSpend] = useState<SpendFloat | null>(null);
   const [walletPulse, setWalletPulse] = useState<WinTier | null>(null);
   const [walletSpend, setWalletSpend] = useState(false);
+  const [shake, setShake] = useState<"big" | "mega" | "jackpot" | null>(null);
   const seq = useRef(0);
   const clearTimers = useRef<number[]>([]);
 
@@ -266,28 +269,25 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
           ? tier
           : null;
       if (shakeTier && !reduced) {
-        const shakeClass =
+        const shakeKey =
           shakeTier === "jackpot"
-            ? "cash-fx-shake-jackpot"
+            ? "jackpot"
             : shakeTier === "mega"
-              ? "cash-fx-shake-mega"
-              : "cash-fx-shake-big";
-        const root = document.documentElement;
-        root.classList.add("cash-fx-shaking", shakeClass);
+              ? "mega"
+              : "big";
+        setShake(shakeKey);
         const shakeMs =
-          shakeTier === "jackpot" ? 480 : shakeTier === "mega" ? 560 : 380;
+          shakeKey === "jackpot" ? 480 : shakeKey === "mega" ? 560 : 380;
         if (typeof navigator.vibrate === "function") {
           navigator.vibrate(
-            shakeTier === "jackpot"
+            shakeKey === "jackpot"
               ? [28, 36, 28, 36, 55]
-              : shakeTier === "mega"
+              : shakeKey === "mega"
                 ? [22, 30, 22, 30, 22]
                 : [18, 28, 18]
           );
         }
-        clearLater(() => {
-          root.classList.remove("cash-fx-shaking", shakeClass);
-        }, shakeMs);
+        clearLater(() => setShake(null), shakeMs);
       }
 
       const flightMs = reduced ? 360 : quick ? 520 : 720;
@@ -305,8 +305,15 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
   );
 
   const api = useMemo(
-    () => ({ playWin, playSpend, walletRef, walletPulse, walletSpend }),
-    [playWin, playSpend, walletPulse, walletSpend]
+    () => ({
+      playWin,
+      playSpend,
+      walletRef,
+      walletPulse,
+      walletSpend,
+      shakeClass: shake ? `cash-fx-shake-${shake}` : "",
+    }),
+    [playWin, playSpend, walletPulse, walletSpend, shake]
   );
 
   return (

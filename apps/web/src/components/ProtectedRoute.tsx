@@ -1,7 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { AppHeader } from "./AppHeader";
-import { CashFxProvider } from "../lib/cashFx";
+import { CashFxProvider, useCashFx } from "../lib/cashFx";
 
 function BootScreen() {
   return (
@@ -21,6 +21,20 @@ export function ProtectedRoute() {
   return <Outlet />;
 }
 
+function AppShell() {
+  const { shakeClass } = useCashFx();
+  return (
+    <>
+      <AppHeader />
+      <div className={`cash-fx-body${shakeClass ? ` ${shakeClass}` : ""}`}>
+        <div className="page-wrap">
+          <Outlet />
+        </div>
+      </div>
+    </>
+  );
+}
+
 /** Requires display name before the rest of the app. */
 export function NamedRoute() {
   const { token, user, loading } = useAuth();
@@ -36,10 +50,7 @@ export function NamedRoute() {
 
   return (
     <CashFxProvider>
-      <AppHeader />
-      <div className="page-wrap">
-        <Outlet />
-      </div>
+      <AppShell />
     </CashFxProvider>
   );
 }
