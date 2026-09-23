@@ -96,6 +96,7 @@ export class TableRoom {
       name: this.name,
       seatCapacity: SEAT_CAPACITY,
       playerCount,
+      spectatorCount: this.spectators.size,
       status: playerCount >= SEAT_CAPACITY ? "busy" : "open",
     };
   }
@@ -232,21 +233,29 @@ export class TableRoom {
     return this.spectators.get(userId)?.name ?? null;
   }
 
-  join(userId: string, name: string) {
+  /** Fresh table presence (not a reconnect). */
+  join(userId: string, name: string): boolean {
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx >= 0) {
       this.seats[seatIdx]!.connected = true;
       this.seats[seatIdx]!.name = name;
       this.broadcast();
       void this.kickIfBroke(userId);
-      return;
+      return false;
     }
+    const already = this.spectators.has(userId);
     this.spectators.set(userId, { userId, name });
     this.broadcast();
+    this.cb.onLobbyChanged();
+    return !already;
   }
 
-  leave(userId: string) {
+  /** Returns display name if they were present and left. */
+  leave(userId: string): string | null {
+    const name = this.displayName(userId);
     const seatIdx = this.findSeatIndex(userId);
+    const wasSpec = this.spectators.has(userId);
+    if (seatIdx < 0 && !wasSpec) return null;
     if (seatIdx >= 0) {
       this.clearSeat(seatIdx);
     }
@@ -254,6 +263,7 @@ export class TableRoom {
     this.broadcast();
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
+    return name;
   }
 
   setConnected(userId: string, connected: boolean) {

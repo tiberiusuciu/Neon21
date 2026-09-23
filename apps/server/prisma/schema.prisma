@@ -58,6 +58,7 @@ model TableChatMessage {
   userId    String
   name      String
   text      String
+  kind      String   @default("chat")
   createdAt DateTime @default(now())
 
   @@index([tableId, createdAt])

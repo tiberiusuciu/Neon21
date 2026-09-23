@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type FormEvent,
@@ -35,6 +36,21 @@ function countUnread(
   return after.filter((m) => !selfUserId || m.userId !== selfUserId).length;
 }
 
+function withoutOwnPresence(
+  messages: TableChatMessage[],
+  selfUserId: string | null
+): TableChatMessage[] {
+  if (!selfUserId) return messages;
+  return messages.filter(
+    (m) =>
+      !(
+        m.kind === "system" &&
+        m.userId === selfUserId &&
+        (m.text === "has joined" || m.text === "has left")
+      )
+  );
+}
+
 export function TableChat({ messages, selfUserId, onSend }: Props) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
@@ -47,39 +63,43 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
   const lastReadId = useRef<string | null>(null);
   const seeded = useRef(false);
 
-  const visible = messages.slice(-8);
+  const feed = useMemo(
+    () => withoutOwnPresence(messages, selfUserId),
+    [messages, selfUserId]
+  );
+  const visible = feed.slice(-8);
 
   useEffect(() => {
     if (seeded.current) return;
-    if (!messages.length) return;
+    if (!feed.length) return;
     seeded.current = true;
-    lastReadId.current = messages[messages.length - 1]!.id;
-  }, [messages]);
+    lastReadId.current = feed[feed.length - 1]!.id;
+  }, [feed]);
 
   useEffect(() => {
     const el = feedRef.current;
     if (!el || !open) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages.length, open]);
+  }, [feed.length, open]);
 
   useEffect(() => {
     if (!open) return;
     inputRef.current?.focus();
-    lastReadId.current = messages[messages.length - 1]?.id ?? lastReadId.current;
+    lastReadId.current = feed[feed.length - 1]?.id ?? lastReadId.current;
     setUnread(0);
-  }, [open, messages]);
+  }, [open, feed]);
 
   useEffect(() => {
     if (open) return;
-    setUnread(countUnread(messages, lastReadId.current, selfUserId));
-  }, [messages, open, selfUserId]);
+    setUnread(countUnread(feed, lastReadId.current, selfUserId));
+  }, [feed, open, selfUserId]);
 
   useEffect(() => {
-    if (open || !messages.length) return;
-    const latest = messages[messages.length - 1]!;
+    if (open || !feed.length) return;
+    const latest = feed[feed.length - 1]!;
     if (latest.id === lastPeekId.current) return;
     lastPeekId.current = latest.id;
-    setPeeks(messages.slice(-2));
+    setPeeks(feed.slice(-2));
     setPeekVisible(true);
     const hide = window.setTimeout(() => setPeekVisible(false), PEEK_MS);
     const clear = window.setTimeout(() => setPeeks([]), PEEK_MS + 400);
@@ -87,7 +107,7 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
       window.clearTimeout(hide);
       window.clearTimeout(clear);
     };
-  }, [messages, open]);
+  }, [feed, open]);
 
   useEffect(() => {
     function onGlobalKey(e: globalThis.KeyboardEvent) {
@@ -142,19 +162,28 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
           <div ref={feedRef} className="table-chat-feed" aria-live="polite">
             {visible.map((m) => {
               const mine = selfUserId != null && m.userId === selfUserId;
+              const system = m.kind === "system";
               const time = formatChatTime(m.at);
               return (
                 <div
                   key={m.id}
-                  className={`table-chat-line${mine ? " is-mine" : ""}`}
+                  className={`table-chat-line${mine ? " is-mine" : ""}${system ? " is-system" : ""}`}
                 >
                   {time ? (
                     <time className="table-chat-time" dateTime={m.at}>
                       {time}
                     </time>
                   ) : null}
-                  <span className="table-chat-name">{m.name}</span>
-                  <span className="table-chat-text">{m.text}</span>
+                  {system ? (
+                    <span className="table-chat-system">
+                      {m.name} {m.text}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="table-chat-name">{m.name}</span>
+                      <span className="table-chat-text">{m.text}</span>
+                    </>
+                  )}
                 </div>
               );
             })}
@@ -198,13 +227,22 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
             >
               {peeks.map((m) => {
                 const mine = selfUserId != null && m.userId === selfUserId;
+                const system = m.kind === "system";
                 return (
                   <div
                     key={m.id}
-                    className={`table-chat-line${mine ? " is-mine" : ""}`}
+                    className={`table-chat-line${mine ? " is-mine" : ""}${system ? " is-system" : ""}`}
                   >
-                    <span className="table-chat-name">{m.name}</span>
-                    <span className="table-chat-text">{m.text}</span>
+                    {system ? (
+                      <span className="table-chat-system">
+                        {m.name} {m.text}
+                      </span>
+                    ) : (
+                      <>
+                        <span className="table-chat-name">{m.name}</span>
+                        <span className="table-chat-text">{m.text}</span>
+                      </>
+                    )}
                   </div>
                 );
               })}

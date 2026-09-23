@@ -130,12 +130,22 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       offHistory();
     };
   }, [token, setBalanceCents]);
+  const leaveTimerRef = useRef<number | null>(null);
   const subscribeLobby = useCallback(() => {
     if (!socket) return;
     emitEvent(socket, "lobby:subscribe");
   }, [socket]);
   const joinTable = useCallback(
     (tableId: string) => {
+      if (leaveTimerRef.current != null) {
+        window.clearTimeout(leaveTimerRef.current);
+        leaveTimerRef.current = null;
+      }
+      const prev = getActiveTableId();
+      if (prev && prev !== tableId) {
+        setTableState(null);
+        setChatMessages([]);
+      }
       setActiveTableId(tableId);
       if (!socket) return;
       emitEvent(socket, "table:join", { tableId });
@@ -143,11 +153,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     [socket]
   );
   const leaveTable = useCallback(() => {
-    setActiveTableId(null);
-    setTableState(null);
-    setChatMessages([]);
-    if (!socket) return;
-    emitEvent(socket, "table:leave");
+    if (leaveTimerRef.current != null) {
+      window.clearTimeout(leaveTimerRef.current);
+    }
+    leaveTimerRef.current = window.setTimeout(() => {
+      leaveTimerRef.current = null;
+      setActiveTableId(null);
+      setTableState(null);
+      setChatMessages([]);
+      if (!socket) return;
+      emitEvent(socket, "table:leave");
+    }, 400);
   }, [socket]);
   const takeSeat = useCallback(
     (seatIndex: number) => {

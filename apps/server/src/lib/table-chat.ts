@@ -24,15 +24,24 @@ export function clearChatCursors(tableId: string) {
 }
 
 function toPayload(
-  row: { id: string; userId: string; name: string; text: string; createdAt: Date },
+  row: {
+    id: string;
+    userId: string;
+    name: string;
+    text: string;
+    kind: string;
+    createdAt: Date;
+  },
   seenByCount?: number
 ): TableChatMessage {
+  const kind = row.kind === "system" ? "system" : "chat";
   return {
     id: row.id,
     userId: row.userId,
     name: row.name,
     text: row.text,
     at: row.createdAt.toISOString(),
+    ...(kind === "system" ? { kind } : {}),
     ...(seenByCount != null ? { seenByCount } : {}),
   };
 }
@@ -80,6 +89,24 @@ export function checkChatThrottle(tableId: string, userId: string): string | nul
   return null;
 }
 
+async function trimChat(tableId: string) {
+  const excess = await prisma.tableChatMessage.count({
+    where: { tableId },
+  });
+  if (excess <= RETAIN_LIMIT) return;
+  const old = await prisma.tableChatMessage.findMany({
+    where: { tableId },
+    orderBy: { createdAt: "asc" },
+    take: excess - RETAIN_LIMIT,
+    select: { id: true },
+  });
+  if (old.length) {
+    await prisma.tableChatMessage.deleteMany({
+      where: { id: { in: old.map((o) => o.id) } },
+    });
+  }
+}
+
 export async function insertChatMessage(input: {
   tableId: string;
   userId: string;
@@ -92,29 +119,32 @@ export async function insertChatMessage(input: {
       userId: input.userId,
       name: input.name,
       text: input.text,
+      kind: "chat",
     },
   });
 
-  const excess = await prisma.tableChatMessage.count({
-    where: { tableId: input.tableId },
-  });
-  if (excess > RETAIN_LIMIT) {
-    const old = await prisma.tableChatMessage.findMany({
-      where: { tableId: input.tableId },
-      orderBy: { createdAt: "asc" },
-      take: excess - RETAIN_LIMIT,
-      select: { id: true },
-    });
-    if (old.length) {
-      await prisma.tableChatMessage.deleteMany({
-        where: { id: { in: old.map((o) => o.id) } },
-      });
-    }
-  }
-
-  // Author has "read" their own message.
+  await trimChat(input.tableId);
   cursorMap(input.tableId).set(input.userId, row.createdAt.getTime());
+  return toPayload(row, 0);
+}
 
+export async function insertSystemChatMessage(input: {
+  tableId: string;
+  userId: string;
+  name: string;
+  text: string;
+}): Promise<TableChatMessage> {
+  const row = await prisma.tableChatMessage.create({
+    data: {
+      tableId: input.tableId,
+      userId: input.userId,
+      name: input.name,
+      text: input.text,
+      kind: "system",
+    },
+  });
+
+  await trimChat(input.tableId);
   return toPayload(row, 0);
 }
 

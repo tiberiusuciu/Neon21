@@ -70,6 +70,7 @@ export function LobbyPage() {
               <tr>
                 <th>Name</th>
                 <th>Players</th>
+                <th>Viewers</th>
                 <th>Status</th>
                 <th></th>
               </tr>
@@ -81,6 +82,7 @@ export function LobbyPage() {
                   <td>
                     {t.playerCount}/{t.seatCapacity}
                   </td>
+                  <td>{t.spectatorCount ?? 0}</td>
                   <td>
                     <span className={`status-pill ${t.status}`}>{t.status}</span>
                   </td>
@@ -102,7 +104,8 @@ export function LobbyPage() {
                   Join
                 </Link>
                 <div className="meta">
-                  {t.playerCount}/{t.seatCapacity} ·{" "}
+                  {t.playerCount}/{t.seatCapacity} playing ·{" "}
+                  {t.spectatorCount ?? 0} watching ·{" "}
                   <span className={`status-pill ${t.status}`}>{t.status}</span>
                 </div>
               </div>

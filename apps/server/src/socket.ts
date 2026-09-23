@@ -8,6 +8,7 @@ import { getPool, initPool } from "./game/table-pool.js";
 import {
   checkChatThrottle,
   insertChatMessage,
+  insertSystemChatMessage,
   loadChatHistory,
   markChatRead,
 } from "./lib/table-chat.js";
@@ -22,6 +23,78 @@ async function loadUserName(userId: string): Promise<string | null> {
     select: { name: true },
   });
   return user?.name ?? null;
+}
+
+const PRESENCE_GRACE_MS = 2_500;
+/** Pending leave announces: cancel if the same user rejoins quickly. */
+const pendingLeaveAnnounces = new Map<string, ReturnType<typeof setTimeout>>();
+
+function presenceKey(tableId: string, userId: string) {
+  return `${tableId}:${userId}`;
+}
+
+async function writePresenceChat(
+  io: SocketIOServer,
+  tableId: string,
+  userId: string,
+  name: string,
+  action: "joined" | "left",
+  log?: { error: (err: unknown, msg?: string) => void },
+  exceptSocketId?: string
+) {
+  try {
+    const msg = await insertSystemChatMessage({
+      tableId,
+      userId,
+      name,
+      text: action === "joined" ? "has joined" : "has left",
+    });
+    const target = exceptSocketId
+      ? io.to(`table:${tableId}`).except(exceptSocketId)
+      : io.to(`table:${tableId}`);
+    target.emit("table:chat", msg);
+  } catch (err) {
+    log?.error(err, "presence chat failed");
+  }
+}
+
+function emitPresenceChat(
+  io: SocketIOServer,
+  tableId: string,
+  userId: string,
+  name: string,
+  action: "joined" | "left",
+  log?: { error: (err: unknown, msg?: string) => void },
+  exceptSocketId?: string
+) {
+  const key = presenceKey(tableId, userId);
+  if (action === "joined") {
+    const pending = pendingLeaveAnnounces.get(key);
+    if (pending) {
+      clearTimeout(pending);
+      pendingLeaveAnnounces.delete(key);
+      return;
+    }
+    void writePresenceChat(
+      io,
+      tableId,
+      userId,
+      name,
+      "joined",
+      log,
+      exceptSocketId
+    );
+    return;
+  }
+  const existing = pendingLeaveAnnounces.get(key);
+  if (existing) clearTimeout(existing);
+  pendingLeaveAnnounces.set(
+    key,
+    setTimeout(() => {
+      pendingLeaveAnnounces.delete(key);
+      void writePresenceChat(io, tableId, userId, name, "left", log);
+    }, PRESENCE_GRACE_MS)
+  );
 }
 
 export function setupSocket(app: FastifyInstance, httpServer: import("node:http").Server) {
@@ -74,17 +147,38 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (prev && prev !== room.id) {
         socket.leave(`table:${prev}`);
         const prevRoom = pool.get(prev);
-        prevRoom?.leave(userId);
+        const leftName = prevRoom?.leave(userId) ?? null;
+        if (prevRoom && leftName) {
+          emitPresenceChat(io, prev, userId, leftName, "left", app.log);
+        }
       }
       socket.data.tableId = room.id;
       socket.join(`table:${room.id}`);
-      room.join(userId, name);
+      const isNew = room.join(userId, name);
       socket.emit("table:state", room.getSnapshot());
       try {
-        const messages = await loadChatHistory(room.id, room.presentUserIds());
+        const messages = (await loadChatHistory(room.id, room.presentUserIds())).filter(
+          (m) =>
+            !(
+              m.kind === "system" &&
+              m.userId === userId &&
+              (m.text === "has joined" || m.text === "has left")
+            )
+        );
         socket.emit("table:chat:history", { messages });
       } catch (err) {
         app.log.error(err, "chat history failed");
+      }
+      if (isNew) {
+        emitPresenceChat(
+          io,
+          room.id,
+          userId,
+          name,
+          "joined",
+          app.log,
+          socket.id
+        );
       }
     });
 
@@ -92,7 +186,10 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       const tableId = socket.data.tableId as string | undefined;
       if (!tableId) return;
       socket.leave(`table:${tableId}`);
-      pool.get(tableId)?.leave(userId);
+      const leftName = pool.get(tableId)?.leave(userId) ?? null;
+      if (leftName) {
+        emitPresenceChat(io, tableId, userId, leftName, "left", app.log);
+      }
       socket.data.tableId = undefined;
     });
 

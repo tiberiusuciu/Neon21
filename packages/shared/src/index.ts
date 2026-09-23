@@ -224,6 +224,7 @@ export const LobbyTableSchema = z.object({
   name: z.string(),
   seatCapacity: z.number().int(),
   playerCount: z.number().int(),
+  spectatorCount: z.number().int(),
   status: TableStatusSchema,
 });
 export type LobbyTable = z.infer<typeof LobbyTableSchema>;
@@ -324,6 +325,7 @@ export const TableChatMessageSchema = z.object({
   name: z.string(),
   text: z.string(),
   at: z.string(),
+  kind: z.enum(["chat", "system"]).optional(),
   seenByCount: z.number().int().nonnegative().optional(),
 });
 export type TableChatMessage = z.infer<typeof TableChatMessageSchema>;
