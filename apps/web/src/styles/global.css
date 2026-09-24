@@ -5883,19 +5883,18 @@ h3 {
 .seat-spin-pointer-glow {
   position: absolute;
   left: 50%;
-  top: 2px;
-  width: 28px;
-  height: 28px;
-  margin-left: -14px;
+  top: 4px;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    color-mix(in srgb, #ff2a2a 75%, transparent) 0%,
-    color-mix(in srgb, #ff4a1a 35%, transparent) 42%,
-    transparent 70%
+    color-mix(in srgb, #f43f5e 45%, transparent) 0%,
+    transparent 72%
   );
-  filter: blur(3px);
-  animation: seat-spin-pointer-pulse 1.2s ease-in-out infinite;
+  filter: blur(2px);
+  animation: seat-spin-pointer-pulse 1.8s ease-in-out infinite;
 }
 
 .seat-spin-pointer-blade,
@@ -5908,7 +5907,7 @@ h3 {
   margin-left: -8px;
   border-left: 8px solid transparent;
   border-right: 8px solid transparent;
-  border-top: 16px solid #ff1e1e;
+  border-top: 16px solid #e11d48;
 }
 
 .seat-spin-pointer-blade {
@@ -5916,11 +5915,10 @@ h3 {
   border-left-width: 9px;
   border-right-width: 9px;
   border-top-width: 18px;
-  border-top-color: #ff3b2a;
-  filter: drop-shadow(0 0 4px #ff1a1a)
-    drop-shadow(0 0 10px #ff4422)
-    drop-shadow(0 0 18px color-mix(in srgb, #ff2200 80%, transparent));
-  animation: seat-spin-pointer-shimmer 1.6s ease-in-out infinite;
+  border-top-color: #e11d48;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, #e11d48 70%, transparent))
+    drop-shadow(0 0 8px color-mix(in srgb, #fb7185 45%, transparent));
+  animation: seat-spin-pointer-shimmer 2.2s ease-in-out infinite;
 }
 
 .seat-spin-pointer-core {
@@ -5928,64 +5926,58 @@ h3 {
   border-left-width: 5px;
   border-right-width: 5px;
   border-top-width: 12px;
-  border-top-color: #fff0e8;
+  border-top-color: #fecdd3;
   top: 1px;
-  opacity: 0.92;
-  filter: drop-shadow(0 0 3px #fff);
-  animation: seat-spin-pointer-core 1.6s ease-in-out infinite;
+  opacity: 0.85;
+  filter: drop-shadow(0 0 1.5px color-mix(in srgb, #fff 60%, transparent));
+  animation: seat-spin-pointer-core 2.2s ease-in-out infinite;
 }
 
 .seat-spin-wheel.is-spinning .seat-spin-pointer-glow {
-  animation-duration: 0.55s;
+  animation-duration: 0.9s;
 }
 
 .seat-spin-wheel.is-spinning .seat-spin-pointer-blade {
-  filter: drop-shadow(0 0 6px #ff2200)
-    drop-shadow(0 0 14px #ff4a2a)
-    drop-shadow(0 0 26px #ff1800);
-  animation-duration: 0.7s;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, #e11d48 75%, transparent))
+    drop-shadow(0 0 10px color-mix(in srgb, #fb7185 50%, transparent));
+  animation-duration: 1.1s;
 }
 
 @keyframes seat-spin-pointer-pulse {
   0%,
   100% {
-    opacity: 0.7;
-    transform: scale(0.92);
+    opacity: 0.45;
+    transform: scale(0.95);
   }
   50% {
-    opacity: 1;
-    transform: scale(1.12);
+    opacity: 0.75;
+    transform: scale(1.05);
   }
 }
 
 @keyframes seat-spin-pointer-shimmer {
   0%,
   100% {
-    border-top-color: #ff2a1a;
-    filter: drop-shadow(0 0 4px #ff1a1a)
-      drop-shadow(0 0 10px #ff4422)
-      drop-shadow(0 0 18px color-mix(in srgb, #ff2200 80%, transparent));
+    border-top-color: #e11d48;
+    filter: drop-shadow(0 0 3px color-mix(in srgb, #e11d48 70%, transparent))
+      drop-shadow(0 0 8px color-mix(in srgb, #fb7185 40%, transparent));
   }
-  40% {
-    border-top-color: #ff6a3a;
-    filter: drop-shadow(0 0 7px #ff3a20)
-      drop-shadow(0 0 16px #ff6040)
-      drop-shadow(0 0 28px #ff2000);
-  }
-  70% {
-    border-top-color: #ff1400;
+  50% {
+    border-top-color: #f43f5e;
+    filter: drop-shadow(0 0 4px color-mix(in srgb, #f43f5e 65%, transparent))
+      drop-shadow(0 0 9px color-mix(in srgb, #fda4af 35%, transparent));
   }
 }
 
 @keyframes seat-spin-pointer-core {
   0%,
   100% {
-    opacity: 0.75;
-    border-top-color: #ffe8d8;
+    opacity: 0.7;
+    border-top-color: #fecdd3;
   }
   50% {
-    opacity: 1;
-    border-top-color: #ffffff;
+    opacity: 0.95;
+    border-top-color: #fff1f2;
   }
 }
 
@@ -6076,16 +6068,14 @@ h3 {
   margin-left: -1px;
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, #ff6a4a 20%, transparent),
-    #ff2a1a 18%,
-    #fff0e8 50%,
-    #ff2a1a 82%,
-    color-mix(in srgb, #ff6a4a 20%, transparent)
+    color-mix(in srgb, #f43f5e 15%, transparent),
+    #e11d48 22%,
+    #fecdd3 50%,
+    #e11d48 78%,
+    color-mix(in srgb, #f43f5e 15%, transparent)
   );
-  box-shadow:
-    0 0 6px #ff3a20,
-    0 0 12px color-mix(in srgb, #ff2200 70%, transparent);
-  animation: seat-spin-loupe-hair 1.4s ease-in-out infinite;
+  box-shadow: 0 0 4px color-mix(in srgb, #e11d48 55%, transparent);
+  animation: seat-spin-loupe-hair 1.8s ease-in-out infinite;
 }
 
 .seat-spin-loupe-glass {
