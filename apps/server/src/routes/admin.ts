@@ -22,6 +22,8 @@ import {
   getClaimsSumCents,
   getGrossTakeCents,
   getRawPotCents,
+  jackpotStartsAt,
+  jackpotTakeFromLosses,
   setAvailablePotCents,
 } from "../lib/jackpot.js";
 import {
@@ -433,15 +435,49 @@ export async function adminRoutes(app: FastifyInstance) {
         }
       }
 
+      const removeJackpotTake = parsed.data.removeJackpotTake === true;
+      const epoch = jackpotStartsAt();
+
       const result = await prisma.$transaction(async (tx) => {
+        const outcomeWhere =
+          period === "alltime"
+            ? { userId }
+            : {
+                userId,
+                createdAt: { gte: from!, lt: to! },
+              };
+
+        const lossCreatedAt =
+          period === "alltime"
+            ? { gte: epoch }
+            : {
+                gte: from!.getTime() > epoch.getTime() ? from! : epoch,
+                lt: to!,
+              };
+
+        const lossAgg = await tx.handOutcome.aggregate({
+          where: {
+            userId,
+            resultCents: { lt: 0 },
+            createdAt: lossCreatedAt,
+          },
+          _sum: { resultCents: true },
+        });
+        const jackpotTakeCents = jackpotTakeFromLosses(
+          -(lossAgg._sum.resultCents ?? 0)
+        );
+
+        if (!removeJackpotTake && jackpotTakeCents > 0) {
+          await tx.jackpotAdjustment.create({
+            data: {
+              deltaCents: jackpotTakeCents,
+              note: `admin:reset-stats preserve:${request.user.email}:${userId}`,
+            },
+          });
+        }
+
         const deleted = await tx.handOutcome.deleteMany({
-          where:
-            period === "alltime"
-              ? { userId }
-              : {
-                  userId,
-                  createdAt: { gte: from!, lt: to! },
-                },
+          where: outcomeWhere,
         });
         await recomputeUserStats(tx, userId);
         const user = await tx.user.findUniqueOrThrow({
@@ -455,8 +491,20 @@ export async function adminRoutes(app: FastifyInstance) {
             netProfitCents: true,
           },
         });
-        return { deleted: deleted.count, user };
+        return {
+          deleted: deleted.count,
+          user,
+          jackpotTakeCents,
+        };
       });
+
+      if (removeJackpotTake && result.jackpotTakeCents > 0) {
+        try {
+          getPool().emitJackpotDelta(-result.jackpotTakeCents);
+        } catch {
+          // Socket pool not up yet — HTTP response still ok.
+        }
+      }
 
       return {
         user: toAdminUser(result.user),
@@ -464,6 +512,8 @@ export async function adminRoutes(app: FastifyInstance) {
         period,
         from: from?.toISOString() ?? null,
         to: to?.toISOString() ?? null,
+        jackpotTakeCents: result.jackpotTakeCents,
+        jackpotTakeRemoved: removeJackpotTake,
       };
     }
   );

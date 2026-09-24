@@ -64,12 +64,20 @@ export const AdminTopUpResponseSchema = z.object({
 export type AdminTopUpResponse = z.infer<typeof AdminTopUpResponseSchema>;
 
 export const AdminResetStatsBodySchema = z.discriminatedUnion("period", [
-  z.object({ period: z.literal("season") }),
-  z.object({ period: z.literal("alltime") }),
+  z.object({
+    period: z.literal("season"),
+    /** When true, pot shrinks by this player's 5% loss take in range. Default keeps pot. */
+    removeJackpotTake: z.boolean().optional(),
+  }),
+  z.object({
+    period: z.literal("alltime"),
+    removeJackpotTake: z.boolean().optional(),
+  }),
   z.object({
     period: z.literal("custom"),
     from: z.string().min(1),
     to: z.string().min(1),
+    removeJackpotTake: z.boolean().optional(),
   }),
 ]);
 export type AdminResetStatsBody = z.infer<typeof AdminResetStatsBodySchema>;
@@ -80,6 +88,10 @@ export const AdminResetStatsResponseSchema = z.object({
   period: z.enum(["season", "alltime", "custom"]),
   from: z.string().nullable(),
   to: z.string().nullable(),
+  /** 5% take from deleted losses (epoch-aware). */
+  jackpotTakeCents: z.number().int().nonnegative(),
+  /** True when that take was removed from the pot (not preserved via adjustment). */
+  jackpotTakeRemoved: z.boolean(),
 });
 export type AdminResetStatsResponse = z.infer<
   typeof AdminResetStatsResponseSchema

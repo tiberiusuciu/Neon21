@@ -1139,6 +1139,21 @@ h3 {
   margin-top: 0.5rem;
 }
 
+.admin-reset-pot-opt {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0.35rem 0 0.15rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.admin-reset-pot-opt input {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
 .admin-hands {
   margin-top: 1.25rem;
   padding-top: 1rem;

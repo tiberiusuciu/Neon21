@@ -77,6 +77,7 @@ export function AdminPage() {
   const [period, setPeriod] = useState<ResetPeriod>("season");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [removeJackpotTake, setRemoveJackpotTake] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [jackpot, setJackpot] = useState<AdminJackpotResponse | null>(null);
@@ -361,9 +362,12 @@ export function AdminPage() {
         : period === "alltime"
           ? "all time"
           : "the selected range";
+    const potNote = removeJackpotTake
+      ? " Their jackpot pot funding from those hands will also be removed."
+      : " Jackpot pot is kept (their 5% loss take is preserved).";
     if (
       !window.confirm(
-        `Reset stats for ${selected.name} (${label})? This deletes hand history in that window and recomputes lifetime stats. Balance is unchanged.`
+        `Reset stats for ${selected.name} (${label})? This deletes hand history in that window and recomputes lifetime stats. Balance is unchanged.${potNote}`
       )
     ) {
       return;
@@ -377,17 +381,27 @@ export function AdminPage() {
               period: "custom" as const,
               from: new Date(from).toISOString(),
               to: new Date(to).toISOString(),
+              removeJackpotTake,
             }
-          : { period };
+          : { period, removeJackpotTake };
       const res = await api.adminResetStats(token, selected.id, body);
       setSelected(res.user);
       setUsers((prev) =>
         prev.map((u) => (u.id === res.user.id ? res.user : u))
       );
+      const potMsg =
+        res.jackpotTakeCents <= 0
+          ? ""
+          : res.jackpotTakeRemoved
+            ? ` Pot −${formatCents(res.jackpotTakeCents)}.`
+            : ` Pot kept (+${formatCents(res.jackpotTakeCents)} adjustment).`;
       toast.success(
-        `Removed ${res.deletedOutcomes} hand(s). Stats recomputed.`
+        `Removed ${res.deletedOutcomes} hand(s). Stats recomputed.${potMsg}`
       );
       await loadHands(selected.id);
+      if (res.jackpotTakeRemoved && res.jackpotTakeCents > 0) {
+        void loadJackpot();
+      }
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Reset failed");
     } finally {
@@ -741,6 +755,17 @@ export function AdminPage() {
                     </div>
                   </>
                 )}
+                <label className="admin-reset-pot-opt">
+                  <input
+                    type="checkbox"
+                    checked={removeJackpotTake}
+                    onChange={(e) => setRemoveJackpotTake(e.target.checked)}
+                  />
+                  <span>
+                    Also remove this player&apos;s jackpot funding from those
+                    hands
+                  </span>
+                </label>
                 <button
                   type="submit"
                   className="btn btn-ghost"
