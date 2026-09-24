@@ -19,6 +19,8 @@ type Props = {
   goldenHands?: number;
   goldenHandArmed?: boolean;
   goldenHourHandsToward?: number;
+  /** GH X/N earn tracker — only during Golden Hour. */
+  showGoldenHourProgress?: boolean;
   onToggleGoldenHand?: () => void;
 };
 
@@ -35,6 +37,7 @@ export function ChipTray({
   goldenHands = 0,
   goldenHandArmed = false,
   goldenHourHandsToward = 0,
+  showGoldenHourProgress = false,
   onToggleGoldenHand,
 }: Props) {
   const [removing, setRemoving] = useState(false);
@@ -91,19 +94,21 @@ export function ChipTray({
           {" "}
           · available {formatCents(remaining)}
         </span>
-        <span
-          className="chip-golden-progress"
-          role="status"
-          aria-live="polite"
-          aria-label={`${goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
-        >
-          <span className="chip-golden-progress-label" aria-hidden>
-            GH
+        {showGoldenHourProgress && (
+          <span
+            className="chip-golden-progress"
+            role="status"
+            aria-live="polite"
+            aria-label={`${goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
+          >
+            <span className="chip-golden-progress-label" aria-hidden>
+              GH
+            </span>
+            <span className="chip-golden-progress-value">
+              {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+            </span>
           </span>
-          <span className="chip-golden-progress-value">
-            {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
-          </span>
-        </span>
+        )}
       </motion.div>
       <div className="chip-row">
         {chips.map((c, i) => {
