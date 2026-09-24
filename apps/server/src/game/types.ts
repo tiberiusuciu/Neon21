@@ -44,6 +44,10 @@ export interface SeatState {
   spinVouchers: number;
   /** Epoch ms; 5-card Charlie celebrate FX for late joiners. */
   charlieFxUntil: number | null;
+  /** Epoch ms; triple-card bonus celebrate FX. */
+  tripleBonusFxUntil: number | null;
+  /** Amount shown on triple bonus banner while FX is live. */
+  tripleBonusCents: number;
   /** Token reserved for next deal during betting. */
   goldenHandArmed: boolean;
   /** Cached inventory for seat UI. */

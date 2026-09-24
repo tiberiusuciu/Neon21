@@ -242,6 +242,11 @@ export class TableRoom {
       bjTowardSpin: seat.bjTowardSpin,
       spinVouchers: seat.spinVouchers,
       charlieFxUntil: seat.charlieFxUntil,
+      tripleBonusFxUntil: seat.tripleBonusFxUntil,
+      tripleBonusCents:
+        seat.tripleBonusFxUntil != null && seat.tripleBonusFxUntil > Date.now()
+          ? seat.tripleBonusCents
+          : undefined,
       goldenHandActive:
         seat.goldenHandArmed || seat.hands.some((h) => h.goldenHand),
       goldenHands: seat.goldenHands,
@@ -454,6 +459,8 @@ export class TableRoom {
       bjTowardSpin: 0,
       spinVouchers: 0,
       charlieFxUntil: null,
+      tripleBonusFxUntil: null,
+      tripleBonusCents: 0,
       goldenHandArmed: false,
       goldenHands: 0,
       goldenHourHandsToward: 0,
@@ -1309,10 +1316,8 @@ export class TableRoom {
     hand.tripleBonusPaid = true;
     const bal = await creditCents(seat.userId, bonus);
     this.cb.onWalletUpdate(seat.userId, bal);
-    this.cb.onNotice(
-      seat.userId,
-      `Triple card bonus — $${(bonus / 100).toFixed(0)}`
-    );
+    seat.tripleBonusCents = bonus;
+    seat.tripleBonusFxUntil = Date.now() + 2_400;
     const ghWindow = getGoldenHourWindowStartedAt();
     if (ghWindow) {
       void recordGoldenHourResults(seat.userId, ghWindow, [bonus]).then(
@@ -1349,7 +1354,6 @@ export class TableRoom {
         data: { userId: seat.userId, status: "open" },
       });
       await this.refreshSeatSpinProgress(seat.userId);
-      this.cb.onNotice(seat.userId, "5-Card Charlie — spin voucher earned");
     }
 
     seat.charlieFxUntil = Date.now() + 2_400;
@@ -1936,6 +1940,8 @@ export class TableRoom {
       bjTowardSpin: 0,
       spinVouchers: 0,
       charlieFxUntil: null,
+      tripleBonusFxUntil: null,
+      tripleBonusCents: 0,
       goldenHandArmed: false,
       goldenHands: 0,
       goldenHourHandsToward: 0,

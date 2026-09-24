@@ -57,17 +57,23 @@ export function SeatView({
   const [nowTick, setNowTick] = useState(() => Date.now());
   const charlieActive =
     seat.charlieFxUntil != null && seat.charlieFxUntil > nowTick;
+  const tripleActive =
+    seat.tripleBonusFxUntil != null && seat.tripleBonusFxUntil > nowTick;
 
   useEffect(() => {
-    if (seat.charlieFxUntil == null) return;
-    const remaining = seat.charlieFxUntil - Date.now();
+    const until = Math.max(
+      seat.charlieFxUntil ?? 0,
+      seat.tripleBonusFxUntil ?? 0
+    );
+    if (until <= 0) return;
+    const remaining = until - Date.now();
     if (remaining <= 0) {
       setNowTick(Date.now());
       return;
     }
     const t = window.setTimeout(() => setNowTick(Date.now()), remaining + 30);
     return () => window.clearTimeout(t);
-  }, [seat.charlieFxUntil]);
+  }, [seat.charlieFxUntil, seat.tripleBonusFxUntil]);
 
   const prevCount = useRef(seat.hands.length);
   const prevAuraTier = useRef<number | null>(null);
@@ -172,6 +178,16 @@ export function SeatView({
               GOLDEN HAND ACTIVATED
             </div>
           )}
+          {tripleActive && (
+            <div className="seat-triple-banner" aria-live="polite">
+              TRIPLE CARD
+              {(seat.tripleBonusCents ?? 0) > 0 && (
+                <span className="seat-triple-banner-amt">
+                  +{formatCents(seat.tripleBonusCents!)}
+                </span>
+              )}
+            </div>
+          )}
           {charlieActive && (
             <div className="seat-charlie-banner" aria-live="polite">
               <span className="seat-charlie-dots" aria-hidden>
@@ -180,6 +196,7 @@ export function SeatView({
                 ))}
               </span>
               5-CARD CHARLIE
+              <span className="seat-charlie-banner-sub">SPIN VOUCHER</span>
             </div>
           )}
           {(seat.bjTowardSpin != null || (seat.spinVouchers ?? 0) > 0) && (

@@ -388,6 +388,10 @@ export const PublicSeatSchema = z.object({
   spinVouchers: z.number().int().nonnegative().optional(),
   /** Epoch ms while 5-card Charlie FX should show. */
   charlieFxUntil: z.number().int().nullable().optional(),
+  /** Epoch ms while triple-card bonus FX should show. */
+  tripleBonusFxUntil: z.number().int().nullable().optional(),
+  /** Cents of the triple bonus shown during FX. */
+  tripleBonusCents: z.number().int().nonnegative().optional(),
   /** Golden Hand token armed for next hand (betting) or active this round. */
   goldenHandActive: z.boolean().optional(),
   /** Player inventory of Golden Hand tokens. */
