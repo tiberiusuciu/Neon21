@@ -900,7 +900,9 @@ export function TablePage() {
                     d="M12 5c-5.5 0-9.5 5.2-10.7 6.7a1 1 0 0 0 0 1.2C2.5 14.3 6.5 19 12 19s9.5-4.7 10.7-6.1a1 1 0 0 0 0-1.2C21.5 10.2 17.5 5 12 5Zm0 12c-3.9 0-7.1-3.2-8.5-5 1.4-1.8 4.6-5 8.5-5s7.1 3.2 8.5 5c-1.4 1.8-4.6 5-8.5 5Zm0-8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"
                   />
                 </svg>
-                {tableState.spectatorCount}
+                <span className="table-spectators-count">
+                  {tableState.spectatorCount}
+                </span>
               </span>
             )}
             <button

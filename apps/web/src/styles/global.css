@@ -1346,14 +1346,31 @@ h3 {
 }
 
 .table-spectators {
-  color: var(--muted);
   display: inline-flex;
   align-items: center;
   gap: 0.28rem;
   margin-right: 0.15rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.table-spectators-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.table-spectators-count {
+  font-family: var(--font-money);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--fg);
 }
 
 .table-pot {
@@ -1425,11 +1442,6 @@ h3 {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--fg);
-}
-
-.table-spectators-icon {
-  flex-shrink: 0;
-  opacity: 0.85;
 }
 
 .table-toolbar-actions {
