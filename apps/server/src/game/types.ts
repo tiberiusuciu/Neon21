@@ -22,6 +22,10 @@ export interface HandState {
   doubled: boolean;
   fromSplit: boolean;
   resultCents: number | null;
+  /** GH suited-pair suit locked at deal; cleared on hit/double/split. */
+  suitedPairSuit: Suit | null;
+  /** GH triple-card bonus already paid for this hand. */
+  tripleBonusPaid: boolean;
 }
 
 export interface SeatState {
@@ -36,6 +40,8 @@ export interface SeatState {
   connected: boolean;
   bjTowardSpin: number;
   spinVouchers: number;
+  /** Epoch ms; 5-card Charlie celebrate FX for late joiners. */
+  charlieFxUntil: number | null;
 }
 
 export interface Spectator {

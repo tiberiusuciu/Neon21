@@ -330,6 +330,8 @@ export const PublicHandSchema = z.object({
   stood: z.boolean(),
   doubled: z.boolean(),
   resultCents: z.number().int().nullable(),
+  /** Active GH suited-pair multiplier suit, if still eligible. */
+  suitedPairSuit: SuitSchema.nullable().optional(),
 });
 export type PublicHand = z.infer<typeof PublicHandSchema>;
 
@@ -347,6 +349,8 @@ export const PublicSeatSchema = z.object({
   bjTowardSpin: z.number().int().min(0).max(4).optional(),
   /** Open spin vouchers stacked. */
   spinVouchers: z.number().int().nonnegative().optional(),
+  /** Epoch ms while 5-card Charlie FX should show. */
+  charlieFxUntil: z.number().int().nullable().optional(),
 });
 export type PublicSeat = z.infer<typeof PublicSeatSchema>;
 

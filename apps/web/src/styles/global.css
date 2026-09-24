@@ -2890,6 +2890,69 @@ h3 {
   box-shadow: 0 2px 8px color-mix(in srgb, #000 35%, transparent);
 }
 
+.hand-suited-pair-tag {
+  position: absolute;
+  top: -0.45rem;
+  left: 0.1rem;
+  z-index: 2;
+  padding: 0.05rem 0.32rem;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: color-mix(in srgb, #c9a227 75%, #000);
+  color: #1a1408;
+  box-shadow: 0 0 10px color-mix(in srgb, #e8c76a 35%, transparent);
+}
+
+.seat-charlie-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #e8c76a 55%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #c9a227 28%, transparent),
+    color-mix(in srgb, #8a6a20 12%, transparent)
+  );
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  color: #ffe9a8;
+  text-shadow: 0 0 12px color-mix(in srgb, #c9a227 45%, transparent);
+}
+
+.seat-charlie-dots {
+  display: flex;
+  gap: 0.28rem;
+}
+
+.seat-charlie-dots i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: #e8c76a;
+  box-shadow: 0 0 8px color-mix(in srgb, #e8c76a 70%, transparent);
+  animation: seat-charlie-pip 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.08s);
+}
+
+@keyframes seat-charlie-pip {
+  0%,
+  100% {
+    transform: scale(0.75);
+    opacity: 0.55;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+
 .hand-holding {
   position: relative;
   outline: 1px solid color-mix(in srgb, #f0c674 50%, transparent);

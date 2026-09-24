@@ -53,6 +53,21 @@ export function SeatView({
 }: Props) {
   const empty = !seat.userId;
   const split = seat.hands.length > 1;
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  const charlieActive =
+    seat.charlieFxUntil != null && seat.charlieFxUntil > nowTick;
+
+  useEffect(() => {
+    if (seat.charlieFxUntil == null) return;
+    const remaining = seat.charlieFxUntil - Date.now();
+    if (remaining <= 0) {
+      setNowTick(Date.now());
+      return;
+    }
+    const t = window.setTimeout(() => setNowTick(Date.now()), remaining + 30);
+    return () => window.clearTimeout(t);
+  }, [seat.charlieFxUntil]);
+
   const prevCount = useRef(seat.hands.length);
   const prevAuraTier = useRef<number | null>(null);
   const [peeling, setPeeling] = useState(false);
@@ -150,6 +165,16 @@ export function SeatView({
             {isYou && <span className="seat-you-tag">(You)</span>}
             {!seat.connected && <span className="seat-away-tag">away</span>}
           </div>
+          {charlieActive && (
+            <div className="seat-charlie-banner" aria-live="polite">
+              <span className="seat-charlie-dots" aria-hidden>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <i key={i} style={{ ["--i" as string]: i }} />
+                ))}
+              </span>
+              5-CARD CHARLIE
+            </div>
+          )}
           {(seat.bjTowardSpin != null || (seat.spinVouchers ?? 0) > 0) && (
             <SeatBjMeter
               seatKey={seat.userId ?? `seat-${seat.index}`}
@@ -308,6 +333,19 @@ export function SeatView({
                     >
                       ×2
                     </motion.span>
+                  )}
+                  {hand.suitedPairSuit && (
+                    <span
+                      className={`hand-suited-pair-tag suit-${hand.suitedPairSuit}`}
+                    >
+                      {hand.suitedPairSuit === "S"
+                        ? "3×♠"
+                        : hand.suitedPairSuit === "H"
+                          ? "2.5×♥"
+                          : hand.suitedPairSuit === "C"
+                            ? "2×♣"
+                            : "1.5×♦"}
+                    </span>
                   )}
                   <div className="card-row">
                     {hand.cards.map((c, ci) => (

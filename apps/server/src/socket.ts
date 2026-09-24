@@ -338,11 +338,11 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (err) socket.emit("game:error", { message: err });
     });
 
-    socket.on("action:hit", () => {
+    socket.on("action:hit", async () => {
       const tableId = socket.data.tableId as string | undefined;
       const room = tableId ? pool.get(tableId) : undefined;
       if (!room) return;
-      const err = room.hit(userId);
+      const err = await room.hit(userId);
       if (err) socket.emit("game:error", { message: err });
     });
 

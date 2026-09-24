@@ -55,6 +55,11 @@ import {
   getGoldenHourWindowStartedAt,
   isGoldenHourActive,
 } from "../lib/golden-hour.js";
+import {
+  applySuitedPairProfit,
+  detectSuitedPairSuit,
+  tripleCardBonusCents,
+} from "../lib/golden-hour-bonuses.js";
 import { recordGoldenHourResults } from "../lib/golden-hour-rebate.js";
 import {
   getAvailablePotCents,
@@ -73,6 +78,8 @@ function emptyHand(betCents: number): HandState {
     doubled: false,
     fromSplit: false,
     resultCents: null,
+    suitedPairSuit: null,
+    tripleBonusPaid: false,
   };
 }
 
@@ -220,6 +227,7 @@ export class TableRoom {
       connected: seat.connected,
       bjTowardSpin: seat.bjTowardSpin,
       spinVouchers: seat.spinVouchers,
+      charlieFxUntil: seat.charlieFxUntil,
     };
   }
 
@@ -232,6 +240,7 @@ export class TableRoom {
       stood: h.stood,
       doubled: h.doubled,
       resultCents: h.resultCents,
+      suitedPairSuit: h.suitedPairSuit,
     };
   }
 
@@ -426,6 +435,7 @@ export class TableRoom {
       connected: true,
       bjTowardSpin: 0,
       spinVouchers: 0,
+      charlieFxUntil: null,
     };
     await this.refreshSeatSpinProgress(userId);
     this.broadcast();
@@ -773,6 +783,15 @@ export class TableRoom {
       this.broadcast();
     }
 
+    if (isGoldenHourActive()) {
+      for (const i of order) {
+        const hand = this.seats[i]?.hands[0];
+        if (!hand) continue;
+        hand.suitedPairSuit = detectSuitedPairSuit(hand.cards);
+      }
+      this.broadcast();
+    }
+
     const up = this.dealer.cards[0];
     if (up?.rank === "A") {
       await this.runInsurance(gen);
@@ -976,6 +995,7 @@ export class TableRoom {
       for (let hi = 0; hi < seat.hands.length; hi++) {
         if (!this.alive(gen)) return;
         const hand = seat.hands[hi];
+        if (hand.resultCents != null) continue;
         if (hand.stood || evaluateHand(hand.cards).bust) continue;
         if (!hand.fromSplit && isBlackjack(hand.cards)) continue;
 
@@ -1076,12 +1096,19 @@ export class TableRoom {
     };
   }
 
-  hit(userId: string): string | null {
+  async hit(userId: string): Promise<string | null> {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
     if (ctx.hand.stood) return "Cannot hit";
+    if (ctx.hand.resultCents != null) return "Hand already settled";
+    ctx.hand.suitedPairSuit = null;
     ctx.hand.cards.push(this.shoe.draw());
+    await this.maybePayTripleBonus(ctx.seat, ctx.hand);
     const v = evaluateHand(ctx.hand.cards);
+    if (!v.bust && (await this.maybeSettleCharlie(ctx.seat, ctx.hand))) {
+      this.completeTurnAction();
+      return null;
+    }
     if (v.bust || bestTotal(ctx.hand.cards) === 21) {
       ctx.hand.stood = true;
     }
@@ -1115,8 +1142,10 @@ export class TableRoom {
       this.cb.onWalletUpdate(userId, bal);
       ctx.hand.betCents *= 2;
       ctx.hand.doubled = true;
+      ctx.hand.suitedPairSuit = null;
       ctx.hand.cards.push(this.shoe.draw());
       ctx.hand.stood = true;
+      await this.maybePayTripleBonus(ctx.seat, ctx.hand);
       this.completeTurnAction();
       return null;
     } catch (err) {
@@ -1143,6 +1172,8 @@ export class TableRoom {
         doubled: false,
         fromSplit: true,
         resultCents: null,
+        suitedPairSuit: null,
+        tripleBonusPaid: false,
       };
       const right: HandState = {
         cards: [card2],
@@ -1151,6 +1182,8 @@ export class TableRoom {
         doubled: false,
         fromSplit: true,
         resultCents: null,
+        suitedPairSuit: null,
+        tripleBonusPaid: false,
       };
       ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
       this.activeHandIndex = ctx.handIndex;
@@ -1178,7 +1211,9 @@ export class TableRoom {
     if (!this.alive(gen)) return;
 
     const needsDealer = this.seats.some((s) =>
-      s?.hands.some((h) => !evaluateHand(h.cards).bust)
+      s?.hands.some(
+        (h) => h.resultCents == null && !evaluateHand(h.cards).bust
+      )
     );
 
     if (needsDealer) {
@@ -1197,6 +1232,68 @@ export class TableRoom {
     }
 
     await this.runSettle(gen);
+  }
+
+  private winPayout(hand: HandState, baseProfit: number) {
+    const profit = isGoldenHourActive()
+      ? applySuitedPairProfit(baseProfit, hand.suitedPairSuit)
+      : baseProfit;
+    return goldenWinPayout(hand.betCents, profit);
+  }
+
+  private async maybePayTripleBonus(
+    seat: SeatState,
+    hand: HandState
+  ): Promise<void> {
+    if (!isGoldenHourActive() || hand.tripleBonusPaid) return;
+    if (isDebugSeatUser(seat.userId)) return;
+    const bonus = tripleCardBonusCents(hand.cards, hand.fromSplit);
+    if (bonus <= 0) return;
+    hand.tripleBonusPaid = true;
+    const bal = await creditCents(seat.userId, bonus);
+    this.cb.onWalletUpdate(seat.userId, bal);
+    this.cb.onNotice(
+      seat.userId,
+      `Triple card bonus — $${(bonus / 100).toFixed(0)}`
+    );
+    const ghWindow = getGoldenHourWindowStartedAt();
+    if (ghWindow) {
+      void recordGoldenHourResults(seat.userId, ghWindow, [bonus]);
+    }
+    this.broadcast();
+  }
+
+  /** GH 5-card Charlie: instant 1:1 win + spin voucher. Returns true if settled. */
+  private async maybeSettleCharlie(
+    seat: SeatState,
+    hand: HandState
+  ): Promise<boolean> {
+    if (!isGoldenHourActive()) return false;
+    if (hand.resultCents != null) return false;
+    if (hand.cards.length !== 5) return false;
+    if (evaluateHand(hand.cards).bust) return false;
+
+    const { resultCents, creditCents: win } = this.winPayout(
+      hand,
+      hand.betCents
+    );
+    hand.resultCents = resultCents;
+    hand.stood = true;
+    hand.suitedPairSuit = null;
+
+    if (!isDebugSeatUser(seat.userId)) {
+      const bal = await creditCents(seat.userId, win);
+      this.cb.onWalletUpdate(seat.userId, bal);
+      await prisma.spinVoucher.create({
+        data: { userId: seat.userId, status: "open" },
+      });
+      await this.refreshSeatSpinProgress(seat.userId);
+      this.cb.onNotice(seat.userId, "5-Card Charlie — spin voucher earned");
+    }
+
+    seat.charlieFxUntil = Date.now() + 2_400;
+    this.broadcast();
+    return true;
   }
 
   private async recordRoundStats(): Promise<void> {
@@ -1565,8 +1662,8 @@ export class TableRoom {
 
         if (playerBj && !dealerBj) {
           const baseProfit = Math.floor(hand.betCents * 2.5) - hand.betCents;
-          const { resultCents, creditCents: win } = goldenWinPayout(
-            hand.betCents,
+          const { resultCents, creditCents: win } = this.winPayout(
+            hand,
             baseProfit
           );
           hand.resultCents = resultCents;
@@ -1588,8 +1685,8 @@ export class TableRoom {
         }
 
         if (dealerVal.bust) {
-          const { resultCents, creditCents: win } = goldenWinPayout(
-            hand.betCents,
+          const { resultCents, creditCents: win } = this.winPayout(
+            hand,
             hand.betCents
           );
           hand.resultCents = resultCents;
@@ -1601,8 +1698,8 @@ export class TableRoom {
 
         const playerTotal = bestTotal(hand.cards);
         if (playerTotal > dealerTotal) {
-          const { resultCents, creditCents: win } = goldenWinPayout(
-            hand.betCents,
+          const { resultCents, creditCents: win } = this.winPayout(
+            hand,
             hand.betCents
           );
           hand.resultCents = resultCents;
@@ -1702,6 +1799,7 @@ export class TableRoom {
       connected: true,
       bjTowardSpin: 0,
       spinVouchers: 0,
+      charlieFxUntil: null,
     };
     this.onBettingActivity();
     this.cb.onSeatedChanged(this.id);
