@@ -51,7 +51,7 @@ function isOnePercent(t: WheelTile): boolean {
   return t.kind === "percent" && t.pctBps === 100;
 }
 
-/** Merge consecutive same-fill tiles into readable bands (odds stay 100 tiles). */
+/** Merge consecutive same-fill + same-label tiles into readable bands. */
 function buildBands(p: string) {
   const bands: {
     start: number;
@@ -65,9 +65,8 @@ function buildBands(p: string) {
     const t = JACKPOT_WHEEL[i]!;
     const fill = tileFill(t, i, p);
     const last = bands[bands.length - 1];
-    if (last && last.fill === fill) {
+    if (last && last.fill === fill && last.label === t.label) {
       last.end = i + 1;
-      if (last.label != null && last.label !== t.label) last.label = null;
     } else {
       bands.push({
         start: i,
@@ -95,20 +94,33 @@ function bandPath(start: number, end: number): string {
 }
 
 const LABEL_R = 37;
-/** Min gap between loupe label centers (tiles). ~9° keeps short strings from colliding. */
-const LABEL_MIN_GAP_TILES = 2.5;
+const LABEL_R_INNER = 32.5;
+const LABEL_R_OUTER = 41.5;
 /** Repeat labels along wide bands so the loupe always sees one before the band midpoint. */
 const LABEL_REPEAT_STEP = 3;
+const WHEEL_TILES = JACKPOT_WHEEL.length;
 
-function bandLabelAt(tileMid: number) {
+function bandLabelAt(tileMid: number, radius: number) {
   const midDeg = -90 + tileMid * SEG;
   const a = (midDeg * Math.PI) / 180;
   return {
-    x: CX + LABEL_R * Math.cos(a),
-    y: CY + LABEL_R * Math.sin(a),
+    x: CX + radius * Math.cos(a),
+    y: CY + radius * Math.sin(a),
     rot: midDeg + 90,
     tileMid,
   };
+}
+
+function tileMidDist(a: number, b: number): number {
+  const d = Math.abs(a - b) % WHEEL_TILES;
+  return Math.min(d, WHEEL_TILES - d);
+}
+
+/** Half-width of a label in tile units at a given radius. */
+function labelHalfTiles(label: string, fontSize: number, radius: number): number {
+  const arc = Math.max(label.length, 2) * fontSize * 0.55;
+  const circ = 2 * Math.PI * radius;
+  return ((arc / circ) * WHEEL_TILES) / 2;
 }
 
 /** Centers (fractional tile index) for labels along a band. */
@@ -145,18 +157,39 @@ function loupeLabelPriority(b: {
   return 10;
 }
 
-function shouldOfferLoupeLabel(b: {
-  label: string | null;
+function loupeLabelFontSize(b: {
   jackpot: boolean;
-  onePct: boolean;
   start: number;
   end: number;
-}): boolean {
-  if (!b.label) return false;
-  if (b.jackpot || b.onePct || b.end - b.start >= 2) return true;
-  const t = JACKPOT_WHEEL[b.start]!;
-  if (t.kind === "flat") return true;
-  return t.kind === "percent" && t.pctBps >= 200;
+}): number {
+  const span = b.end - b.start;
+  if (b.jackpot) return 2.85;
+  if (span >= 6) return 2.2;
+  if (span >= 3) return 1.85;
+  if (span >= 2) return 1.45;
+  return 1.2;
+}
+
+function pickLabelRadius(
+  tileMid: number,
+  label: string,
+  fontSize: number,
+  placed: { tileMid: number; label: string; fontSize: number; radius: number }[]
+): number | null {
+  const lanes = [LABEL_R, LABEL_R_INNER, LABEL_R_OUTER];
+  for (const radius of lanes) {
+    const half = labelHalfTiles(label, fontSize, radius);
+    const ok = placed.every((p) => {
+      const dist = tileMidDist(tileMid, p.tileMid);
+      const need =
+        half +
+        labelHalfTiles(p.label, p.fontSize, p.radius) +
+        (Math.abs(radius - p.radius) < 1 ? 0.35 : 0.12);
+      return dist >= need;
+    });
+    if (ok) return radius;
+  }
+  return null;
 }
 
 function WheelFace({
@@ -198,43 +231,107 @@ function WheelFace({
         tileMid: number;
         fontSize: number;
         priority: number;
+        radius: number;
       };
-      const candidates: Cand[] = [];
+      type Seed = Omit<Cand, "radius"> & {
+        required: boolean;
+        bandStart: number;
+        bandEnd: number;
+      };
+
+      const seeds: Seed[] = [];
       for (const b of bands) {
-        if (!shouldOfferLoupeLabel(b) || !b.label) continue;
-        const span = b.end - b.start;
-        const fontSize = b.jackpot
-          ? 3.2
-          : span >= 6
-            ? 2.6
-            : span >= 3
-              ? 2.15
-              : 1.65;
+        if (!b.label) continue;
+        const fontSize = loupeLabelFontSize(b);
         const priority = loupeLabelPriority(b);
+        const mid = (b.start + b.end) / 2;
+        seeds.push({
+          key: `lbl-${b.start}-mid`,
+          label: b.label,
+          tileMid: mid,
+          fontSize,
+          priority: priority + 20,
+          required: true,
+          bandStart: b.start,
+          bandEnd: b.end,
+        });
         for (const tileMid of loupeLabelSlots(b.start, b.end)) {
-          candidates.push({
+          if (Math.abs(tileMid - mid) < 0.4) continue;
+          seeds.push({
             key: `lbl-${b.start}-${tileMid}`,
             label: b.label,
             tileMid,
             fontSize,
             priority,
+            required: false,
+            bandStart: b.start,
+            bandEnd: b.end,
           });
         }
       }
 
-      candidates.sort((a, b) => b.priority - a.priority || a.tileMid - b.tileMid);
+      seeds.sort(
+        (a, b) =>
+          Number(b.required) - Number(a.required) ||
+          b.priority - a.priority ||
+          a.tileMid - b.tileMid
+      );
+
       const placed: Cand[] = [];
-      for (const c of candidates) {
-        const clash = placed.some(
-          (p) => Math.abs(p.tileMid - c.tileMid) < LABEL_MIN_GAP_TILES
-        );
-        if (clash) continue;
-        placed.push(c);
+      for (const c of seeds) {
+        let fontSize = c.fontSize;
+        let tileMid = c.tileMid;
+        let radius = pickLabelRadius(tileMid, c.label, fontSize, placed);
+
+        if (radius == null && c.required) {
+          fontSize = Math.min(fontSize, 1.05);
+          const lo = c.bandStart + 0.35;
+          const hi = c.bandEnd - 0.35;
+          const span = Math.max(hi - lo, 0);
+          const steps = Math.max(5, Math.ceil(span * 4) + 1);
+          for (let i = 0; i < steps && radius == null; i++) {
+            const t = steps === 1 ? (lo + hi) / 2 : lo + (span * i) / (steps - 1);
+            const r = pickLabelRadius(t, c.label, fontSize, placed);
+            if (r != null) {
+              tileMid = t;
+              radius = r;
+            }
+          }
+        }
+
+        if (radius == null && c.required) {
+          let best = LABEL_R;
+          let bestScore = Infinity;
+          for (const r of [LABEL_R, LABEL_R_INNER, LABEL_R_OUTER]) {
+            const half = labelHalfTiles(c.label, fontSize, r);
+            let score = 0;
+            for (const p of placed) {
+              const need =
+                half + labelHalfTiles(p.label, p.fontSize, p.radius) + 0.08;
+              const gap = tileMidDist(tileMid, p.tileMid) - need;
+              if (gap < 0) score += -gap;
+            }
+            if (score < bestScore) {
+              bestScore = score;
+              best = r;
+            }
+          }
+          radius = best;
+        }
+        if (radius == null) continue;
+        placed.push({
+          key: c.key,
+          label: c.label,
+          tileMid,
+          fontSize,
+          priority: c.priority,
+          radius,
+        });
       }
       placed.sort((a, b) => a.tileMid - b.tileMid);
 
       labels = placed.map((c) => {
-        const { x, y, rot } = bandLabelAt(c.tileMid);
+        const { x, y, rot } = bandLabelAt(c.tileMid, c.radius);
         return (
           <text
             key={c.key}
@@ -242,7 +339,7 @@ function WheelFace({
             y={y}
             fill="#f5ecd8"
             stroke="#0a0812"
-            strokeWidth={0.5}
+            strokeWidth={0.45}
             paintOrder="stroke"
             fontSize={c.fontSize}
             fontWeight={700}
