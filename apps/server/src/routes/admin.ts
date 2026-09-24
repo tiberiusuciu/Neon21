@@ -6,6 +6,7 @@ import {
   AdminGrantVoucherBodySchema,
   AdminGrantGoldenHandsBodySchema,
   AdminGoldenHourDisableBodySchema,
+  AdminGoldenHourScheduleBodySchema,
   type AdminUserRow,
   type AdminHandOutcome,
 } from "@neon21/shared";
@@ -33,6 +34,7 @@ import {
 import {
   adminEndGoldenHour,
   adminSetGoldenHourDisabled,
+  adminSetGoldenHourSchedule,
   adminStartGoldenHour,
   getGoldenHourPublic,
 } from "../lib/golden-hour.js";
@@ -151,6 +153,19 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(400).send({ error: "Invalid body" });
       }
       return adminSetGoldenHourDisabled(body.data.disabled);
+    }
+  );
+
+  app.post(
+    "/admin/golden-hour/schedule",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const body = AdminGoldenHourScheduleBodySchema.safeParse(request.body);
+      if (!body.success) {
+        return reply.status(400).send({ error: body.error.flatten() });
+      }
+      return adminSetGoldenHourSchedule(body.data);
     }
   );
 

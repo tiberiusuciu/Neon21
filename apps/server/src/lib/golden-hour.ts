@@ -5,10 +5,10 @@ import { payGoldenHourRebates } from "./golden-hour-rebate.js";
 const ROW_ID = "golden_hour";
 export const GOLDEN_HOUR_DURATION_MS = 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
-/** Inclusive min gap between Golden Hour windows. */
-export const GOLDEN_HOUR_COOLDOWN_MIN_MS = 4 * HOUR_MS;
-/** Inclusive max gap between Golden Hour windows. */
-export const GOLDEN_HOUR_COOLDOWN_MAX_MS = 12 * HOUR_MS;
+/** Default inclusive min gap between Golden Hour windows. */
+export const GOLDEN_HOUR_COOLDOWN_MIN_HOURS = 4;
+/** Default inclusive max gap between Golden Hour windows. */
+export const GOLDEN_HOUR_COOLDOWN_MAX_HOURS = 12;
 
 type Row = {
   id: string;
@@ -16,6 +16,8 @@ type Row = {
   activeUntil: Date | null;
   nextStartsAt: Date | null;
   windowStartedAt: Date | null;
+  cooldownMinHours: number;
+  cooldownMaxHours: number;
 };
 
 type Transition = "started" | "ended" | null;
@@ -27,13 +29,31 @@ let timer: ReturnType<typeof setTimeout> | null = null;
 let broadcaster: Broadcaster | null = null;
 let ticking = false;
 
-function randomCooldownMs(): number {
-  const span =
-    GOLDEN_HOUR_COOLDOWN_MAX_MS - GOLDEN_HOUR_COOLDOWN_MIN_MS + HOUR_MS;
-  const steps = Math.max(1, Math.floor(span / HOUR_MS));
-  return (
-    GOLDEN_HOUR_COOLDOWN_MIN_MS + Math.floor(Math.random() * steps) * HOUR_MS
+function clampHours(n: number, fallback: number): number {
+  if (!Number.isFinite(n)) return fallback;
+  return Math.min(168, Math.max(1, Math.floor(n)));
+}
+
+function normalizeCooldown(minHours: number, maxHours: number): {
+  min: number;
+  max: number;
+} {
+  const min = clampHours(minHours, GOLDEN_HOUR_COOLDOWN_MIN_HOURS);
+  const max = clampHours(maxHours, GOLDEN_HOUR_COOLDOWN_MAX_HOURS);
+  return min <= max ? { min, max } : { min: max, max: min };
+}
+
+function cooldownBounds(row?: Row | null): { min: number; max: number } {
+  return normalizeCooldown(
+    row?.cooldownMinHours ?? GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
+    row?.cooldownMaxHours ?? GOLDEN_HOUR_COOLDOWN_MAX_HOURS
   );
+}
+
+function randomCooldownMs(row?: Row | null): number {
+  const { min, max } = cooldownBounds(row ?? cache);
+  const steps = max - min + 1;
+  return (min + Math.floor(Math.random() * steps)) * HOUR_MS;
 }
 
 function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
@@ -41,6 +61,7 @@ function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
     !row.disabled &&
     row.activeUntil != null &&
     row.activeUntil.getTime() > now;
+  const { min, max } = cooldownBounds(row);
   return {
     disabled: row.disabled,
     active,
@@ -52,6 +73,8 @@ function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
     windowStartedAt: row.windowStartedAt
       ? row.windowStartedAt.getTime()
       : null,
+    cooldownMinHours: min,
+    cooldownMaxHours: max,
   };
 }
 
@@ -89,6 +112,8 @@ async function persist(data: {
   activeUntil?: Date | null;
   nextStartsAt?: Date | null;
   windowStartedAt?: Date | null;
+  cooldownMinHours?: number;
+  cooldownMaxHours?: number;
 }): Promise<Row> {
   const row = await prisma.goldenHourState.upsert({
     where: { id: ROW_ID },
@@ -98,6 +123,10 @@ async function persist(data: {
       activeUntil: data.activeUntil ?? null,
       nextStartsAt: data.nextStartsAt ?? null,
       windowStartedAt: data.windowStartedAt ?? null,
+      cooldownMinHours:
+        data.cooldownMinHours ?? GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
+      cooldownMaxHours:
+        data.cooldownMaxHours ?? GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
     },
     update: {
       ...(data.disabled !== undefined ? { disabled: data.disabled } : {}),
@@ -109,6 +138,12 @@ async function persist(data: {
         : {}),
       ...(data.windowStartedAt !== undefined
         ? { windowStartedAt: data.windowStartedAt }
+        : {}),
+      ...(data.cooldownMinHours !== undefined
+        ? { cooldownMinHours: data.cooldownMinHours }
+        : {}),
+      ...(data.cooldownMaxHours !== undefined
+        ? { cooldownMaxHours: data.cooldownMaxHours }
         : {}),
     },
   });
@@ -138,7 +173,7 @@ async function ensureSchedule(row: Row): Promise<Row> {
   }
   return persist({
     activeUntil: null,
-    nextStartsAt: new Date(now + randomCooldownMs()),
+    nextStartsAt: new Date(now + randomCooldownMs(row)),
   });
 }
 
@@ -146,7 +181,7 @@ async function endWindow(row: Row, now: number): Promise<Row> {
   const windowStartedAt = row.windowStartedAt;
   const next = await persist({
     activeUntil: null,
-    nextStartsAt: new Date(now + randomCooldownMs()),
+    nextStartsAt: new Date(now + randomCooldownMs(row)),
     windowStartedAt: null,
   });
   if (windowStartedAt) {
@@ -211,6 +246,8 @@ export function getGoldenHourPublic(): GoldenHourPublic {
       activeUntil: null,
       nextStartsAt: null,
       windowStartedAt: null,
+      cooldownMinHours: GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
+      cooldownMaxHours: GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
     };
   }
   return toPublic(cache);
@@ -316,5 +353,44 @@ export async function adminSetGoldenHourDisabled(
     emit(null);
     scheduleWake();
   }
+  return getGoldenHourPublic();
+}
+
+/** Update auto-start gap range; optionally re-roll nextStartsAt when idle. */
+export async function adminSetGoldenHourSchedule(opts: {
+  cooldownMinHours: number;
+  cooldownMaxHours: number;
+  rescheduleNext?: boolean;
+}): Promise<GoldenHourPublic> {
+  const { min, max } = normalizeCooldown(
+    opts.cooldownMinHours,
+    opts.cooldownMaxHours
+  );
+  const reschedule = opts.rescheduleNext !== false;
+  const row = cache ?? (await loadRow());
+  const now = Date.now();
+  const active =
+    !row.disabled &&
+    row.activeUntil != null &&
+    row.activeUntil.getTime() > now;
+
+  const patch: {
+    cooldownMinHours: number;
+    cooldownMaxHours: number;
+    nextStartsAt?: Date | null;
+  } = {
+    cooldownMinHours: min,
+    cooldownMaxHours: max,
+  };
+
+  if (reschedule && !row.disabled && !active) {
+    patch.nextStartsAt = new Date(
+      now + randomCooldownMs({ ...row, cooldownMinHours: min, cooldownMaxHours: max })
+    );
+  }
+
+  await persist(patch);
+  emit(null);
+  scheduleWake();
   return getGoldenHourPublic();
 }

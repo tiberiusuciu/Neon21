@@ -106,6 +106,10 @@ model GoldenHourState {
   activeUntil     DateTime?
   nextStartsAt    DateTime?
   windowStartedAt DateTime?
+  /** Inclusive min hours between windows (admin-tunable). */
+  cooldownMinHours Int      @default(4)
+  /** Inclusive max hours between windows (admin-tunable). */
+  cooldownMaxHours Int      @default(12)
   updatedAt       DateTime  @updatedAt
 }
 

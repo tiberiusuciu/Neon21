@@ -87,6 +87,9 @@ export function AdminPage() {
   const [goldenHour, setGoldenHour] = useState<GoldenHourPublic | null>(null);
   const [loadingGolden, setLoadingGolden] = useState(false);
   const [goldenBusy, setGoldenBusy] = useState(false);
+  const [ghCooldownMin, setGhCooldownMin] = useState("4");
+  const [ghCooldownMax, setGhCooldownMax] = useState("12");
+  const [ghRescheduleNext, setGhRescheduleNext] = useState(true);
   const [ghNow, setGhNow] = useState(() => Date.now());
   const [granting, setGranting] = useState(false);
   const [openVouchers, setOpenVouchers] = useState(0);
@@ -134,7 +137,10 @@ export function AdminPage() {
     if (!token) return;
     setLoadingGolden(true);
     try {
-      setGoldenHour(await api.adminGoldenHour(token));
+      const gh = await api.adminGoldenHour(token);
+      setGoldenHour(gh);
+      setGhCooldownMin(String(gh.cooldownMinHours ?? 4));
+      setGhCooldownMax(String(gh.cooldownMaxHours ?? 12));
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to load Golden Hour"
@@ -287,6 +293,46 @@ export function AdminPage() {
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to update Golden Hour"
+      );
+    } finally {
+      setGoldenBusy(false);
+    }
+  }
+
+  async function onGoldenSchedule(e: FormEvent) {
+    e.preventDefault();
+    if (!token || goldenBusy) return;
+    const min = Number(ghCooldownMin);
+    const max = Number(ghCooldownMax);
+    if (
+      !Number.isInteger(min) ||
+      !Number.isInteger(max) ||
+      min < 1 ||
+      max < 1 ||
+      min > 168 ||
+      max > 168
+    ) {
+      toast.error("Cooldown hours must be integers from 1 to 168");
+      return;
+    }
+    setGoldenBusy(true);
+    try {
+      const gh = await api.adminGoldenHourSchedule(token, {
+        cooldownMinHours: min,
+        cooldownMaxHours: max,
+        rescheduleNext: ghRescheduleNext,
+      });
+      setGoldenHour(gh);
+      setGhCooldownMin(String(gh.cooldownMinHours ?? min));
+      setGhCooldownMax(String(gh.cooldownMaxHours ?? max));
+      toast.success(
+        ghRescheduleNext && !gh.active && !gh.disabled
+          ? "Schedule saved — next Golden Hour re-rolled"
+          : "Schedule saved"
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to save schedule"
       );
     } finally {
       setGoldenBusy(false);
@@ -523,7 +569,10 @@ export function AdminPage() {
               className="muted"
               style={{ margin: "0 0 0.75rem", fontSize: "0.8rem" }}
             >
-              Wins ×1.5 / half-loss only via Golden Hands · vault take 10% · 1h windows · random 4–12h gap
+              Wins ×1.5 / half-loss only via Golden Hands · vault take 10% · 1h
+              windows · random{" "}
+              {goldenHour.cooldownMinHours ?? 4}–
+              {goldenHour.cooldownMaxHours ?? 12}h gap
             </p>
             <div className="admin-golden-actions">
               <button
@@ -551,6 +600,74 @@ export function AdminPage() {
                 {goldenHour.disabled ? "Enable" : "Disable"}
               </button>
             </div>
+            <form
+              className="admin-golden-schedule"
+              onSubmit={(e) => void onGoldenSchedule(e)}
+              style={{
+                marginTop: "0.85rem",
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.65rem",
+                alignItems: "flex-end",
+              }}
+            >
+              <label className="field" style={{ margin: 0, minWidth: "5.5rem" }}>
+                <span className="muted" style={{ fontSize: "0.75rem" }}>
+                  Min hours
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={168}
+                  step={1}
+                  value={ghCooldownMin}
+                  disabled={goldenBusy}
+                  onChange={(e) => setGhCooldownMin(e.target.value)}
+                />
+              </label>
+              <label className="field" style={{ margin: 0, minWidth: "5.5rem" }}>
+                <span className="muted" style={{ fontSize: "0.75rem" }}>
+                  Max hours
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={168}
+                  step={1}
+                  value={ghCooldownMax}
+                  disabled={goldenBusy}
+                  onChange={(e) => setGhCooldownMax(e.target.value)}
+                />
+              </label>
+              <label
+                className="muted"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  fontSize: "0.8rem",
+                  margin: "0 0 0.35rem",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={ghRescheduleNext}
+                  disabled={
+                    goldenBusy || goldenHour.active || goldenHour.disabled
+                  }
+                  onChange={(e) => setGhRescheduleNext(e.target.checked)}
+                />
+                Re-roll next start
+              </label>
+              <button
+                type="submit"
+                className="btn btn-sm"
+                disabled={goldenBusy}
+                style={{ marginBottom: "0.15rem" }}
+              >
+                Save schedule
+              </button>
+            </form>
           </>
         ) : (
           <p className="muted">Could not load Golden Hour.</p>

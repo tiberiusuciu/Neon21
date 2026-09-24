@@ -189,6 +189,10 @@ export const GoldenHourPublicSchema = z.object({
   nextStartsAt: z.number().int().nullable(),
   /** Epoch ms when the current/last window started (for rebate ledger). */
   windowStartedAt: z.number().int().nullable().optional(),
+  /** Inclusive min hours until next auto-start (idle). */
+  cooldownMinHours: z.number().int().positive().optional(),
+  /** Inclusive max hours until next auto-start (idle). */
+  cooldownMaxHours: z.number().int().positive().optional(),
 });
 export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
 
@@ -210,6 +214,16 @@ export const AdminGoldenHourDisableBodySchema = z.object({
 });
 export type AdminGoldenHourDisableBody = z.infer<
   typeof AdminGoldenHourDisableBodySchema
+>;
+
+export const AdminGoldenHourScheduleBodySchema = z.object({
+  cooldownMinHours: z.number().int().min(1).max(168),
+  cooldownMaxHours: z.number().int().min(1).max(168),
+  /** When idle, re-roll nextStartsAt from the new range. Default true. */
+  rescheduleNext: z.boolean().optional(),
+});
+export type AdminGoldenHourScheduleBody = z.infer<
+  typeof AdminGoldenHourScheduleBodySchema
 >;
 
 export const AdminHandOutcomeSchema = z.object({

@@ -1,5 +1,6 @@
 import type {
   AdminGoldenHourDisableBody,
+  AdminGoldenHourScheduleBody,
   AdminGrantGoldenHandsBody,
   AdminGrantGoldenHandsResponse,
   AdminGrantVoucherBody,
@@ -200,6 +201,14 @@ export const api = {
 
   adminDisableGoldenHour(token: string, body: AdminGoldenHourDisableBody) {
     return request<GoldenHourPublic>("/admin/golden-hour/disable", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
+  },
+
+  adminGoldenHourSchedule(token: string, body: AdminGoldenHourScheduleBody) {
+    return request<GoldenHourPublic>("/admin/golden-hour/schedule", {
       method: "POST",
       token,
       body: JSON.stringify(body),
