@@ -3094,6 +3094,7 @@ h3 {
 
 .cash-fx-kind-double .cash-fx-label {
   font-size: 1.55rem;
+  color: #ffe08a;
 }
 
 .cash-fx-firework {
@@ -3161,9 +3162,12 @@ h3 {
   margin: -0.575rem 0 0 -0.575rem;
   border-radius: 50%;
   background:
-    radial-gradient(circle at 35% 30%, #d8ffe8 0%, var(--accent) 42%, #1f6b45 100%);
-  border: 2px solid color-mix(in srgb, #07110b 35%, transparent);
-  box-shadow: 0 2px 8px color-mix(in srgb, #000 35%, transparent);
+    radial-gradient(circle at 35% 28%, #fff6c8 0%, #f0c674 38%, #a87828 72%, #6a4a18 100%);
+  border: 2px solid color-mix(in srgb, #3a2a10 40%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, #f0c674 45%, transparent),
+    0 2px 8px color-mix(in srgb, #000 35%, transparent);
+  animation: cash-chip-gleam 0.55s ease-out both;
 }
 
 .cash-fx-chip::after {
@@ -3174,7 +3178,19 @@ h3 {
   place-items: center;
   font-size: 0.55rem;
   font-weight: 850;
-  color: #07110b;
+  color: #3a2a10;
+}
+
+@keyframes cash-chip-gleam {
+  0% {
+    filter: brightness(1.15);
+  }
+  40% {
+    filter: brightness(1.35);
+  }
+  100% {
+    filter: brightness(1);
+  }
 }
 
 .cash-fx-confetti {
