@@ -5240,6 +5240,18 @@ h3 {
   cursor: pointer;
 }
 
+.table-debug-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 39;
+  margin: 0;
+  padding: 0;
+  border: none;
+  cursor: default;
+  background: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .table-debug-panel {
   position: fixed;
   left: 0.75rem;

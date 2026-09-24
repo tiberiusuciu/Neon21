@@ -91,7 +91,14 @@ export function TableDebugPanel() {
   }
 
   return (
-    <div className="table-debug-panel">
+    <>
+      <button
+        type="button"
+        className="table-debug-backdrop"
+        aria-label="Close debug panel"
+        onClick={() => setOpen(false)}
+      />
+      <div className="table-debug-panel">
       <div className="table-debug-head">
         <strong>Table debug</strong>
         <button type="button" className="btn btn-sm btn-ghost" onClick={() => setOpen(false)}>
@@ -323,5 +330,6 @@ export function TableDebugPanel() {
 
       {note ? <p className="table-debug-note">{note}</p> : null}
     </div>
+    </>
   );
 }
