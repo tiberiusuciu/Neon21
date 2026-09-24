@@ -14,8 +14,15 @@ import {
 } from "./lib/table-chat.js";
 import {
   getGoldenHourPublic,
+  getGoldenHourWindowStartedAt,
+  isGoldenHourActive,
   setGoldenHourBroadcaster,
 } from "./lib/golden-hour.js";
+import {
+  getGoldenHourRebateProgress,
+  setGoldenHourRebateEmitters,
+  toRebateProgress,
+} from "./lib/golden-hour-rebate.js";
 
 const TableIdSchema = z.object({ tableId: z.string().min(1) });
 const SeatTakeSchema = z.object({ seatIndex: z.number().int().min(0).max(6) });
@@ -120,6 +127,39 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
     }
   });
 
+  setGoldenHourRebateEmitters({
+    onProgress: (userId, progress) => {
+      io.to(`user:${userId}`).emit("golden-hour:rebate", progress);
+    },
+    onPaid: (userId, rebateCents, balanceCents) => {
+      pool.emitWalletUpdate(userId, balanceCents);
+      io.to(`user:${userId}`).emit("golden-hour:rebate-paid", {
+        rebateCents,
+      });
+    },
+  });
+
+  async function pushRebateProgress(socket: {
+    data: { userId: string };
+    emit: (event: string, payload: unknown) => void;
+  }) {
+    const userId = socket.data.userId;
+    if (!isGoldenHourActive()) {
+      socket.emit("golden-hour:rebate", toRebateProgress(0, 0, 0));
+      return;
+    }
+    const windowStartedAt = getGoldenHourWindowStartedAt();
+    if (!windowStartedAt) {
+      socket.emit("golden-hour:rebate", toRebateProgress(0, 0, 0));
+      return;
+    }
+    const progress = await getGoldenHourRebateProgress(
+      userId,
+      windowStartedAt
+    );
+    socket.emit("golden-hour:rebate", progress);
+  }
+
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined;
     if (!token) {
@@ -139,6 +179,7 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
     const userId = socket.data.userId as string;
     socket.join(`user:${userId}`);
     socket.emit("golden-hour:state", getGoldenHourPublic());
+    void pushRebateProgress(socket);
 
     socket.on("lobby:subscribe", () => {
       socket.join("lobby");
@@ -148,6 +189,7 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
     socket.on("golden-hour:subscribe", () => {
       socket.join("golden-hour");
       socket.emit("golden-hour:state", getGoldenHourPublic());
+      void pushRebateProgress(socket);
     });
 
     socket.on("golden-hour:unsubscribe", () => {

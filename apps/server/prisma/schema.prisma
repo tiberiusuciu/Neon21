@@ -97,11 +97,27 @@ model JackpotAdjustment {
 
 /** Singleton schedule for the Golden Hour event. */
 model GoldenHourState {
-  id           String    @id @default("golden_hour")
-  disabled     Boolean   @default(false)
-  activeUntil  DateTime?
-  nextStartsAt DateTime?
-  updatedAt    DateTime  @updatedAt
+  id              String    @id @default("golden_hour")
+  disabled        Boolean   @default(false)
+  activeUntil     DateTime?
+  nextStartsAt    DateTime?
+  windowStartedAt DateTime?
+  updatedAt       DateTime  @updatedAt
+}
+
+/** Per-player win/loss totals for one Golden Hour window (rebate basis). */
+model GoldenHourPlayerStats {
+  id              String   @id @default(cuid())
+  userId          String
+  windowStartedAt DateTime
+  wonCents        Int      @default(0)
+  lostCents       Int      @default(0)
+  rebatePaidCents Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([userId, windowStartedAt])
+  @@index([windowStartedAt])
 }
 
 model Table {

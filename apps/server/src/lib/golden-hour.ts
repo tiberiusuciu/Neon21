@@ -1,5 +1,6 @@
 import type { GoldenHourPublic } from "@neon21/shared";
 import { prisma } from "./prisma.js";
+import { payGoldenHourRebates } from "./golden-hour-rebate.js";
 
 const ROW_ID = "golden_hour";
 export const GOLDEN_HOUR_DURATION_MS = 60 * 60 * 1000;
@@ -14,6 +15,7 @@ type Row = {
   disabled: boolean;
   activeUntil: Date | null;
   nextStartsAt: Date | null;
+  windowStartedAt: Date | null;
 };
 
 type Transition = "started" | "ended" | null;
@@ -47,6 +49,9 @@ function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
       !active && !row.disabled && row.nextStartsAt
         ? row.nextStartsAt.getTime()
         : null,
+    windowStartedAt: row.windowStartedAt
+      ? row.windowStartedAt.getTime()
+      : null,
   };
 }
 
@@ -83,6 +88,7 @@ async function persist(data: {
   disabled?: boolean;
   activeUntil?: Date | null;
   nextStartsAt?: Date | null;
+  windowStartedAt?: Date | null;
 }): Promise<Row> {
   const row = await prisma.goldenHourState.upsert({
     where: { id: ROW_ID },
@@ -91,6 +97,7 @@ async function persist(data: {
       disabled: data.disabled ?? false,
       activeUntil: data.activeUntil ?? null,
       nextStartsAt: data.nextStartsAt ?? null,
+      windowStartedAt: data.windowStartedAt ?? null,
     },
     update: {
       ...(data.disabled !== undefined ? { disabled: data.disabled } : {}),
@@ -99,6 +106,9 @@ async function persist(data: {
         : {}),
       ...(data.nextStartsAt !== undefined
         ? { nextStartsAt: data.nextStartsAt }
+        : {}),
+      ...(data.windowStartedAt !== undefined
+        ? { windowStartedAt: data.windowStartedAt }
         : {}),
     },
   });
@@ -117,7 +127,6 @@ async function loadRow(): Promise<Row> {
   return persist({});
 }
 
-/** Ensure a next start exists when idle and not disabled. */
 async function ensureSchedule(row: Row): Promise<Row> {
   if (row.disabled) return row;
   const now = Date.now();
@@ -133,6 +142,23 @@ async function ensureSchedule(row: Row): Promise<Row> {
   });
 }
 
+async function endWindow(row: Row, now: number): Promise<Row> {
+  const windowStartedAt = row.windowStartedAt;
+  const next = await persist({
+    activeUntil: null,
+    nextStartsAt: new Date(now + randomCooldownMs()),
+    windowStartedAt: null,
+  });
+  if (windowStartedAt) {
+    try {
+      await payGoldenHourRebates(windowStartedAt);
+    } catch (err) {
+      console.error("[golden-hour] rebate payout failed", err);
+    }
+  }
+  return next;
+}
+
 async function tick(): Promise<void> {
   if (ticking) return;
   ticking = true;
@@ -143,19 +169,18 @@ async function tick(): Promise<void> {
 
     if (!row.disabled) {
       if (row.activeUntil && row.activeUntil.getTime() <= now) {
-        row = await persist({
-          activeUntil: null,
-          nextStartsAt: new Date(now + randomCooldownMs()),
-        });
+        row = await endWindow(row, now);
         transition = "ended";
       } else if (
         !row.activeUntil &&
         row.nextStartsAt &&
         row.nextStartsAt.getTime() <= now
       ) {
+        const startedAt = new Date(now);
         row = await persist({
           activeUntil: new Date(now + GOLDEN_HOUR_DURATION_MS),
           nextStartsAt: null,
+          windowStartedAt: startedAt,
         });
         transition = "started";
       }
@@ -185,6 +210,7 @@ export function getGoldenHourPublic(): GoldenHourPublic {
       active: false,
       activeUntil: null,
       nextStartsAt: null,
+      windowStartedAt: null,
     };
   }
   return toPublic(cache);
@@ -192,6 +218,11 @@ export function getGoldenHourPublic(): GoldenHourPublic {
 
 export function isGoldenHourActive(): boolean {
   return getGoldenHourPublic().active;
+}
+
+export function getGoldenHourWindowStartedAt(): Date | null {
+  if (!cache?.windowStartedAt || !isGoldenHourActive()) return null;
+  return cache.windowStartedAt;
 }
 
 /** Standard win payout (no global Golden Hour multiplier). */
@@ -202,7 +233,7 @@ export function goldenWinPayout(
   return { resultCents: profitCents, creditCents: betCents + profitCents };
 }
 
-/** Standard loss payout (no global Golden Hour rebate). */
+/** Standard loss payout (no global Golden Hour half-loss). */
 export function goldenLossPayout(betCents: number): {
   resultCents: number;
   refundCents: number;
@@ -230,10 +261,12 @@ export function goldenHandLossPayout(betCents: number): {
 
 export async function adminStartGoldenHour(): Promise<GoldenHourPublic> {
   const now = Date.now();
+  const startedAt = new Date(now);
   await persist({
     disabled: false,
     activeUntil: new Date(now + GOLDEN_HOUR_DURATION_MS),
     nextStartsAt: null,
+    windowStartedAt: startedAt,
   });
   emit("started");
   scheduleWake();
@@ -243,10 +276,15 @@ export async function adminStartGoldenHour(): Promise<GoldenHourPublic> {
 export async function adminEndGoldenHour(): Promise<GoldenHourPublic> {
   const now = Date.now();
   const wasActive = isGoldenHourActive();
-  await persist({
-    activeUntil: null,
-    nextStartsAt: new Date(now + randomCooldownMs()),
-  });
+  if (wasActive && cache) {
+    await endWindow(cache, now);
+  } else {
+    await persist({
+      activeUntil: null,
+      nextStartsAt: new Date(now + randomCooldownMs()),
+      windowStartedAt: null,
+    });
+  }
   emit(wasActive ? "ended" : null);
   scheduleWake();
   return getGoldenHourPublic();
@@ -257,10 +295,14 @@ export async function adminSetGoldenHourDisabled(
 ): Promise<GoldenHourPublic> {
   const wasActive = isGoldenHourActive();
   if (disabled) {
+    if (wasActive && cache) {
+      await endWindow(cache, Date.now());
+    }
     await persist({
       disabled: true,
       activeUntil: null,
       nextStartsAt: null,
+      windowStartedAt: null,
     });
     emit(wasActive ? "ended" : null);
     clearTimer();
@@ -269,6 +311,7 @@ export async function adminSetGoldenHourDisabled(
       disabled: false,
       activeUntil: null,
       nextStartsAt: new Date(Date.now() + randomCooldownMs()),
+      windowStartedAt: null,
     });
     emit(null);
     scheduleWake();

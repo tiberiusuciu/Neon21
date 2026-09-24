@@ -169,8 +169,23 @@ export const GoldenHourPublicSchema = z.object({
   active: z.boolean(),
   activeUntil: z.number().int().nullable(),
   nextStartsAt: z.number().int().nullable(),
+  /** Epoch ms when the current/last window started (for rebate ledger). */
+  windowStartedAt: z.number().int().nullable().optional(),
 });
 export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
+
+/** Projected Golden Hour net-loss rebate for the current window. */
+export const GOLDEN_HOUR_REBATE_CAP_CENTS = 500_000;
+export const GoldenHourRebateProgressSchema = z.object({
+  wonCents: z.number().int().nonnegative(),
+  lostCents: z.number().int().nonnegative(),
+  rebateCents: z.number().int().nonnegative(),
+  capCents: z.number().int().positive(),
+  paidCents: z.number().int().nonnegative().optional(),
+});
+export type GoldenHourRebateProgress = z.infer<
+  typeof GoldenHourRebateProgressSchema
+>;
 
 export const AdminGoldenHourDisableBodySchema = z.object({
   disabled: z.boolean(),

@@ -88,6 +88,7 @@ export function TablePage() {
     subscribeJackpot,
     unsubscribeJackpot,
     goldenHour,
+    goldenHourRebate,
   } = useGameSocket();
   const { playWin, playSpend, playPush } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
@@ -920,6 +921,21 @@ export function TablePage() {
                   {formatCountdown(
                     Math.max(0, goldenHour.activeUntil - now)
                   )}
+                </span>
+              </span>
+            )}
+            {goldenHour?.active && goldenHourRebate && (
+              <span
+                className="table-golden-rebate"
+                title="Projected net-loss rebate at end of Golden Hour"
+              >
+                <span className="table-golden-rebate-label">Rebate</span>
+                <span className="table-golden-rebate-value">
+                  {formatCents(goldenHourRebate.rebateCents)}
+                  <span className="table-golden-rebate-cap">
+                    {" "}
+                    / {formatCents(goldenHourRebate.capCents)}
+                  </span>
                 </span>
               </span>
             )}

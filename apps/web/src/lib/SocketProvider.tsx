@@ -10,11 +10,13 @@ import {
 } from "react";
 import type {
   GoldenHourPublic,
+  GoldenHourRebateProgress,
   JackpotWinBroadcast,
   LobbyTable,
   TableChatMessage,
   TableStateSnapshot,
 } from "@neon21/shared";
+import { formatCents } from "./format";
 import { useAuth } from "./auth";
 import { useToast } from "./toast";
 import { getActiveTableId, setActiveTableId } from "./activeTable";
@@ -33,6 +35,7 @@ type GameSocketApi = {
   tableState: TableStateSnapshot | null;
   chatMessages: TableChatMessage[];
   goldenHour: GoldenHourPublic | null;
+  goldenHourRebate: GoldenHourRebateProgress | null;
   subscribeLobby: () => void;
   joinTable: (tableId: string) => void;
   leaveTable: () => void;
@@ -99,6 +102,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [tableState, setTableState] = useState<TableStateSnapshot | null>(null);
   const [chatMessages, setChatMessages] = useState<TableChatMessage[]>([]);
   const [goldenHour, setGoldenHour] = useState<GoldenHourPublic | null>(null);
+  const [goldenHourRebate, setGoldenHourRebate] =
+    useState<GoldenHourRebateProgress | null>(null);
   const tableStateRef = useRef<TableStateSnapshot | null>(null);
   const pendingWinToast = useRef<JackpotWinBroadcast | null>(null);
   useEffect(() => {
@@ -195,12 +200,29 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     });
     const offGhStarted = onEvent(s, "golden-hour:started", (state) => {
       setGoldenHour(state);
+      setGoldenHourRebate({
+        wonCents: 0,
+        lostCents: 0,
+        rebateCents: 0,
+        capCents: 500_000,
+      });
       toastSuccess.current(
         "Golden Hour — the house treasury is vulnerable"
       );
     });
     const offGhEnded = onEvent(s, "golden-hour:ended", (state) => {
       setGoldenHour(state);
+      setGoldenHourRebate(null);
+    });
+    const offGhRebate = onEvent(s, "golden-hour:rebate", (progress) => {
+      setGoldenHourRebate(progress);
+    });
+    const offGhRebatePaid = onEvent(s, "golden-hour:rebate-paid", ({ rebateCents }) => {
+      if (rebateCents > 0) {
+        toastSuccess.current(
+          `Golden rebate paid — ${formatCents(rebateCents)}`
+        );
+      }
     });
     emitEvent(s, "golden-hour:subscribe");
     return () => {
@@ -216,6 +238,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       offGhState();
       offGhStarted();
       offGhEnded();
+      offGhRebate();
+      offGhRebatePaid();
     };
   }, [token, setBalanceCents]);
   const leaveTimerRef = useRef<number | null>(null);
@@ -414,6 +438,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       tableState,
       chatMessages,
       goldenHour,
+      goldenHourRebate,
       subscribeLobby,
       joinTable,
       leaveTable,
@@ -455,6 +480,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       tableState,
       chatMessages,
       goldenHour,
+      goldenHourRebate,
       subscribeLobby,
       joinTable,
       leaveTable,

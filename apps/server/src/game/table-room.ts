@@ -52,8 +52,10 @@ import { prisma } from "../lib/prisma.js";
 import {
   goldenLossPayout,
   goldenWinPayout,
+  getGoldenHourWindowStartedAt,
   isGoldenHourActive,
 } from "../lib/golden-hour.js";
+import { recordGoldenHourResults } from "../lib/golden-hour-rebate.js";
 import {
   getAvailablePotCents,
   getSpinSeatProgress,
@@ -1251,6 +1253,9 @@ export class TableRoom {
     }
 
     const bjJobs: Promise<void>[] = [];
+    const ghWindow = isGoldenHourActive()
+      ? getGoldenHourWindowStartedAt()
+      : null;
     for (const [userId, hands] of byUser) {
       const newBlackjacks = hands.filter((h) => h.isBlackjack).length;
       if (newBlackjacks > 0) {
@@ -1263,6 +1268,15 @@ export class TableRoom {
         );
       } else {
         recordHandOutcomesSafe(userId, hands);
+      }
+      if (ghWindow) {
+        void recordGoldenHourResults(
+          userId,
+          ghWindow,
+          hands.map((h) => h.resultCents)
+        ).catch((err) =>
+          console.error("[golden-hour] rebate track failed", userId, err)
+        );
       }
     }
 
