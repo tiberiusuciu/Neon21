@@ -3,23 +3,23 @@ import { GOLDEN_HOUR_REBATE_CAP_CENTS } from "@neon21/shared";
 import { prisma } from "./prisma.js";
 import { creditCents } from "../game/wallet.js";
 
-export function computeGoldenRebateCents(
-  wonCents: number,
-  lostCents: number
-): number {
-  const net = Math.max(0, lostCents - wonCents);
-  return Math.min(Math.floor(net * 0.1), GOLDEN_HOUR_REBATE_CAP_CENTS);
+/** 10% of gross losses this window, capped. Wins do not reduce the rebate. */
+export function computeGoldenRebateCents(lostCents: number): number {
+  return Math.min(
+    Math.floor(Math.max(0, lostCents) * 0.1),
+    GOLDEN_HOUR_REBATE_CAP_CENTS
+  );
 }
 
 export function toRebateProgress(
-  wonCents: number,
   lostCents: number,
-  paidCents = 0
+  paidCents = 0,
+  wonCents = 0
 ): GoldenHourRebateProgress {
   return {
     wonCents,
     lostCents,
-    rebateCents: computeGoldenRebateCents(wonCents, lostCents),
+    rebateCents: computeGoldenRebateCents(lostCents),
     capCents: GOLDEN_HOUR_REBATE_CAP_CENTS,
     paidCents,
   };
@@ -46,7 +46,7 @@ export function setGoldenHourRebateEmitters(opts: {
   if (opts.onPaid !== undefined) paidEmitter = opts.onPaid;
 }
 
-/** Accumulate win/loss cents for a Golden Hour window. */
+/** Accumulate gross losses for a Golden Hour window (wins ignored for rebate). */
 export async function recordGoldenHourResults(
   userId: string,
   windowStartedAt: Date,
@@ -54,13 +54,11 @@ export async function recordGoldenHourResults(
 ): Promise<GoldenHourRebateProgress | null> {
   if (resultCentsList.length === 0) return null;
 
-  let won = 0;
   let lost = 0;
   for (const r of resultCentsList) {
-    if (r > 0) won += r;
-    else if (r < 0) lost += -r;
+    if (r < 0) lost += -r;
   }
-  if (won === 0 && lost === 0) {
+  if (lost === 0) {
     const progress = await getGoldenHourRebateProgress(
       userId,
       windowStartedAt
@@ -76,19 +74,18 @@ export async function recordGoldenHourResults(
     create: {
       userId,
       windowStartedAt,
-      wonCents: won,
+      wonCents: 0,
       lostCents: lost,
     },
     update: {
-      wonCents: { increment: won },
       lostCents: { increment: lost },
     },
   });
 
   const progress = toRebateProgress(
-    row.wonCents,
     row.lostCents,
-    row.rebatePaidCents
+    row.rebatePaidCents,
+    row.wonCents
   );
   progressEmitter?.(userId, progress);
   return progress;
@@ -104,10 +101,10 @@ export async function getGoldenHourRebateProgress(
     },
   });
   if (!row) return toRebateProgress(0, 0, 0);
-  return toRebateProgress(row.wonCents, row.lostCents, row.rebatePaidCents);
+  return toRebateProgress(row.lostCents, row.rebatePaidCents, row.wonCents);
 }
 
-/** Credit 10% net-loss rebates (capped) for a closed window. */
+/** Credit 10% gross-loss rebates (capped) for a closed window. */
 export async function payGoldenHourRebates(
   windowStartedAt: Date
 ): Promise<void> {
@@ -115,7 +112,7 @@ export async function payGoldenHourRebates(
     where: { windowStartedAt, rebatePaidCents: 0 },
   });
   for (const row of rows) {
-    const rebate = computeGoldenRebateCents(row.wonCents, row.lostCents);
+    const rebate = computeGoldenRebateCents(row.lostCents);
     if (rebate <= 0) continue;
     const balanceCents = await creditCents(row.userId, rebate);
     await prisma.goldenHourPlayerStats.update({
@@ -125,7 +122,7 @@ export async function payGoldenHourRebates(
     paidEmitter?.(row.userId, rebate, balanceCents);
     progressEmitter?.(
       row.userId,
-      toRebateProgress(row.wonCents, row.lostCents, rebate)
+      toRebateProgress(row.lostCents, rebate, row.wonCents)
     );
   }
 }

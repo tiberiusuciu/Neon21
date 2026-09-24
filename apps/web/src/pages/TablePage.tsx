@@ -947,7 +947,7 @@ export function TablePage() {
                 className={`table-golden-rebate${
                   rebateBump ? " is-bump" : ""
                 }`}
-                title="Projected net-loss rebate at end of Golden Hour"
+                title="Projected loss rebate at end of Golden Hour (10% of losses, wins don't reduce it)"
               >
                 <span className="table-golden-rebate-label">Rebate</span>
                 <span className="table-golden-rebate-value">

@@ -196,9 +196,10 @@ export const GoldenHourPublicSchema = z.object({
 });
 export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
 
-/** Projected Golden Hour net-loss rebate for the current window. */
+/** Projected Golden Hour gross-loss rebate for the current window. */
 export const GOLDEN_HOUR_REBATE_CAP_CENTS = 500_000;
 export const GoldenHourRebateProgressSchema = z.object({
+  /** Unused for rebate math; kept for clients that still read it. */
   wonCents: z.number().int().nonnegative(),
   lostCents: z.number().int().nonnegative(),
   rebateCents: z.number().int().nonnegative(),

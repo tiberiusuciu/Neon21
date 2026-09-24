@@ -1318,14 +1318,6 @@ export class TableRoom {
     this.cb.onWalletUpdate(seat.userId, bal);
     seat.tripleBonusCents = bonus;
     seat.tripleBonusFxUntil = Date.now() + 2_400;
-    const ghWindow = getGoldenHourWindowStartedAt();
-    if (ghWindow) {
-      void recordGoldenHourResults(seat.userId, ghWindow, [bonus]).then(
-        (progress) => {
-          if (progress) this.cb.onGoldenHourRebate(seat.userId, progress);
-        }
-      );
-    }
     this.broadcast();
   }
 

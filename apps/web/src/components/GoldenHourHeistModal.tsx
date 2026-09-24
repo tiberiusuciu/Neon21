@@ -64,8 +64,8 @@ export function GoldenHourHeistModal() {
             </h2>
             <p className="heist-modal-body">
               The house treasury is vulnerable! The jackpot grows twice as
-              fast, loss insurance is active, and special hand bonuses are
-              live!
+              fast, you bank 10% of every lost bet as a rebate (wins never
+              take it back), and special hand bonuses are live!
             </p>
             <button type="button" className="btn" onClick={dismiss}>
               Understood

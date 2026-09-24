@@ -113,7 +113,7 @@ model GoldenHourState {
   updatedAt       DateTime  @updatedAt
 }
 
-/** Per-player win/loss totals for one Golden Hour window (rebate basis). */
+/** Per-player gross losses for one Golden Hour window (rebate basis). */
 model GoldenHourPlayerStats {
   id              String   @id @default(cuid())
   userId          String
