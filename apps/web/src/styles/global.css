@@ -6942,15 +6942,14 @@ html[data-resolved="dark"] .table-debug-field select {
   top: 22%;
   width: 0;
   height: 0;
-  transform: scale(4.4);
 }
 
 .seat-spin-loupe-disc {
   position: absolute;
-  left: -62px;
-  top: -10px;
-  width: 124px;
-  height: 124px;
+  left: -273px;
+  top: -44px;
+  width: 546px;
+  height: 546px;
   border-radius: 50%;
   overflow: hidden;
   will-change: transform;
@@ -7011,8 +7010,6 @@ html[data-resolved="dark"] .table-debug-field select {
     linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   mask-composite: exclude;
-  -webkit-backdrop-filter: blur(2.5px);
-  backdrop-filter: blur(2.5px);
 }
 
 .seat-spin-wheel.is-spinning .seat-spin-loupe {
