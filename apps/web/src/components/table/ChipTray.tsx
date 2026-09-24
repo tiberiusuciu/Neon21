@@ -158,7 +158,7 @@ export function ChipTray({
         {showAllIn && (
           <motion.button
             type="button"
-            className="chip-btn chip-btn-allin-dedicated"
+            className="chip-btn chip-btn-allin"
             whileTap={{ scale: 0.88 }}
             whileHover={{ y: -2 }}
             onClick={(e) => {
@@ -167,8 +167,8 @@ export function ChipTray({
             }}
             title={`All in ${formatCents(remaining)} (A)`}
           >
-            <span>ALL</span>
-            <span className="chip-allin-amt">{formatCents(remaining)}</span>
+            <span>All</span>
+            <span className="chip-allin-tag">max</span>
             <kbd className="kbd chip-kbd">A</kbd>
           </motion.button>
         )}
