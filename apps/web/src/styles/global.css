@@ -6113,12 +6113,12 @@ h3 {
 
 .seat-spin-pot {
   position: relative;
-  z-index: 3;
+  z-index: 10;
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 0.35rem;
-  margin: 0 0 0.1rem;
+  margin: 0 0 0.35rem;
   font-size: 0.72rem;
   letter-spacing: 0.02em;
 }
@@ -6142,7 +6142,7 @@ h3 {
   z-index: 2;
   width: 124px;
   height: 124px;
-  margin: 0.35rem 0 0.55rem;
+  margin: 0.15rem 0 0.55rem;
 }
 
 .seat-spin-offer-meter {
@@ -6298,71 +6298,34 @@ h3 {
 .seat-spin-loupe {
   pointer-events: none;
   position: absolute;
-  top: -18px;
+  top: 4px;
   left: 50%;
   z-index: 7;
-  width: 68px;
-  height: 78px;
-  margin-left: -34px;
+  width: 62px;
+  height: 68px;
+  margin-left: -31px;
   overflow: hidden;
-  border-radius: 8px;
-  background: #0a0812;
-  border: 2px solid transparent;
-  background-clip: padding-box;
+  border-radius: 10px;
+  background: #12101a;
+  border: 1px solid color-mix(in srgb, #e8eef8 32%, transparent);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #f0d090 55%, transparent),
-    0 0 16px color-mix(in srgb, #c9a24a 32%, transparent),
-    0 4px 14px color-mix(in srgb, #000 55%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #fff 22%, transparent),
-    inset 0 1px 0 color-mix(in srgb, #fff8e0 35%, transparent);
-}
-
-.seat-spin-loupe-frame {
-  pointer-events: none;
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  border-radius: inherit;
-  border: 2px solid transparent;
-  background:
-    linear-gradient(#0a0812, #0a0812) padding-box,
-    linear-gradient(
-      145deg,
-      #fff6d0 0%,
-      #d4a84a 28%,
-      #8a6230 52%,
-      #e8c878 78%,
-      #a87838 100%
-    )
-      border-box;
-  box-shadow: inset 0 0 10px color-mix(in srgb, #000 40%, transparent);
-  mix-blend-mode: normal;
-  opacity: 1;
-  /* frame sits on top but must not block glass shine — punch a hole via outline only */
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  padding: 2px;
+    0 3px 10px color-mix(in srgb, #000 42%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 10%, transparent);
 }
 
 .seat-spin-loupe-zoom {
   position: absolute;
   left: 50%;
-  top: 18%;
+  top: 22%;
   width: 0;
   height: 0;
-  transform: scale(4.6);
+  transform: scale(4.4);
 }
 
 .seat-spin-loupe-disc {
   position: absolute;
   left: -62px;
-  top: -8px;
+  top: -10px;
   width: 124px;
   height: 124px;
   border-radius: 50%;
@@ -6399,77 +6362,43 @@ h3 {
   animation: none;
 }
 
+/* Frosted glass rim — soft haze at the edges, clear center */
 .seat-spin-loupe-glass {
   position: absolute;
   inset: 0;
   z-index: 3;
   border-radius: inherit;
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, #fff 22%, transparent) 0%,
-    color-mix(in srgb, #fff8e0 8%, transparent) 22%,
-    transparent 40%,
-    transparent 68%,
-    color-mix(in srgb, #3a2040 18%, transparent) 100%
-  );
-  box-shadow: inset 0 -8px 12px color-mix(in srgb, #000 32%, transparent);
-}
-
-.seat-spin-loupe-shine {
-  position: absolute;
-  inset: -20% -40%;
-  z-index: 5;
-  background: linear-gradient(
-    105deg,
-    transparent 36%,
-    color-mix(in srgb, #fff 28%, transparent) 48%,
-    color-mix(in srgb, #ffe9a8 18%, transparent) 52%,
-    transparent 64%
-  );
-  transform: translateX(-60%);
-  animation: seat-spin-loupe-shine 3.4s ease-in-out infinite;
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, #dce4f4 28%, transparent) 0%,
+      color-mix(in srgb, #fff 8%, transparent) 14%,
+      transparent 28%,
+      transparent 72%,
+      color-mix(in srgb, #fff 8%, transparent) 86%,
+      color-mix(in srgb, #dce4f4 28%, transparent) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, #eef2fa 32%, transparent) 0%,
+      color-mix(in srgb, #fff 10%, transparent) 16%,
+      transparent 32%,
+      transparent 78%,
+      color-mix(in srgb, #a8b4c8 14%, transparent) 100%
+    );
+  box-shadow:
+    inset 0 0 14px 3px color-mix(in srgb, #c8d2e8 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff 35%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, #fff 8%, transparent);
+  -webkit-backdrop-filter: blur(1.5px);
+  backdrop-filter: blur(1.5px);
 }
 
 .seat-spin-wheel.is-spinning .seat-spin-loupe {
+  border-color: color-mix(in srgb, #e8eef8 42%, transparent);
   box-shadow:
-    0 0 0 1px color-mix(in srgb, #ffe9a8 70%, transparent),
-    0 0 22px color-mix(in srgb, #ff4a2a 28%, transparent),
-    0 0 18px color-mix(in srgb, #c9a24a 40%, transparent),
-    0 4px 14px color-mix(in srgb, #000 55%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
-}
-
-.seat-spin-wheel.is-spinning .seat-spin-loupe-shine {
-  animation-duration: 1.6s;
-}
-
-@keyframes seat-spin-loupe-shine {
-  0%,
-  55% {
-    transform: translateX(-70%);
-    opacity: 0;
-  }
-  65% {
-    opacity: 0.85;
-  }
-  80% {
-    transform: translateX(70%);
-    opacity: 0;
-  }
-  100% {
-    transform: translateX(70%);
-    opacity: 0;
-  }
-}
-
-@keyframes seat-spin-loupe-hair {
-  0%,
-  100% {
-    opacity: 0.75;
-  }
-  50% {
-    opacity: 1;
-  }
+    0 3px 12px color-mix(in srgb, #000 48%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 14%, transparent);
 }
 
 .seat-spin-edge-particles {
@@ -6803,16 +6732,11 @@ h3 {
   .seat-spin-pointer-glow,
   .seat-spin-pointer-blade,
   .seat-spin-pointer-core,
-  .seat-spin-loupe-shine,
   .seat-spin-loupe-hairline {
     animation: none !important;
   }
 
   .seat-spin-edge-particles {
-    display: none;
-  }
-
-  .seat-spin-loupe-shine {
     display: none;
   }
 

@@ -503,7 +503,6 @@ export function SpinWheel({
           </svg>
         )}
         <div className="seat-spin-loupe" aria-hidden>
-          <div className="seat-spin-loupe-frame" />
           <div className="seat-spin-loupe-zoom">
             <div className="seat-spin-loupe-disc" style={discStyle}>
               <WheelFace prefix="seat-spin-loupe" showLabels />
@@ -511,7 +510,6 @@ export function SpinWheel({
           </div>
           <div className="seat-spin-loupe-hairline" />
           <div className="seat-spin-loupe-glass" />
-          <div className="seat-spin-loupe-shine" />
         </div>
         <div className="seat-spin-pointer" aria-hidden>
           <span className="seat-spin-pointer-glow" />
