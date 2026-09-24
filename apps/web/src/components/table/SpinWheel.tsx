@@ -4,6 +4,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import {
   JACKPOT_WHEEL,
@@ -93,15 +94,69 @@ function bandPath(start: number, end: number): string {
   return `M ${CX} ${CY} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`;
 }
 
-function bandLabelPos(start: number, end: number) {
-  const midDeg = -90 + ((start + end) / 2) * SEG;
+const LABEL_R = 37;
+/** Min gap between loupe label centers (tiles). ~9° keeps short strings from colliding. */
+const LABEL_MIN_GAP_TILES = 2.5;
+/** Repeat labels along wide bands so the loupe always sees one before the band midpoint. */
+const LABEL_REPEAT_STEP = 3;
+
+function bandLabelAt(tileMid: number) {
+  const midDeg = -90 + tileMid * SEG;
   const a = (midDeg * Math.PI) / 180;
-  const lr = 37;
   return {
-    x: CX + lr * Math.cos(a),
-    y: CY + lr * Math.sin(a),
+    x: CX + LABEL_R * Math.cos(a),
+    y: CY + LABEL_R * Math.sin(a),
     rot: midDeg + 90,
+    tileMid,
   };
+}
+
+/** Centers (fractional tile index) for labels along a band. */
+function loupeLabelSlots(start: number, end: number): number[] {
+  const span = end - start;
+  if (span <= 3) return [(start + end) / 2];
+
+  const slots: number[] = [];
+  const last = end - 0.5;
+  for (let t = start + 0.5; t < end; t += LABEL_REPEAT_STEP) {
+    slots.push(Math.min(t, last));
+  }
+  const prev = slots[slots.length - 1];
+  if (prev == null || last - prev > LABEL_REPEAT_STEP * 0.55) {
+    slots.push(last);
+  }
+  return slots;
+}
+
+function loupeLabelPriority(b: {
+  jackpot: boolean;
+  onePct: boolean;
+  start: number;
+  end: number;
+}): number {
+  if (b.jackpot) return 100;
+  const t = JACKPOT_WHEEL[b.start]!;
+  if (t.kind === "percent" && t.pctBps >= 2_500) return 90;
+  if (b.onePct) return 75;
+  if (t.kind === "flat") return 65;
+  if (t.kind === "percent" && t.pctBps >= 500) return 50;
+  if (b.end - b.start >= 2) return 40;
+  if (t.kind === "percent" && t.pctBps >= 200) return 25;
+  return 10;
+}
+
+function shouldOfferLoupeLabel(b: {
+  label: string | null;
+  jackpot: boolean;
+  onePct: boolean;
+  start: number;
+  end: number;
+}): boolean {
+  if (!b.label) return false;
+  if (b.jackpot || b.onePct || b.end - b.start >= 2) return true;
+  const t = JACKPOT_WHEEL[b.start]!;
+  if (t.kind === "flat") return true;
+  return t.kind === "percent" && t.pctBps >= 200;
 }
 
 function WheelFace({
@@ -134,46 +189,75 @@ function WheelFace({
         />
       );
     });
-    const labels = showLabels
-      ? bands
-          .filter((b) => {
-            if (!b.label) return false;
-            if (b.jackpot || b.onePct || b.end - b.start >= 2) return true;
-            const t = JACKPOT_WHEEL[b.start]!;
-            return t.kind === "percent" && t.pctBps >= 200;
-          })
-          .map((b) => {
-            const span = b.end - b.start;
-            const { x, y, rot } = bandLabelPos(b.start, b.end);
-            const fontSize = b.jackpot
-              ? 3.4
-              : span >= 6
-                ? 2.8
-                : span >= 3
-                  ? 2.3
-                  : 1.9;
-            return (
-              <text
-                key={`lbl-${b.start}-${b.end}`}
-                x={x}
-                y={y}
-                fill="#f5ecd8"
-                stroke="#0a0812"
-                strokeWidth={0.55}
-                paintOrder="stroke"
-                fontSize={fontSize}
-                fontWeight={700}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                transform={`rotate(${rot} ${x} ${y})`}
-                className="seat-spin-wedge-label"
-                style={{ pointerEvents: "none" }}
-              >
-                {b.label}
-              </text>
-            );
-          })
-      : null;
+
+    let labels: ReactNode = null;
+    if (showLabels) {
+      type Cand = {
+        key: string;
+        label: string;
+        tileMid: number;
+        fontSize: number;
+        priority: number;
+      };
+      const candidates: Cand[] = [];
+      for (const b of bands) {
+        if (!shouldOfferLoupeLabel(b) || !b.label) continue;
+        const span = b.end - b.start;
+        const fontSize = b.jackpot
+          ? 3.2
+          : span >= 6
+            ? 2.6
+            : span >= 3
+              ? 2.15
+              : 1.65;
+        const priority = loupeLabelPriority(b);
+        for (const tileMid of loupeLabelSlots(b.start, b.end)) {
+          candidates.push({
+            key: `lbl-${b.start}-${tileMid}`,
+            label: b.label,
+            tileMid,
+            fontSize,
+            priority,
+          });
+        }
+      }
+
+      candidates.sort((a, b) => b.priority - a.priority || a.tileMid - b.tileMid);
+      const placed: Cand[] = [];
+      for (const c of candidates) {
+        const clash = placed.some(
+          (p) => Math.abs(p.tileMid - c.tileMid) < LABEL_MIN_GAP_TILES
+        );
+        if (clash) continue;
+        placed.push(c);
+      }
+      placed.sort((a, b) => a.tileMid - b.tileMid);
+
+      labels = placed.map((c) => {
+        const { x, y, rot } = bandLabelAt(c.tileMid);
+        return (
+          <text
+            key={c.key}
+            x={x}
+            y={y}
+            fill="#f5ecd8"
+            stroke="#0a0812"
+            strokeWidth={0.5}
+            paintOrder="stroke"
+            fontSize={c.fontSize}
+            fontWeight={700}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            transform={`rotate(${rot} ${x} ${y})`}
+            className="seat-spin-wedge-label"
+            style={{ pointerEvents: "none" }}
+          >
+            {c.label}
+          </text>
+        );
+      });
+    }
+
     return { wedges, labels };
   }, [prefix, showLabels]);
 
