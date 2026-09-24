@@ -23,6 +23,7 @@ import {
 } from "./cards.js";
 import {
   ACTION_PAUSE_MS,
+  STAND_PAUSE_MS,
   ALL_BET_CLAMP_MS,
   BETTING_MS,
   DEAL_CARD_MS,
@@ -84,7 +85,7 @@ export class TableRoom {
   private timer: ReturnType<typeof setTimeout> | null = null;
   private generation = 0;
   private allBetClamped = false;
-  private turnResolve: (() => void) | null = null;
+  private turnResolve: ((pauseMs?: number) => void) | null = null;
   private insuranceWait: (() => void) | null = null;
   /** False once the insurance window closes (timer / all decided). */
   private insuranceOpen = false;
@@ -979,7 +980,7 @@ export class TableRoom {
           this.activeSeatIndex = si;
           this.activeHandIndex = hi;
           this.broadcast();
-          await this.delay(ACTION_PAUSE_MS);
+          await this.delay(STAND_PAUSE_MS);
           if (!this.alive(gen)) return;
           continue;
         }
@@ -1000,9 +1001,9 @@ export class TableRoom {
 
   private waitForHandAction(gen: number, seatIndex: number, handIndex: number): Promise<void> {
     return new Promise((resolve) => {
-      const beginPauseThenDone = () => {
+      const beginPauseThenDone = (pauseMs = ACTION_PAUSE_MS) => {
         this.turnResolve = null;
-        this.schedule(ACTION_PAUSE_MS, () => {
+        this.schedule(pauseMs, () => {
           if (!this.alive(gen)) {
             resolve();
             return;
@@ -1026,17 +1027,17 @@ export class TableRoom {
         if (hand && !hand.stood && !evaluateHand(hand.cards).bust) {
           hand.stood = true;
         }
-        beginPauseThenDone();
+        beginPauseThenDone(STAND_PAUSE_MS);
       });
       this.broadcast();
     });
   }
 
-  private completeTurnAction() {
+  private completeTurnAction(pauseMs = ACTION_PAUSE_MS) {
     const resolve = this.turnResolve;
     if (resolve) {
       this.turnResolve = null;
-      resolve();
+      resolve(pauseMs);
     } else {
       this.broadcast();
     }
@@ -1082,7 +1083,7 @@ export class TableRoom {
     const ctx = this.activeHand();
     if (!ctx || ctx.seat.userId !== userId) return "Not your turn";
     ctx.hand.stood = true;
-    this.completeTurnAction();
+    this.completeTurnAction(STAND_PAUSE_MS);
     return null;
   }
 

@@ -91,7 +91,10 @@ export const DEALER_BUST_PAUSE_MS = 1_200;
 export const SETTLE_WIN_PAYOUT_MS = 1_750;
 export const INSURANCE_MS = 10_000;
 export const TURN_MS = 25_000;
+/** Pause after hit/double/bust before next hand. */
 export const ACTION_PAUSE_MS = 2_500;
+/** Shorter beat after stand / hold before advancing. */
+export const STAND_PAUSE_MS = 900;
 export const SETTLE_MS = 3_000;
 export const EMPTY_DELETE_MS = 10_000;
 export const SHOE_DECKS = 6;
