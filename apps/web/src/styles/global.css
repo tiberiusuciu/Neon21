@@ -4,6 +4,7 @@
   --font-money: "Space Grotesk", sans-serif;
   --accent: #7cffb2;
   --accent-dim: color-mix(in srgb, var(--accent) 55%, transparent);
+  --btn-fg: #07110b;
   --radius: 10px;
   --header-h: 56px;
   --space: 1rem;
@@ -27,6 +28,7 @@
 html[data-theme="light"],
 html:not([data-theme]) {
   --accent: #0f8f5c;
+  --btn-fg: #ffffff;
   --bg: #e8ece9;
   --bg-elevated: #f4f7f5;
   --fg: #121412;
@@ -58,6 +60,7 @@ html[data-theme="dark"] {
   --surface: color-mix(in srgb, #161a18 78%, transparent);
   --danger: #ff7a7a;
   --glow: color-mix(in srgb, var(--accent) 18%, transparent);
+  --btn-fg: #07110b;
   color-scheme: dark;
 }
 
@@ -71,6 +74,7 @@ html[data-theme="dark"] {
     --surface: color-mix(in srgb, #161a18 78%, transparent);
     --danger: #ff7a7a;
     --glow: color-mix(in srgb, var(--accent) 18%, transparent);
+    --btn-fg: #07110b;
     color-scheme: dark;
   }
 }
@@ -78,6 +82,7 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: light) {
   html[data-theme="system"] {
     --accent: #0f8f5c;
+    --btn-fg: #ffffff;
     --bg: #e8ece9;
     --bg-elevated: #f4f7f5;
     --fg: #121412;
@@ -487,7 +492,7 @@ h3 {
   border-radius: 999px;
   border: 1px solid transparent;
   background: var(--accent);
-  color: #07110b;
+  color: var(--btn-fg);
   font-weight: 650;
   cursor: pointer;
   transition: transform 0.15s var(--ease), opacity 0.15s var(--ease);
@@ -1282,7 +1287,7 @@ h3 {
   padding: 0 0.28rem;
   border-radius: 999px;
   background: var(--accent);
-  color: #07110b;
+  color: var(--btn-fg);
   font-size: 0.62rem;
   font-weight: 800;
   line-height: 1.15rem;
@@ -2385,9 +2390,9 @@ h3 {
 
 .btn-double.is-ready {
   opacity: 1;
-  color: #07110b;
+  color: var(--btn-fg);
   font-weight: 800;
-  border: 1px solid color-mix(in srgb, #07110b 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--btn-fg) 12%, transparent);
   background: linear-gradient(
     135deg,
     color-mix(in srgb, var(--accent) 92%, #fff),
@@ -2559,7 +2564,7 @@ h3 {
   padding: 0 0.28rem;
   border-radius: 999px;
   background: var(--accent);
-  color: #07110b;
+  color: var(--btn-fg);
   font-size: 0.65rem;
   font-weight: 850;
   letter-spacing: 0.02em;
@@ -7504,5 +7509,96 @@ html[data-resolved="light"] .card-back {
       #0a3d28 4px,
       #0a3d28 8px
     );
+}
+
+/* Light mode: seat auras need deeper, denser colors on white felt */
+html[data-resolved="light"] .seat-bet-aura {
+  --aura-glow: color-mix(in srgb, var(--aura) 58%, transparent);
+  --bloom-alpha: calc(var(--bloom-alpha, 0.18) + 0.12);
+}
+
+html[data-resolved="light"] .seat-bet-aura-ring {
+  border-width: 1.5px;
+  border-color: color-mix(in srgb, var(--aura) 72%, transparent);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--aura) 48%, transparent),
+    0 0 16px color-mix(in srgb, var(--aura) 22%, transparent),
+    inset 0 0 8px color-mix(in srgb, var(--aura) 16%, transparent);
+}
+
+html[data-resolved="light"] .seat-bet-aura-ring-mid {
+  opacity: 0.78;
+}
+
+html[data-resolved="light"] .seat-bet-aura-ring-inner {
+  opacity: 0.55;
+}
+
+html[data-resolved="light"] .seat-bet-aura-f {
+  box-shadow:
+    0 0 5px color-mix(in srgb, var(--aura) 75%, transparent),
+    0 0 10px color-mix(in srgb, var(--aura) 40%, transparent);
+}
+
+html[data-resolved="light"] .seat-bet-aura-t1 {
+  --aura: #1a9e68;
+  --aura-2: #0a3d28;
+  --bloom-alpha: 0.26;
+}
+
+html[data-resolved="light"] .seat-bet-aura-t2 {
+  --aura: #0f8f5c;
+  --aura-2: #0a6b45;
+  --bloom-alpha: 0.3;
+}
+
+html[data-resolved="light"] .seat-bet-aura-t3 {
+  --aura: #0e7490;
+  --aura-2: #155e75;
+  --bloom-alpha: 0.3;
+}
+
+html[data-resolved="light"] .seat-bet-aura-t4 {
+  --aura: #b45309;
+  --aura-2: #92400e;
+  --bloom-alpha: 0.32;
+}
+
+html[data-resolved="light"] .seat-bet-aura-t5 {
+  --aura: #be123c;
+  --aura-2: #9f1239;
+  --bloom-alpha: 0.34;
+}
+
+html[data-resolved="light"] .seat-bet-aura-t6 {
+  --aura: #0a3d28;
+  --aura-2: #0f8f5c;
+  --bloom-alpha: 0.32;
+}
+
+html[data-resolved="light"] .seat-aura-t1,
+html[data-resolved="light"] .seat-aura-t2 {
+  border-color: color-mix(in srgb, #0a3d28 58%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, #0f8f5c 38%, transparent);
+}
+
+html[data-resolved="light"] .seat-aura-t3 {
+  border-color: color-mix(in srgb, #0e7490 60%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, #0e7490 35%, transparent);
+}
+
+html[data-resolved="light"] .seat-aura-t4 {
+  border-color: color-mix(in srgb, #b45309 60%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, #b45309 35%, transparent);
+}
+
+html[data-resolved="light"] .seat-aura-t5 {
+  border-color: color-mix(in srgb, #be123c 58%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, #be123c 32%, transparent);
+}
+
+html[data-resolved="light"] .btn-double.is-ready {
+  background: linear-gradient(135deg, #0f8f5c, #0a3d28);
+  border-color: color-mix(in srgb, #0a3d28 35%, transparent);
 }
 
