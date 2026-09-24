@@ -174,23 +174,9 @@ export function AdminPage() {
     setSettingJackpot(true);
     try {
       const res = await api.adminSetJackpot(token, { dollars: amount });
-      setJackpot((prev) =>
-        prev
-          ? {
-              ...prev,
-              takeCents: res.takeCents,
-              adjustmentsCents: prev.adjustmentsCents + res.deltaCents,
-            }
-          : {
-              takeCents: res.takeCents,
-              grossTakeCents: 0,
-              claimsSumCents: 0,
-              adjustmentsCents: res.deltaCents,
-            }
-      );
-      setJackpotDollars((res.takeCents / 100).toFixed(2));
+      await loadJackpot();
       toast.success(
-        res.deltaCents === 0
+        res.previousTakeCents === res.takeCents && res.deltaCents === 0
           ? `Jackpot already ${formatCents(res.takeCents)}`
           : `Jackpot set to ${formatCents(res.takeCents)}`
       );

@@ -133,15 +133,19 @@ export async function adminRoutes(app: FastifyInstance) {
         `admin:${request.user.email}`
       );
 
-      if (result.deltaCents !== 0) {
+      if (result.availableDeltaCents !== 0) {
         try {
-          getPool().emitJackpotDelta(result.deltaCents);
+          getPool().emitJackpotDelta(result.availableDeltaCents);
         } catch {
           // Socket pool not up yet — HTTP response still ok.
         }
       }
 
-      return result;
+      return {
+        takeCents: result.takeCents,
+        previousTakeCents: result.previousTakeCents,
+        deltaCents: result.deltaCents,
+      };
     }
   );
 

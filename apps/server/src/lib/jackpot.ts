@@ -51,16 +51,24 @@ export async function getAdjustmentsSumCents(): Promise<number> {
   return agg._sum.deltaCents ?? 0;
 }
 
-export async function getAvailablePotCents(): Promise<number> {
+/** Unclamped ledger: can be negative when claims exceed funding. */
+export async function getRawPotCents(): Promise<number> {
   const [gross, claimed, adjusted] = await Promise.all([
     getGrossTakeCents(),
     getClaimsSumCents(),
     getAdjustmentsSumCents(),
   ]);
-  return Math.max(0, gross + adjusted - claimed);
+  return gross + adjusted - claimed;
 }
 
-/** Set available pot to an absolute amount via a ledger adjustment. */
+export async function getAvailablePotCents(): Promise<number> {
+  return Math.max(0, await getRawPotCents());
+}
+
+/**
+ * Set available pot to an absolute amount via a ledger adjustment.
+ * Delta is vs the unclamped raw pot so underwater vaults can be filled.
+ */
 export async function setAvailablePotCents(
   targetCents: number,
   note = "admin set-pot"
@@ -68,10 +76,12 @@ export async function setAvailablePotCents(
   takeCents: number;
   previousTakeCents: number;
   deltaCents: number;
+  availableDeltaCents: number;
 }> {
   const target = Math.max(0, Math.floor(targetCents));
-  const previousTakeCents = await getAvailablePotCents();
-  const deltaCents = target - previousTakeCents;
+  const previousRaw = await getRawPotCents();
+  const previousTakeCents = Math.max(0, previousRaw);
+  const deltaCents = target - previousRaw;
   if (deltaCents !== 0) {
     await prisma.jackpotAdjustment.create({
       data: { deltaCents, note },
@@ -81,6 +91,7 @@ export async function setAvailablePotCents(
     takeCents: target,
     previousTakeCents,
     deltaCents,
+    availableDeltaCents: target - previousTakeCents,
   };
 }
 
