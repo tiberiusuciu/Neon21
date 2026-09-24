@@ -81,7 +81,12 @@ function RisingDots({ mode }: { mode: "light" | "dark" }) {
 function AuthScene({ mode }: { mode: "light" | "dark" }) {
   return (
     <>
-      <AceOfSpadesCard wire={WIRE[mode]} />
+      <AceOfSpadesCard
+        wire={WIRE[mode]}
+        spin={0.08}
+        wobbleX={0.1}
+        wobbleSpeed={0.35}
+      />
       <RisingDots mode={mode} />
     </>
   );

@@ -5,15 +5,17 @@ import { AceOfSpadesCard, WIRE_MARK } from "./WireAceCard";
 
 function MarkScene({
   mode,
-  spin,
+  animate,
 }: {
   mode: "light" | "dark";
-  spin: number;
+  animate: boolean;
 }) {
   return (
     <AceOfSpadesCard
       wire={WIRE_MARK[mode]}
-      spin={spin}
+      spin={0}
+      wobbleX={animate ? 0.14 : 0}
+      wobbleSpeed={0.42}
       position={[0, 0, 0]}
       rotation={[0.22, 0.4, 0.03]}
       scale={0.82}
@@ -41,11 +43,7 @@ export function BrandMark() {
         camera={{ position: [0, 0, 7.4], fov: 32 }}
         gl={{ antialias: true, alpha: true, powerPreference: "low-power" }}
       >
-        <MarkScene
-          key={resolved}
-          mode={resolved}
-          spin={reduced ? 0 : 0.22}
-        />
+        <MarkScene key={resolved} mode={resolved} animate={!reduced} />
       </Canvas>
     </span>
   );

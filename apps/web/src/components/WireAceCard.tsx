@@ -123,7 +123,12 @@ function letterALineGeo(scale: number, z: number) {
 
 type AceProps = {
   wire: WirePalette;
+  /** Continuous Y spin speed (rad/s). */
   spin?: number;
+  /** Peak X tilt for a gentle back-and-forth rock (radians). */
+  wobbleX?: number;
+  /** Wobble cycles per second. */
+  wobbleSpeed?: number;
   position?: [number, number, number];
   rotation?: [number, number, number];
   scale?: number;
@@ -132,11 +137,14 @@ type AceProps = {
 export function AceOfSpadesCard({
   wire,
   spin = 0.12,
+  wobbleX = 0,
+  wobbleSpeed = 0.55,
   position = [0, 0.1, -2.2],
   rotation = [0.32, 0.45, 0.06],
   scale = 1.05,
 }: AceProps) {
   const group = useRef<THREE.Group>(null);
+  const baseX = rotation[0];
 
   const { cardEdges, spadeFront, spadeBack, aTop, aBot, pipTop, pipBot } =
     useMemo(() => {
@@ -162,9 +170,15 @@ export function AceOfSpadesCard({
       return { cardEdges, spadeFront, spadeBack, aTop, aBot, pipTop, pipBot };
     }, []);
 
-  useFrame((_, delta) => {
-    if (!group.current || spin === 0) return;
-    group.current.rotation.y += delta * spin;
+  useFrame((state, delta) => {
+    if (!group.current) return;
+    if (wobbleX > 0) {
+      group.current.rotation.x =
+        baseX + Math.sin(state.clock.elapsedTime * wobbleSpeed * Math.PI * 2) * wobbleX;
+    }
+    if (spin !== 0) {
+      group.current.rotation.y += delta * spin;
+    }
   });
 
   return (

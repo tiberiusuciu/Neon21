@@ -438,8 +438,21 @@ h3 {
 }
 
 @media (max-width: 719px) {
+  .brand {
+    flex: 0 1 auto;
+    gap: 0.28rem;
+    max-width: min(42%, 8.5rem);
+  }
+
+  .brand-mark {
+    width: calc(var(--header-h) * 0.58);
+    height: calc(var(--header-h) - 14px);
+  }
+
   .brand-text {
-    display: none;
+    display: inline;
+    font-size: 0.92rem;
+    letter-spacing: -0.05em;
   }
 
   .header-inner {
@@ -449,7 +462,7 @@ h3 {
 
   .header-meta {
     gap: 0.3rem;
-    max-width: calc(100% - 3.25rem);
+    max-width: calc(100% - 7.5rem);
   }
 
   .balance {
