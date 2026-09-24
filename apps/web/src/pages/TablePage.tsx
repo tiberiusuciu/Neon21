@@ -917,7 +917,8 @@ export function TablePage() {
                 className="btn btn-sm btn-ghost"
                 onClick={leaveSeat}
               >
-                Leave seat
+                <span className="table-action-full">Leave seat</span>
+                <span className="table-action-short">Leave</span>
               </button>
             )}
             <button
