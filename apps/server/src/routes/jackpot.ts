@@ -23,7 +23,7 @@ export async function jackpotRoutes(app: FastifyInstance) {
       const [gross, available, rows] = await Promise.all([
         getGrossTakeCents(),
         getAvailablePotCents(),
-        listRecentClaims(50),
+        listRecentClaims(40),
       ]);
 
       const claims: JackpotClaimEntry[] = rows.map((r) => ({

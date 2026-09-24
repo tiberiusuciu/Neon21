@@ -5327,13 +5327,16 @@ h3 {
 .jackpot-claims {
   margin-top: 2rem;
   text-align: left;
+  max-width: 22rem;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .jackpot-claims-title {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.5rem;
 }
 
 .jackpot-claims-list {
@@ -5342,29 +5345,55 @@ h3 {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
 }
 
 .jackpot-claim-row {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.15rem 0.75rem;
-  padding: 0.65rem 0.75rem;
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
-  border: 1px solid var(--line);
-  font-size: 0.88rem;
+  gap: 0.05rem 0.75rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.85rem;
+}
+
+.jackpot-claim-row:last-child {
+  border-bottom: none;
+}
+
+.jackpot-claim-main {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jackpot-claim-who {
+  font-weight: 600;
 }
 
 .jackpot-claim-amt {
   font-family: var(--font-money);
   font-weight: 700;
   color: var(--accent);
+  font-variant-numeric: tabular-nums;
 }
 
 .jackpot-claim-when {
   grid-column: 1 / -1;
-  font-size: 0.75rem;
+  font-size: 0.72rem;
+}
+
+.jackpot-claims-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.65rem;
+  font-size: 0.8rem;
+}
+
+.jackpot-claims-pager .btn {
+  min-width: 4.5rem;
 }
 
 /* Seat BJ progress toward spin */

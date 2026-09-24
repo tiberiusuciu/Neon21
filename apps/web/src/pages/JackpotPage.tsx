@@ -28,6 +28,8 @@ const PREVIEW_PRESETS: { label: string; cents: number }[] = [
   { label: "Mid T4", cents: 1_750_000 },
 ];
 
+const CLAIMS_PAGE_SIZE = 5;
+
 function formatClaimWhen(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
     month: "short",
@@ -91,6 +93,7 @@ export function JackpotPage() {
   const { socket, subscribeJackpot, unsubscribeJackpot } = useGameSocket();
   const [takeCents, setTakeCents] = useState(0);
   const [claims, setClaims] = useState<JackpotClaimEntry[]>([]);
+  const [claimsPage, setClaimsPage] = useState(0);
   const [loading, setLoading] = useState(true);
   const [deltaFlash, setDeltaFlash] = useState<"up" | "down" | null>(null);
   const [celebrateTier, setCelebrateTier] = useState<JackpotTier>(0);
@@ -127,6 +130,7 @@ export function JackpotPage() {
         setTakeCents(take);
         takeRef.current = take;
         setClaims(res.claims);
+        setClaimsPage(0);
         celebrated.current = jackpotTierReached(take);
         seeded.current = true;
       } catch (err) {
@@ -194,6 +198,7 @@ export function JackpotPage() {
       setTakeCents(next);
       celebrated.current = jackpotTierReached(next);
       setClaims((c) => [claim, ...c].slice(0, 50));
+      setClaimsPage(0);
       if (previewCents == null) {
         setDeltaFlash("down");
         window.setTimeout(() => setDeltaFlash(null), 700);
@@ -216,6 +221,13 @@ export function JackpotPage() {
 
   const showDebug =
     import.meta.env.DEV || import.meta.env.VITE_STAGING === "true";
+
+  const claimsPageCount = Math.max(1, Math.ceil(claims.length / CLAIMS_PAGE_SIZE));
+  const claimsPageSafe = Math.min(claimsPage, claimsPageCount - 1);
+  const visibleClaims = claims.slice(
+    claimsPageSafe * CLAIMS_PAGE_SIZE,
+    claimsPageSafe * CLAIMS_PAGE_SIZE + CLAIMS_PAGE_SIZE
+  );
 
   return (
     <motion.div
@@ -328,25 +340,51 @@ export function JackpotPage() {
             {claims.length === 0 ? (
               <p className="muted">No spins claimed yet.</p>
             ) : (
-              <ul className="jackpot-claims-list">
-                {claims.map((c) => (
-                  <li key={c.id} className="jackpot-claim-row">
-                    <div>
-                      <strong>{c.userName}</strong>
-                      <span className="muted">
-                        {" "}
-                        · {c.tableName} · {c.label}
-                      </span>
-                    </div>
-                    <div className="jackpot-claim-amt">
-                      {formatCents(c.payoutCents)}
-                    </div>
-                    <div className="jackpot-claim-when muted">
-                      {formatClaimWhen(c.createdAt)}
-                    </div>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="jackpot-claims-list">
+                  {visibleClaims.map((c) => (
+                    <li key={c.id} className="jackpot-claim-row">
+                      <div className="jackpot-claim-main">
+                        <span className="jackpot-claim-who">{c.userName}</span>
+                        <span className="muted"> · {c.label}</span>
+                      </div>
+                      <div className="jackpot-claim-amt">
+                        {formatCents(c.payoutCents)}
+                      </div>
+                      <div className="jackpot-claim-when muted">
+                        {formatClaimWhen(c.createdAt)}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {claimsPageCount > 1 && (
+                  <div className="jackpot-claims-pager">
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={claimsPageSafe <= 0}
+                      onClick={() => setClaimsPage((p) => Math.max(0, p - 1))}
+                    >
+                      Newer
+                    </button>
+                    <span className="muted">
+                      {claimsPageSafe + 1} / {claimsPageCount}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      disabled={claimsPageSafe >= claimsPageCount - 1}
+                      onClick={() =>
+                        setClaimsPage((p) =>
+                          Math.min(claimsPageCount - 1, p + 1)
+                        )
+                      }
+                    >
+                      Older
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
 
