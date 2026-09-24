@@ -52,6 +52,7 @@ import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
 import {
   getGoldenHandsInventory,
+  getGoldenHandsProgress,
   grantGoldenHands,
   recordGoldenHourHandsPlayed,
   reserveGoldenHand,
@@ -244,6 +245,7 @@ export class TableRoom {
       goldenHandActive:
         seat.goldenHandArmed || seat.hands.some((h) => h.goldenHand),
       goldenHands: seat.goldenHands,
+      goldenHourHandsToward: seat.goldenHourHandsToward,
     };
   }
 
@@ -454,6 +456,7 @@ export class TableRoom {
       charlieFxUntil: null,
       goldenHandArmed: false,
       goldenHands: 0,
+      goldenHourHandsToward: 0,
     };
     await this.refreshSeatSpinProgress(userId);
     await this.refreshSeatGoldenHands(userId);
@@ -1440,10 +1443,11 @@ export class TableRoom {
         const played = hands.filter((h) => !h.isInsurance).length;
         if (played > 0) {
           void recordGoldenHourHandsPlayed(userId, played)
-            .then(async ({ granted, goldenHands }) => {
+            .then(async ({ granted, goldenHands, handsTowardNext }) => {
               const seat = this.seats.find((s) => s?.userId === userId);
               if (seat) {
                 seat.goldenHands = goldenHands;
+                seat.goldenHourHandsToward = handsTowardNext;
                 this.broadcast();
               }
               if (granted > 0) {
@@ -1501,7 +1505,9 @@ export class TableRoom {
     if (seatIdx < 0) return;
     const seat = this.seats[seatIdx];
     if (!seat || seat.userId !== userId) return;
-    seat.goldenHands = await getGoldenHandsInventory(userId);
+    const prog = await getGoldenHandsProgress(userId);
+    seat.goldenHands = prog.goldenHands;
+    seat.goldenHourHandsToward = prog.handsTowardNext;
   }
 
   async toggleGoldenHand(userId: string): Promise<string | null> {
@@ -1932,6 +1938,7 @@ export class TableRoom {
       charlieFxUntil: null,
       goldenHandArmed: false,
       goldenHands: 0,
+      goldenHourHandsToward: 0,
     };
     this.onBettingActivity();
     this.cb.onSeatedChanged(this.id);

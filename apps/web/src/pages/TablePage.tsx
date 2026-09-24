@@ -1234,6 +1234,7 @@ export function TablePage() {
               onReuse={reuseBet}
               goldenHands={mySeat.goldenHands ?? 0}
               goldenHandArmed={mySeat.goldenHandActive === true}
+              goldenHourHandsToward={mySeat.goldenHourHandsToward ?? 0}
               onToggleGoldenHand={toggleGoldenHand}
             />
           ) : null

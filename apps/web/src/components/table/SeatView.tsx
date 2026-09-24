@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { PublicSeat, TableSpinState } from "@neon21/shared";
+import { GOLDEN_HANDS_PER_HANDS } from "@neon21/shared";
 import { formatCents } from "../../lib/format";
 import { PlayingCard } from "./PlayingCard";
 import { HandValueBadge } from "./HandValueBadge";
@@ -187,6 +188,22 @@ export function SeatView({
               bjTowardSpin={seat.bjTowardSpin ?? 0}
               spinVouchers={seat.spinVouchers ?? 0}
             />
+          )}
+          {seat.goldenHourHandsToward != null && (
+            <div
+              className="seat-golden-hands-meter"
+              title={`${seat.goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
+            >
+              <span className="seat-golden-hands-meter-label">GH</span>
+              <span className="seat-golden-hands-meter-value">
+                {seat.goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+              </span>
+              {(seat.goldenHands ?? 0) > 0 && (
+                <span className="seat-golden-hands-meter-inv">
+                  ×{seat.goldenHands}
+                </span>
+              )}
+            </div>
           )}
           {showSpinCta && onClaimSpin && (
             <button

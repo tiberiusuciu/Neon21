@@ -48,6 +48,8 @@ export interface SeatState {
   goldenHandArmed: boolean;
   /** Cached inventory for seat UI. */
   goldenHands: number;
+  /** Cached GH hands toward next Golden Hand token. */
+  goldenHourHandsToward: number;
 }
 
 export interface Spectator {

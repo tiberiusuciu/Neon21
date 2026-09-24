@@ -2957,6 +2957,54 @@ h3 {
   border-radius: 12px;
 }
 
+.seat-golden-hands-meter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  margin: 0.15rem 0 0.1rem;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #e8c76a;
+}
+
+.seat-golden-hands-meter-label {
+  opacity: 0.75;
+  font-size: 0.55rem;
+}
+
+.seat-golden-hands-meter-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.seat-golden-hands-meter-inv {
+  margin-left: 0.1rem;
+  color: #ffe9a8;
+  font-weight: 800;
+}
+
+.chip-golden-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, #e8c76a 40%, transparent);
+  background: color-mix(in srgb, #c9a227 12%, transparent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e8c76a;
+  white-space: nowrap;
+}
+
+.chip-golden-progress-label {
+  opacity: 0.7;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+}
+
 .seat-golden-hand .seat-bet-aura {
   filter: saturate(1.2) brightness(1.08);
 }

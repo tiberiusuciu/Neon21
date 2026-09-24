@@ -392,6 +392,13 @@ export const PublicSeatSchema = z.object({
   goldenHandActive: z.boolean().optional(),
   /** Player inventory of Golden Hand tokens. */
   goldenHands: z.number().int().nonnegative().optional(),
+  /** Hands toward next Golden Hand (0 … GOLDEN_HANDS_PER_HANDS-1). */
+  goldenHourHandsToward: z
+    .number()
+    .int()
+    .min(0)
+    .max(GOLDEN_HANDS_PER_HANDS - 1)
+    .optional(),
 });
 export type PublicSeat = z.infer<typeof PublicSeatSchema>;
 

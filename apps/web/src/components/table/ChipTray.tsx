@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  GOLDEN_HANDS_PER_HANDS,
   MIN_BET_CENTS,
   chipFaceLabel,
   visibleChipDenominations,
@@ -17,6 +18,7 @@ type Props = {
   onReuse: () => void;
   goldenHands?: number;
   goldenHandArmed?: boolean;
+  goldenHourHandsToward?: number;
   onToggleGoldenHand?: () => void;
 };
 
@@ -32,6 +34,7 @@ export function ChipTray({
   onReuse,
   goldenHands = 0,
   goldenHandArmed = false,
+  goldenHourHandsToward = 0,
   onToggleGoldenHand,
 }: Props) {
   const [removing, setRemoving] = useState(false);
@@ -180,6 +183,13 @@ export function ChipTray({
         )}
       </div>
       <div className="chip-actions">
+        <span
+          className="chip-golden-progress"
+          title={`Golden Hour hands toward next Golden Hand (${GOLDEN_HANDS_PER_HANDS} hands = 1 token)`}
+        >
+          <span className="chip-golden-progress-label">GH</span>
+          {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+        </span>
         {(goldenHandArmed || goldenHands > 0) && onToggleGoldenHand && (
           <motion.button
             type="button"
