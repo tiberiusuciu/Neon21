@@ -151,6 +151,8 @@ export async function getSpinSeatProgress(userId: string): Promise<{
 /**
  * Grant vouchers only for thresholds crossed by *this* settle's new BJs.
  * Never catch up on historical backlog (that caused multi-voucher spikes).
+ * Do not cap against all vouchers-in-window — admin/debug grants would
+ * permanently eat natural 5th-BJ tickets.
  */
 export async function maybeGrantSpinVouchers(
   userId: string,
@@ -159,17 +161,11 @@ export async function maybeGrantSpinVouchers(
   const fresh = Math.max(0, Math.floor(newBlackjacks));
   if (fresh <= 0) return 0;
 
-  const [bj, vouchers] = await Promise.all([
-    countBlackjacks24h(userId),
-    countVouchersInWindow(userId),
-  ]);
+  const bj = await countBlackjacks24h(userId);
   const prev = Math.max(0, bj - fresh);
-  const crossings =
+  const toGrant =
     Math.floor(bj / SPIN_BJ_PER_VOUCHER) -
     Math.floor(prev / SPIN_BJ_PER_VOUCHER);
-  const earned = Math.floor(bj / SPIN_BJ_PER_VOUCHER);
-  // Cap by earned−existing so concurrent settles / retries cannot duplicate.
-  const toGrant = Math.min(crossings, Math.max(0, earned - vouchers));
   if (toGrant <= 0) return 0;
   await prisma.spinVoucher.createMany({
     data: Array.from({ length: toGrant }, () => ({
