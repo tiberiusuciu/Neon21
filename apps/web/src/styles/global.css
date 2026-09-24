@@ -5870,36 +5870,178 @@ h3 {
 }
 
 .seat-spin-pointer {
+  pointer-events: none;
   position: absolute;
-  top: -4px;
+  top: -10px;
   left: 50%;
   z-index: 9;
+  width: 22px;
+  height: 28px;
+  margin-left: -11px;
+}
+
+.seat-spin-pointer-glow {
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 28px;
+  height: 28px;
+  margin-left: -14px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, #ff2a2a 75%, transparent) 0%,
+    color-mix(in srgb, #ff4a1a 35%, transparent) 42%,
+    transparent 70%
+  );
+  filter: blur(3px);
+  animation: seat-spin-pointer-pulse 1.2s ease-in-out infinite;
+}
+
+.seat-spin-pointer-blade,
+.seat-spin-pointer-core {
+  position: absolute;
+  left: 50%;
+  top: 0;
   width: 0;
   height: 0;
-  margin-left: -7px;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 12px solid #c8b8e8;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, #8a68d0 70%, transparent));
+  margin-left: -8px;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 16px solid #ff1e1e;
+}
+
+.seat-spin-pointer-blade {
+  margin-left: -9px;
+  border-left-width: 9px;
+  border-right-width: 9px;
+  border-top-width: 18px;
+  border-top-color: #ff3b2a;
+  filter: drop-shadow(0 0 4px #ff1a1a)
+    drop-shadow(0 0 10px #ff4422)
+    drop-shadow(0 0 18px color-mix(in srgb, #ff2200 80%, transparent));
+  animation: seat-spin-pointer-shimmer 1.6s ease-in-out infinite;
+}
+
+.seat-spin-pointer-core {
+  margin-left: -5px;
+  border-left-width: 5px;
+  border-right-width: 5px;
+  border-top-width: 12px;
+  border-top-color: #fff0e8;
+  top: 1px;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 3px #fff);
+  animation: seat-spin-pointer-core 1.6s ease-in-out infinite;
+}
+
+.seat-spin-wheel.is-spinning .seat-spin-pointer-glow {
+  animation-duration: 0.55s;
+}
+
+.seat-spin-wheel.is-spinning .seat-spin-pointer-blade {
+  filter: drop-shadow(0 0 6px #ff2200)
+    drop-shadow(0 0 14px #ff4a2a)
+    drop-shadow(0 0 26px #ff1800);
+  animation-duration: 0.7s;
+}
+
+@keyframes seat-spin-pointer-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes seat-spin-pointer-shimmer {
+  0%,
+  100% {
+    border-top-color: #ff2a1a;
+    filter: drop-shadow(0 0 4px #ff1a1a)
+      drop-shadow(0 0 10px #ff4422)
+      drop-shadow(0 0 18px color-mix(in srgb, #ff2200 80%, transparent));
+  }
+  40% {
+    border-top-color: #ff6a3a;
+    filter: drop-shadow(0 0 7px #ff3a20)
+      drop-shadow(0 0 16px #ff6040)
+      drop-shadow(0 0 28px #ff2000);
+  }
+  70% {
+    border-top-color: #ff1400;
+  }
+}
+
+@keyframes seat-spin-pointer-core {
+  0%,
+  100% {
+    opacity: 0.75;
+    border-top-color: #ffe8d8;
+  }
+  50% {
+    opacity: 1;
+    border-top-color: #ffffff;
+  }
 }
 
 .seat-spin-loupe {
   pointer-events: none;
   position: absolute;
-  top: -12px;
+  top: -14px;
   left: 50%;
   z-index: 7;
-  width: 58px;
-  height: 42px;
-  margin-left: -29px;
+  width: 62px;
+  height: 44px;
+  margin-left: -31px;
   overflow: hidden;
-  border-radius: 6px;
-  border: 1.5px solid color-mix(in srgb, #e8dcf8 58%, transparent);
-  background: #0c0a14;
+  border-radius: 8px;
+  background: #0a0812;
+  border: 2px solid transparent;
+  background-clip: padding-box;
   box-shadow:
-    0 0 14px color-mix(in srgb, #8a68d0 38%, transparent),
-    0 3px 10px color-mix(in srgb, #000 50%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #fff 14%, transparent);
+    0 0 0 1px color-mix(in srgb, #f0d090 55%, transparent),
+    0 0 16px color-mix(in srgb, #c9a24a 32%, transparent),
+    0 4px 14px color-mix(in srgb, #000 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 22%, transparent),
+    inset 0 1px 0 color-mix(in srgb, #fff8e0 35%, transparent);
+}
+
+.seat-spin-loupe-frame {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#0a0812, #0a0812) padding-box,
+    linear-gradient(
+      145deg,
+      #fff6d0 0%,
+      #d4a84a 28%,
+      #8a6230 52%,
+      #e8c878 78%,
+      #a87838 100%
+    )
+      border-box;
+  box-shadow: inset 0 0 10px color-mix(in srgb, #000 40%, transparent);
+  mix-blend-mode: normal;
+  opacity: 1;
+  /* frame sits on top but must not block glass shine — punch a hole via outline only */
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 2px;
 }
 
 .seat-spin-loupe-zoom {
@@ -5908,7 +6050,7 @@ h3 {
   top: 50%;
   width: 0;
   height: 0;
-  transform: scale(3.25);
+  transform: scale(3.35);
 }
 
 .seat-spin-loupe-disc {
@@ -5930,10 +6072,20 @@ h3 {
   top: 0;
   bottom: 0;
   z-index: 2;
-  width: 1px;
-  margin-left: -0.5px;
-  background: color-mix(in srgb, #ffe9a8 80%, transparent);
-  box-shadow: 0 0 5px color-mix(in srgb, #ffe9a8 55%, transparent);
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, #ff6a4a 20%, transparent),
+    #ff2a1a 18%,
+    #fff0e8 50%,
+    #ff2a1a 82%,
+    color-mix(in srgb, #ff6a4a 20%, transparent)
+  );
+  box-shadow:
+    0 0 6px #ff3a20,
+    0 0 12px color-mix(in srgb, #ff2200 70%, transparent);
+  animation: seat-spin-loupe-hair 1.4s ease-in-out infinite;
 }
 
 .seat-spin-loupe-glass {
@@ -5942,21 +6094,71 @@ h3 {
   z-index: 3;
   border-radius: inherit;
   background: linear-gradient(
-    165deg,
-    color-mix(in srgb, #fff 16%, transparent) 0%,
-    transparent 38%,
-    transparent 62%,
-    color-mix(in srgb, #7a5cff 8%, transparent) 100%
+    160deg,
+    color-mix(in srgb, #fff 22%, transparent) 0%,
+    color-mix(in srgb, #fff8e0 8%, transparent) 22%,
+    transparent 40%,
+    transparent 68%,
+    color-mix(in srgb, #3a2040 18%, transparent) 100%
   );
-  box-shadow: inset 0 -6px 10px color-mix(in srgb, #000 28%, transparent);
+  box-shadow: inset 0 -8px 12px color-mix(in srgb, #000 32%, transparent);
+}
+
+.seat-spin-loupe-shine {
+  position: absolute;
+  inset: -20% -40%;
+  z-index: 5;
+  background: linear-gradient(
+    105deg,
+    transparent 36%,
+    color-mix(in srgb, #fff 28%, transparent) 48%,
+    color-mix(in srgb, #ffe9a8 18%, transparent) 52%,
+    transparent 64%
+  );
+  transform: translateX(-60%);
+  animation: seat-spin-loupe-shine 3.4s ease-in-out infinite;
 }
 
 .seat-spin-wheel.is-spinning .seat-spin-loupe {
-  border-color: color-mix(in srgb, #fff 72%, transparent);
   box-shadow:
-    0 0 18px color-mix(in srgb, #c8a0ff 48%, transparent),
-    0 3px 10px color-mix(in srgb, #000 50%, transparent),
-    inset 0 0 0 1px color-mix(in srgb, #fff 22%, transparent);
+    0 0 0 1px color-mix(in srgb, #ffe9a8 70%, transparent),
+    0 0 22px color-mix(in srgb, #ff4a2a 28%, transparent),
+    0 0 18px color-mix(in srgb, #c9a24a 40%, transparent),
+    0 4px 14px color-mix(in srgb, #000 55%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 28%, transparent);
+}
+
+.seat-spin-wheel.is-spinning .seat-spin-loupe-shine {
+  animation-duration: 1.6s;
+}
+
+@keyframes seat-spin-loupe-shine {
+  0%,
+  55% {
+    transform: translateX(-70%);
+    opacity: 0;
+  }
+  65% {
+    opacity: 0.85;
+  }
+  80% {
+    transform: translateX(70%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(70%);
+    opacity: 0;
+  }
+}
+
+@keyframes seat-spin-loupe-hair {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .seat-spin-edge-particles {
@@ -6286,11 +6488,20 @@ h3 {
   .seat-spin-jackpot-fx span,
   .seat-spin-edge-particles i,
   .seat-spin-timer-fill,
-  .seat-spin-go {
+  .seat-spin-go,
+  .seat-spin-pointer-glow,
+  .seat-spin-pointer-blade,
+  .seat-spin-pointer-core,
+  .seat-spin-loupe-shine,
+  .seat-spin-loupe-hairline {
     animation: none !important;
   }
 
   .seat-spin-edge-particles {
+    display: none;
+  }
+
+  .seat-spin-loupe-shine {
     display: none;
   }
 
