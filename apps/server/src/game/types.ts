@@ -87,6 +87,10 @@ export type RoomCallbacks = {
   onJackpotDelta: (deltaCents: number) => void;
   onJackpotClaim: (claim: import("@neon21/shared").JackpotClaimEntry) => void;
   onJackpotWin: (win: import("@neon21/shared").JackpotWinBroadcast) => void;
+  onGoldenHourRebate: (
+    userId: string,
+    progress: import("@neon21/shared").GoldenHourRebateProgress
+  ) => void;
 };
 
 /** Synthetic seats spawned by staging table debug — no real wallet. */

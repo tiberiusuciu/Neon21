@@ -131,6 +131,8 @@ export class TableRoom {
     userId: string;
     resolve: () => void;
   } | null = null;
+  /** GH window locked at deal — settle may run after activeUntil. */
+  private roundGhWindow: Date | null = null;
 
   constructor(id: string, name: string, cb: RoomCallbacks) {
     this.id = id;
@@ -793,6 +795,10 @@ export class TableRoom {
       return;
     }
 
+    this.roundGhWindow = isGoldenHourActive()
+      ? getGoldenHourWindowStartedAt()
+      : null;
+
     await this.runDealing(gen);
   }
 
@@ -1306,7 +1312,11 @@ export class TableRoom {
     );
     const ghWindow = getGoldenHourWindowStartedAt();
     if (ghWindow) {
-      void recordGoldenHourResults(seat.userId, ghWindow, [bonus]);
+      void recordGoldenHourResults(seat.userId, ghWindow, [bonus]).then(
+        (progress) => {
+          if (progress) this.cb.onGoldenHourRebate(seat.userId, progress);
+        }
+      );
     }
     this.broadcast();
   }
@@ -1347,7 +1357,7 @@ export class TableRoom {
   private async recordRoundStats(): Promise<void> {
     const byUser = new Map<string, HandOutcomeInput[]>();
     let deltaCents = 0;
-    const takeBps = isGoldenHourActive()
+    const takeBps = this.roundGhWindow
       ? JACKPOT_LOSS_TAKE_BPS_GOLDEN
       : JACKPOT_LOSS_TAKE_BPS;
     const dealerBj = isBlackjack(this.dealer.cards);
@@ -1399,9 +1409,7 @@ export class TableRoom {
 
     const bjJobs: Promise<void>[] = [];
     const rebateJobs: Promise<void>[] = [];
-    const ghWindow = isGoldenHourActive()
-      ? getGoldenHourWindowStartedAt()
-      : null;
+    const ghWindow = this.roundGhWindow;
     for (const [userId, hands] of byUser) {
       const newBlackjacks = hands.filter((h) => h.isBlackjack).length;
       if (newBlackjacks > 0) {
@@ -1421,7 +1429,10 @@ export class TableRoom {
             userId,
             ghWindow,
             hands.map((h) => h.resultCents)
-          ).then(() => undefined)
+          )
+            .then((progress) => {
+              if (progress) this.cb.onGoldenHourRebate(userId, progress);
+            })
             .catch((err) => {
               console.error("[golden-hour] rebate track failed", userId, err);
             })
@@ -1460,6 +1471,8 @@ export class TableRoom {
     if (bjJobs.length > 0) {
       await Promise.all(bjJobs);
     }
+
+    this.roundGhWindow = null;
   }
 
   private async afterBlackjackSettle(userId: string, newBlackjacks: number) {

@@ -61,7 +61,12 @@ export async function recordGoldenHourResults(
     else if (r < 0) lost += -r;
   }
   if (won === 0 && lost === 0) {
-    return getGoldenHourRebateProgress(userId, windowStartedAt);
+    const progress = await getGoldenHourRebateProgress(
+      userId,
+      windowStartedAt
+    );
+    progressEmitter?.(userId, progress);
+    return progress;
   }
 
   const row = await prisma.goldenHourPlayerStats.upsert({

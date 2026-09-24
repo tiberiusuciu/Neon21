@@ -93,6 +93,9 @@ export class TablePool {
       onJackpotWin: (win) => {
         this.io.emit("jackpot:win", win);
       },
+      onGoldenHourRebate: (userId, progress) => {
+        this.io.to(`user:${userId}`).emit("golden-hour:rebate", progress);
+      },
     });
     this.tables.set(id, room);
     this.broadcastLobby();

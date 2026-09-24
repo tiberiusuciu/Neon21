@@ -201,12 +201,16 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setGoldenHour(state);
     });
     const offGhStarted = onEvent(s, "golden-hour:started", (state) => {
-      setGoldenHour(state);
-      setGoldenHourRebate({
-        wonCents: 0,
-        lostCents: 0,
-        rebateCents: 0,
-        capCents: 500_000,
+      setGoldenHour((prev) => {
+        if (prev?.windowStartedAt !== state.windowStartedAt) {
+          setGoldenHourRebate({
+            wonCents: 0,
+            lostCents: 0,
+            rebateCents: 0,
+            capCents: 500_000,
+          });
+        }
+        return state;
       });
       toastSuccess.current(
         "Golden Hour — the house treasury is vulnerable"
