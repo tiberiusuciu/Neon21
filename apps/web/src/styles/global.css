@@ -1330,8 +1330,8 @@ h3 {
   background: radial-gradient(
     ellipse 55% 50% at 50% 42%,
     transparent 0%,
-    color-mix(in srgb, var(--fg) 12%, transparent) 55%,
-    color-mix(in srgb, var(--fg) 28%, transparent) 100%
+    color-mix(in srgb, #000 22%, transparent) 55%,
+    color-mix(in srgb, #000 48%, transparent) 100%
   );
   opacity: 0.85;
   transition: opacity 0.45s var(--ease);
@@ -1342,8 +1342,8 @@ h3 {
   background: radial-gradient(
     ellipse 48% 44% at 50% 42%,
     transparent 0%,
-    color-mix(in srgb, var(--fg) 18%, transparent) 48%,
-    color-mix(in srgb, var(--fg) 38%, transparent) 100%
+    color-mix(in srgb, #000 28%, transparent) 48%,
+    color-mix(in srgb, #000 58%, transparent) 100%
   );
 }
 
