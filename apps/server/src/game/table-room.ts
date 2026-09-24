@@ -437,9 +437,13 @@ export class TableRoom {
 
     this.seats[seatIdx] = null;
     this.spectators.set(userId, { userId, name: seat.name });
-    this.broadcast();
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
+    if (this.phase === "betting" && !this.spin) {
+      this.onBettingActivity();
+    } else {
+      this.broadcast();
+    }
     return null;
   }
 
@@ -570,16 +574,29 @@ export class TableRoom {
     return null;
   }
 
-  /** Any bet change restarts the short “about to begin” window. */
+  /** Bet/seat change: long timer until everyone has bet, then short clamp. */
   private onBettingActivity() {
     if (this.phase !== "betting") return;
     if (this.spin) {
       this.broadcast();
       return;
     }
-    this.allBetClamped = true;
-    this.schedule(ALL_BET_CLAMP_MS, () => void this.lockBetsAndDeal());
+    if (this.allSeatedHaveBets()) {
+      this.allBetClamped = true;
+      this.schedule(ALL_BET_CLAMP_MS, () => void this.lockBetsAndDeal());
+    } else if (this.allBetClamped) {
+      // Someone cleared or joined without a bet — restore the long window.
+      this.allBetClamped = false;
+      this.schedule(BETTING_MS, () => void this.lockBetsAndDeal());
+    }
+    // Still waiting on a seat: leave the existing long timer alone.
     this.broadcast();
+  }
+
+  private allSeatedHaveBets(): boolean {
+    const seated = this.seats.filter((s): s is SeatState => s != null);
+    if (seated.length === 0) return false;
+    return seated.every((s) => s.pendingBetCents >= MIN_BET_CENTS);
   }
 
   private startBetting() {

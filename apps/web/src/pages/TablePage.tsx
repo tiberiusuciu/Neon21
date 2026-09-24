@@ -487,7 +487,7 @@ export function TablePage() {
   }, [endsAt, pauseEndsAt]);
 
   const [turnBudgetMs, setTurnBudgetMs] = useState(25_000);
-  const [betBudgetMs, setBetBudgetMs] = useState(20_000);
+  const [betBudgetMs, setBetBudgetMs] = useState(40_000);
   const [insuranceBudgetMs, setInsuranceBudgetMs] = useState(10_000);
   useEffect(() => {
     if (!isMyTurn) {
@@ -499,12 +499,12 @@ export function TablePage() {
 
   useEffect(() => {
     if (phase !== "betting" || endsAt == null) {
-      setBetBudgetMs(20_000);
+      setBetBudgetMs(40_000);
       return;
     }
     const rem = endsAt - Date.now();
-    // Short “about to begin” window is 5s; full open betting is 20s
-    setBetBudgetMs(rem <= 5_500 ? 5_000 : 20_000);
+    // Short clamp once everyone has bet is 5s; open betting is 40s
+    setBetBudgetMs(rem <= 5_500 ? 5_000 : 40_000);
   }, [phase, endsAt]);
 
   useEffect(() => {

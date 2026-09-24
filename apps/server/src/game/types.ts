@@ -82,7 +82,8 @@ export function isDebugSeatUser(userId: string): boolean {
   return userId.startsWith("debug:");
 }
 
-export const BETTING_MS = 20_000;
+export const BETTING_MS = 40_000;
+/** Short window once every seated player has a bet down. */
 export const ALL_BET_CLAMP_MS = 5_000;
 export const DEAL_CARD_MS = 500;
 export const DEALER_BUST_PAUSE_MS = 1_200;
