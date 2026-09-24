@@ -168,7 +168,17 @@ export function AppHeader() {
           </div>
         </div>
       </header>
-      {open && <nav className="nav-drawer">{links}</nav>}
+      {open && (
+        <>
+          <button
+            type="button"
+            className="nav-drawer-backdrop"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+          />
+          <nav className="nav-drawer">{links}</nav>
+        </>
+      )}
     </>
   );
 }
