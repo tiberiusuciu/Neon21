@@ -355,12 +355,23 @@ h3 {
 }
 
 .nav-desktop a,
-.nav-drawer a {
+.nav-drawer a,
+.nav-desktop .nav-ops-btn,
+.nav-drawer .nav-ops-btn {
   padding: 0.4rem 0.65rem;
   border-radius: 8px;
   color: var(--muted);
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.nav-desktop .nav-ops-btn,
+.nav-drawer .nav-ops-btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
 .nav-desktop a.active,
@@ -809,6 +820,198 @@ h3 {
   text-align: center;
 }
 
+
+.admin-ops-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: color-mix(in srgb, #000 35%, transparent);
+  cursor: pointer;
+}
+
+.admin-ops-sheet {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 81;
+  width: min(22rem, 94vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-elevated);
+  border-left: 1px solid var(--line);
+  box-shadow: -12px 0 40px color-mix(in srgb, #000 28%, transparent);
+  padding: calc(var(--header-h) + 0.75rem) 0.9rem 1rem;
+}
+
+.admin-ops-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+  flex-shrink: 0;
+}
+
+.admin-ops-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.1rem;
+  letter-spacing: -0.02em;
+}
+
+.admin-ops-sub {
+  margin-top: 0.15rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.admin-ops-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.admin-ops-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.admin-ops-section-title {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.admin-ops-search,
+.admin-ops-topup {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.admin-ops-search input,
+.admin-ops-topup input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  font: inherit;
+}
+
+.admin-ops-search input:focus,
+.admin-ops-topup input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
+}
+
+.admin-ops-users {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 11rem;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.admin-ops-empty {
+  padding: 0.35rem 0.15rem;
+  font-size: 0.85rem;
+}
+
+.admin-ops-user {
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.admin-ops-user:hover {
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.admin-ops-user.is-active {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.admin-ops-user-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-ops-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.65rem 0.7rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.admin-ops-selected-meta {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  font-size: 0.85rem;
+}
+
+.admin-ops-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.admin-ops-grant {
+  align-self: flex-start;
+}
+
+.admin-ops-gh-status {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.admin-ops-gh-actions {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.admin-ops-full {
+  margin-top: auto;
+  padding: 0.55rem 0 0.15rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--accent);
+}
 
 .admin-search {
   flex-direction: row;

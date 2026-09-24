@@ -9,6 +9,7 @@ import { useCashFx } from "../lib/cashFx";
 import { useAnimatedCents } from "../lib/useAnimatedCents";
 import { useGameSocket } from "../lib/SocketProvider";
 import { BrandMark } from "./BrandMark";
+import { AdminOpsSheet } from "./AdminOpsSheet";
 
 export function AppHeader() {
   const { user, wallet, claim, refresh } = useAuth();
@@ -17,6 +18,7 @@ export function AppHeader() {
   const amountRef = useRef<HTMLSpanElement>(null);
   const toast = useToast();
   const [open, setOpen] = useState(false);
+  const [opsOpen, setOpsOpen] = useState(false);
   const [claiming, setClaiming] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -76,9 +78,21 @@ export function AppHeader() {
         Leaderboard
       </NavLink>
       {user?.isAdmin && (
-        <NavLink to="/admin" onClick={() => setOpen(false)}>
-          Admin
-        </NavLink>
+        <>
+          <button
+            type="button"
+            className="nav-ops-btn"
+            onClick={() => {
+              setOpen(false);
+              setOpsOpen(true);
+            }}
+          >
+            Quick ops
+          </button>
+          <NavLink to="/admin" onClick={() => setOpen(false)}>
+            Admin
+          </NavLink>
+        </>
       )}
       <NavLink to="/settings" onClick={() => setOpen(false)}>
         Settings
@@ -178,6 +192,9 @@ export function AppHeader() {
           />
           <nav className="nav-drawer">{links}</nav>
         </>
+      )}
+      {user?.isAdmin && (
+        <AdminOpsSheet open={opsOpen} onClose={() => setOpsOpen(false)} />
       )}
     </>
   );
