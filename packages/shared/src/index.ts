@@ -307,7 +307,7 @@ export const MIN_BET_CENTS = 500;
 /** Max pending bet while a Golden Hand token is armed. */
 export const GOLDEN_HAND_MAX_BET_CENTS = 500_000;
 /** Hands played during GH per Golden Hand token earned. */
-export const GOLDEN_HANDS_PER_HANDS = 100;
+export const GOLDEN_HANDS_PER_HANDS = 25;
 export const SEAT_CAPACITY = 7;
 
 export const SuitSchema = z.enum(["S", "H", "D", "C"]);
