@@ -928,18 +928,6 @@ export function TablePage() {
               className={`table-pot${potBump ? " is-bump" : ""}`}
               title="House jackpot"
             >
-              <svg
-                className="table-pot-icon"
-                viewBox="0 0 24 24"
-                width="13"
-                height="13"
-                aria-hidden
-              >
-                <path
-                  fill="currentColor"
-                  d="M7 9V7a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v2c0 3.87-3.13 7-7 7h0c-3.87 0-7-3.13-7-7v-2a2 2 0 0 1 2-2h1Zm2-2v2h6V7a3 3 0 0 0-6 0Zm-2 5v1c0 2.76 2.24 5 5 5s5-2.24 5-5v-1H7Z"
-                />
-              </svg>
               <span className="table-pot-label">Pot</span>
               <span className="table-pot-value">
                 {formatCents(jackpotTakeCents)}

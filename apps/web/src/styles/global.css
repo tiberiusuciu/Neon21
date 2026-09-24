@@ -1621,13 +1621,6 @@ h3 {
     background 0.2s var(--ease);
 }
 
-.table-pot-icon {
-  display: none;
-  flex-shrink: 0;
-  color: var(--muted);
-  opacity: 0.95;
-}
-
 .table-pot.is-bump .table-pot-value {
   color: color-mix(in srgb, #5ecf8a 72%, var(--fg));
   transition: color 0.2s var(--ease);
@@ -1788,11 +1781,7 @@ h3 {
   }
 
   .table-pot-label {
-    display: none;
-  }
-
-  .table-pot-icon {
-    display: block;
+    font-size: 0.62rem;
   }
 }
 
