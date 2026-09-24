@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import type { PublicSeat, TablePhase, TableSpinState } from "@neon21/shared";
-import { MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
+import { JACKPOT_CELEBRATE_MS, MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { useGameSocket } from "../lib/SocketProvider";
 import { onEvent } from "../lib/socket";
@@ -31,7 +31,7 @@ import { scheduleScrollSeatIntoClearView } from "../lib/scrollSeatIntoClearView"
 import { JackpotWinFx } from "../components/table/JackpotWinFx";
 
 const HISTORY_MAX = 24;
-const JACKPOT_WIN_FX_MS = 30_000;
+const JACKPOT_WIN_FX_MS = JACKPOT_CELEBRATE_MS;
 const SHOW_TABLE_DEBUG =
   import.meta.env.VITE_STAGING === "true" || import.meta.env.DEV;
 
@@ -275,6 +275,14 @@ export function TablePage() {
   }, [phase, mySeat, playWin, playPush, tableState?.dealer]);
 
   const spin = tableState?.spin ?? null;
+
+  useEffect(() => {
+    const until = tableState?.jackpotCelebrateUntil;
+    if (until == null || until <= Date.now()) return;
+    setJackpotFxUntil((prev) =>
+      prev != null && prev >= until ? prev : until
+    );
+  }, [tableState?.jackpotCelebrateUntil]);
 
   const onSpinReveal = useCallback(
     (s: TableSpinState) => {

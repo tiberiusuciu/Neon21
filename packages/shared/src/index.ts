@@ -340,6 +340,9 @@ export const TableSpinStateSchema = z.object({
 });
 export type TableSpinState = z.infer<typeof TableSpinStateSchema>;
 
+/** Table-wide 100% jackpot celebration duration (matches client FX). */
+export const JACKPOT_CELEBRATE_MS = 30_000;
+
 export const TableStateSnapshotSchema = z.object({
   tableId: z.string(),
   name: z.string(),
@@ -361,6 +364,8 @@ export const TableStateSnapshotSchema = z.object({
   debugTimerPaused: z.boolean().optional(),
   /** Active jackpot spin on this table (spectatable). */
   spin: TableSpinStateSchema.nullable().optional(),
+  /** Epoch ms until table-wide 100% celebration ends (survives spin clear). */
+  jackpotCelebrateUntil: z.number().int().nullable().optional(),
 });
 export type TableStateSnapshot = z.infer<typeof TableStateSnapshotSchema>;
 

@@ -1,5 +1,6 @@
 import {
   CHIP_DENOMINATIONS_CENTS,
+  JACKPOT_CELEBRATE_MS,
   MIN_BET_CENTS,
   SEAT_CAPACITY,
   pickWheelTile,
@@ -101,6 +102,8 @@ export class TableRoom {
   private scheduledFn: (() => void) | null = null;
   private pausedRemainingMs: number | null = null;
   private spin: ActiveSpin | null = null;
+  /** Epoch ms; table-wide 100% FX for late joiners. */
+  private jackpotCelebrateUntil: number | null = null;
   private spinDoneWait: {
     userId: string;
     resolve: () => void;
@@ -140,6 +143,12 @@ export class TableRoom {
   }
 
   getSnapshot(): TableStateSnapshot {
+    if (
+      this.jackpotCelebrateUntil != null &&
+      Date.now() >= this.jackpotCelebrateUntil
+    ) {
+      this.jackpotCelebrateUntil = null;
+    }
     const snap: TableStateSnapshot = {
       tableId: this.id,
       name: this.name,
@@ -167,6 +176,7 @@ export class TableRoom {
             potBeforeCents: this.spin.potBeforeCents,
           }
         : null,
+      jackpotCelebrateUntil: this.jackpotCelebrateUntil,
     };
     if (env.tableDebugEnabled) {
       snap.debugStack = this.shoe.injectPreview(24).map(
@@ -1442,6 +1452,9 @@ export class TableRoom {
       payoutCents,
       potBeforeCents: potBefore,
     };
+    if (tileIndex === 0 || pctBps === 10_000) {
+      this.jackpotCelebrateUntil = Date.now() + JACKPOT_CELEBRATE_MS;
+    }
     this.broadcast();
 
     if (payoutCents > 0) {
