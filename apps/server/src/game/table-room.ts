@@ -1163,9 +1163,10 @@ export class TableRoom {
       else byUser.set(seat.userId, batch);
     }
     for (const [userId, hands] of byUser) {
-      if (hands.some((h) => h.isBlackjack)) {
+      const newBlackjacks = hands.filter((h) => h.isBlackjack).length;
+      if (newBlackjacks > 0) {
         void recordHandOutcomes(userId, hands)
-          .then(() => this.afterBlackjackSettle(userId))
+          .then(() => this.afterBlackjackSettle(userId, newBlackjacks))
           .catch((err) =>
             console.error("[stats] recordHandOutcomes failed", userId, err)
           );
@@ -1179,9 +1180,9 @@ export class TableRoom {
     }
   }
 
-  private async afterBlackjackSettle(userId: string) {
+  private async afterBlackjackSettle(userId: string, newBlackjacks: number) {
     try {
-      await maybeGrantSpinVouchers(userId);
+      await maybeGrantSpinVouchers(userId, newBlackjacks);
       await this.refreshSeatSpinProgress(userId);
       this.broadcast();
     } catch (err) {

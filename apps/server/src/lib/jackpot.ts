@@ -102,19 +102,26 @@ export function windowStart(now = Date.now()): Date {
   return new Date(now - SPIN_BJ_WINDOW_MS);
 }
 
+/** BJ progress only counts hands after jackpot/voucher feature start (no retroactive backlog). */
+export function spinBjCountStartsAt(now = Date.now()): Date {
+  const window = windowStart(now);
+  const epoch = jackpotStartsAt();
+  return epoch > window ? epoch : window;
+}
+
 export async function countBlackjacks24h(userId: string): Promise<number> {
   return prisma.handOutcome.count({
     where: {
       userId,
       isBlackjack: true,
-      createdAt: { gte: windowStart() },
+      createdAt: { gte: spinBjCountStartsAt() },
     },
   });
 }
 
 export async function countVouchersInWindow(userId: string): Promise<number> {
   return prisma.spinVoucher.count({
-    where: { userId, createdAt: { gte: windowStart() } },
+    where: { userId, createdAt: { gte: spinBjCountStartsAt() } },
   });
 }
 
@@ -140,15 +147,27 @@ export async function getSpinSeatProgress(userId: string): Promise<{
 }
 
 /**
- * Grant stackable vouchers: every 5 BJs in 24h earns one voucher created in-window.
+ * Grant vouchers only for thresholds crossed by *this* settle's new BJs.
+ * Never catch up on historical backlog (that caused multi-voucher spikes).
  */
-export async function maybeGrantSpinVouchers(userId: string): Promise<number> {
+export async function maybeGrantSpinVouchers(
+  userId: string,
+  newBlackjacks: number
+): Promise<number> {
+  const fresh = Math.max(0, Math.floor(newBlackjacks));
+  if (fresh <= 0) return 0;
+
   const [bj, vouchers] = await Promise.all([
     countBlackjacks24h(userId),
     countVouchersInWindow(userId),
   ]);
+  const prev = Math.max(0, bj - fresh);
+  const crossings =
+    Math.floor(bj / SPIN_BJ_PER_VOUCHER) -
+    Math.floor(prev / SPIN_BJ_PER_VOUCHER);
   const earned = Math.floor(bj / SPIN_BJ_PER_VOUCHER);
-  const toGrant = earned - vouchers;
+  // Cap by earned−existing so concurrent settles / retries cannot duplicate.
+  const toGrant = Math.min(crossings, Math.max(0, earned - vouchers));
   if (toGrant <= 0) return 0;
   await prisma.spinVoucher.createMany({
     data: Array.from({ length: toGrant }, () => ({
