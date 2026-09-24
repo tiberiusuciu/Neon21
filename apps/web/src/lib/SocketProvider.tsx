@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import type {
+  GoldenHourPublic,
   JackpotWinBroadcast,
   LobbyTable,
   TableChatMessage,
@@ -31,6 +32,7 @@ type GameSocketApi = {
   lobbyTables: LobbyTable[];
   tableState: TableStateSnapshot | null;
   chatMessages: TableChatMessage[];
+  goldenHour: GoldenHourPublic | null;
   subscribeLobby: () => void;
   joinTable: (tableId: string) => void;
   leaveTable: () => void;
@@ -96,6 +98,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   const [lobbyTables, setLobbyTables] = useState<LobbyTable[]>([]);
   const [tableState, setTableState] = useState<TableStateSnapshot | null>(null);
   const [chatMessages, setChatMessages] = useState<TableChatMessage[]>([]);
+  const [goldenHour, setGoldenHour] = useState<GoldenHourPublic | null>(null);
   const tableStateRef = useRef<TableStateSnapshot | null>(null);
   const pendingWinToast = useRef<JackpotWinBroadcast | null>(null);
   useEffect(() => {
@@ -106,6 +109,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       setLobbyTables([]);
       setTableState(null);
       setChatMessages([]);
+      setGoldenHour(null);
       setActiveTableId(null);
       tableStateRef.current = null;
       pendingWinToast.current = null;
@@ -186,6 +190,19 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         `${win.name} at ${win.tableName} hit ${win.label} — $${amt} from the jackpot`
       );
     });
+    const offGhState = onEvent(s, "golden-hour:state", (state) => {
+      setGoldenHour(state);
+    });
+    const offGhStarted = onEvent(s, "golden-hour:started", (state) => {
+      setGoldenHour(state);
+      toastSuccess.current(
+        "Golden Hour has begun — wins ×1.5, losses halved"
+      );
+    });
+    const offGhEnded = onEvent(s, "golden-hour:ended", (state) => {
+      setGoldenHour(state);
+    });
+    emitEvent(s, "golden-hour:subscribe");
     return () => {
       s.off("connect", onConnect);
       s.off("disconnect", onDisconnect);
@@ -196,6 +213,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       offChat();
       offHistory();
       offJackpotWin();
+      offGhState();
+      offGhStarted();
+      offGhEnded();
     };
   }, [token, setBalanceCents]);
   const leaveTimerRef = useRef<number | null>(null);
@@ -393,6 +413,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       lobbyTables,
       tableState,
       chatMessages,
+      goldenHour,
       subscribeLobby,
       joinTable,
       leaveTable,
@@ -433,6 +454,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       lobbyTables,
       tableState,
       chatMessages,
+      goldenHour,
       subscribeLobby,
       joinTable,
       leaveTable,

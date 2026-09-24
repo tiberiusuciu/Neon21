@@ -6,11 +6,12 @@ import type {
   AdminHandOutcome,
   AdminJackpotResponse,
   AdminUserRow,
+  GoldenHourPublic,
 } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
-import { formatCents } from "../lib/format";
+import { formatCents, formatCountdown } from "../lib/format";
 
 type ResetPeriod = "season" | "alltime" | "custom";
 
@@ -57,6 +58,10 @@ export function AdminPage() {
   const [jackpotDollars, setJackpotDollars] = useState("");
   const [settingJackpot, setSettingJackpot] = useState(false);
   const [loadingJackpot, setLoadingJackpot] = useState(false);
+  const [goldenHour, setGoldenHour] = useState<GoldenHourPublic | null>(null);
+  const [loadingGolden, setLoadingGolden] = useState(false);
+  const [goldenBusy, setGoldenBusy] = useState(false);
+  const [ghNow, setGhNow] = useState(() => Date.now());
   const [granting, setGranting] = useState(false);
   const [openVouchers, setOpenVouchers] = useState(0);
   const [hands, setHands] = useState<AdminHandOutcome[]>([]);
@@ -98,6 +103,20 @@ export function AdminPage() {
     }
   }, [token, toast]);
 
+  const loadGoldenHour = useCallback(async () => {
+    if (!token) return;
+    setLoadingGolden(true);
+    try {
+      setGoldenHour(await api.adminGoldenHour(token));
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to load Golden Hour"
+      );
+    } finally {
+      setLoadingGolden(false);
+    }
+  }, [token, toast]);
+
   const applyHandHistory = useCallback((res: AdminHandHistoryResponse) => {
     setOpenVouchers(res.openVouchers);
     setHands(res.hands);
@@ -136,7 +155,14 @@ export function AdminPage() {
     if (!user?.isAdmin || !token) return;
     void loadUsers("");
     void loadJackpot();
-  }, [user?.isAdmin, token, loadUsers, loadJackpot]);
+    void loadGoldenHour();
+  }, [user?.isAdmin, token, loadUsers, loadJackpot, loadGoldenHour]);
+
+  useEffect(() => {
+    if (!goldenHour) return;
+    const id = window.setInterval(() => setGhNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [goldenHour]);
 
   useEffect(() => {
     if (!selected?.id || !token) {
@@ -186,6 +212,51 @@ export function AdminPage() {
       );
     } finally {
       setSettingJackpot(false);
+    }
+  }
+
+  async function onGoldenStart() {
+    if (!token || goldenBusy) return;
+    setGoldenBusy(true);
+    try {
+      setGoldenHour(await api.adminStartGoldenHour(token));
+      toast.success("Golden Hour started");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to start Golden Hour"
+      );
+    } finally {
+      setGoldenBusy(false);
+    }
+  }
+
+  async function onGoldenEnd() {
+    if (!token || goldenBusy) return;
+    setGoldenBusy(true);
+    try {
+      setGoldenHour(await api.adminEndGoldenHour(token));
+      toast.success("Golden Hour ended");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to end Golden Hour"
+      );
+    } finally {
+      setGoldenBusy(false);
+    }
+  }
+
+  async function onGoldenDisable(disabled: boolean) {
+    if (!token || goldenBusy) return;
+    setGoldenBusy(true);
+    try {
+      setGoldenHour(await api.adminDisableGoldenHour(token, { disabled }));
+      toast.success(disabled ? "Golden Hour disabled" : "Golden Hour enabled");
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to update Golden Hour"
+      );
+    } finally {
+      setGoldenBusy(false);
     }
   }
 
@@ -332,7 +403,80 @@ export function AdminPage() {
       transition={{ duration: 0.25 }}
     >
       <h1 className="page-title">Admin</h1>
-      <p className="page-sub">Jackpot vault, wallets, and player stats.</p>
+      <p className="page-sub">Jackpot vault, Golden Hour, wallets, and player stats.</p>
+
+      <section className="settings-block admin-golden-hour">
+        <h2 className="admin-section-title">Golden Hour</h2>
+        {loadingGolden && !goldenHour ? (
+          <p className="muted">Loading…</p>
+        ) : goldenHour ? (
+          <>
+            <p style={{ margin: "0 0 0.35rem" }}>
+              {goldenHour.disabled ? (
+                <strong>Disabled</strong>
+              ) : goldenHour.active ? (
+                <>
+                  <strong className="golden-hour-live-label">Live</strong>
+                  {goldenHour.activeUntil != null && (
+                    <>
+                      {" "}
+                      — ends in{" "}
+                      {formatCountdown(
+                        Math.max(0, goldenHour.activeUntil - ghNow)
+                      )}
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  Next in{" "}
+                  <strong>
+                    {goldenHour.nextStartsAt != null
+                      ? formatCountdown(
+                          Math.max(0, goldenHour.nextStartsAt - ghNow)
+                        )
+                      : "—"}
+                  </strong>
+                </>
+              )}
+            </p>
+            <p
+              className="muted"
+              style={{ margin: "0 0 0.75rem", fontSize: "0.8rem" }}
+            >
+              Wins ×1.5 profit · losses halved · 1h windows · random 1–12h gap
+            </p>
+            <div className="admin-golden-actions">
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={goldenBusy || goldenHour.disabled || goldenHour.active}
+                onClick={() => void onGoldenStart()}
+              >
+                Start now
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={goldenBusy || !goldenHour.active}
+                onClick={() => void onGoldenEnd()}
+              >
+                End now
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={goldenBusy}
+                onClick={() => void onGoldenDisable(!goldenHour.disabled)}
+              >
+                {goldenHour.disabled ? "Enable" : "Disable"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <p className="muted">Could not load Golden Hour.</p>
+        )}
+      </section>
 
       <section className="settings-block admin-jackpot">
         <h2 className="admin-section-title">Jackpot pool</h2>

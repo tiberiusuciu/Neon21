@@ -10,6 +10,7 @@ import { statsRoutes } from "./routes/stats.js";
 import { leaderboardRoutes } from "./routes/leaderboard.js";
 import { adminRoutes } from "./routes/admin.js";
 import { jackpotRoutes } from "./routes/jackpot.js";
+import { goldenHourRoutes } from "./routes/golden-hour.js";
 
 export async function buildApp() {
   const app = Fastify({ logger: true });
@@ -46,6 +47,7 @@ export async function buildApp() {
   await app.register(statsRoutes);
   await app.register(leaderboardRoutes);
   await app.register(jackpotRoutes);
+  await app.register(goldenHourRoutes);
   await app.register(adminRoutes);
 
   return app;

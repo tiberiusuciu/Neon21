@@ -4,6 +4,7 @@ import {
   AdminResetStatsBodySchema,
   AdminSetJackpotBodySchema,
   AdminGrantVoucherBodySchema,
+  AdminGoldenHourDisableBodySchema,
   type AdminUserRow,
   type AdminHandOutcome,
 } from "@neon21/shared";
@@ -21,6 +22,12 @@ import {
   getGrossTakeCents,
   setAvailablePotCents,
 } from "../lib/jackpot.js";
+import {
+  adminEndGoldenHour,
+  adminSetGoldenHourDisabled,
+  adminStartGoldenHour,
+  getGoldenHourPublic,
+} from "../lib/golden-hour.js";
 
 function toAdminUser(u: {
   id: string;
@@ -95,6 +102,46 @@ function withBalances(
 }
 
 export async function adminRoutes(app: FastifyInstance) {
+  app.get(
+    "/admin/golden-hour",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      return getGoldenHourPublic();
+    }
+  );
+
+  app.post(
+    "/admin/golden-hour/start",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      return adminStartGoldenHour();
+    }
+  );
+
+  app.post(
+    "/admin/golden-hour/end",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      return adminEndGoldenHour();
+    }
+  );
+
+  app.post(
+    "/admin/golden-hour/disable",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+      const body = AdminGoldenHourDisableBodySchema.safeParse(request.body);
+      if (!body.success) {
+        return reply.status(400).send({ error: "Invalid body" });
+      }
+      return adminSetGoldenHourDisabled(body.data.disabled);
+    }
+  );
+
   app.get(
     "/admin/jackpot",
     { preHandler: [app.authenticate] },

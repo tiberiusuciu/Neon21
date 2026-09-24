@@ -1,4 +1,5 @@
 import type {
+  AdminGoldenHourDisableBody,
   AdminGrantVoucherBody,
   AdminGrantVoucherResponse,
   AdminHandHistoryResponse,
@@ -12,6 +13,7 @@ import type {
   AdminUsersResponse,
   ClaimResponse,
   GameTable,
+  GoldenHourPublic,
   LeaderboardResponse,
   LeaderboardScope,
   JackpotResponse,
@@ -168,6 +170,38 @@ export const api = {
 
   jackpot(token: string) {
     return request<JackpotResponse>("/jackpot", { token });
+  },
+
+  goldenHour(token: string) {
+    return request<GoldenHourPublic>("/golden-hour", { token });
+  },
+
+  adminGoldenHour(token: string) {
+    return request<GoldenHourPublic>("/admin/golden-hour", { token });
+  },
+
+  adminStartGoldenHour(token: string) {
+    return request<GoldenHourPublic>("/admin/golden-hour/start", {
+      method: "POST",
+      token,
+      body: "{}",
+    });
+  },
+
+  adminEndGoldenHour(token: string) {
+    return request<GoldenHourPublic>("/admin/golden-hour/end", {
+      method: "POST",
+      token,
+      body: "{}",
+    });
+  },
+
+  adminDisableGoldenHour(token: string, body: AdminGoldenHourDisableBody) {
+    return request<GoldenHourPublic>("/admin/golden-hour/disable", {
+      method: "POST",
+      token,
+      body: JSON.stringify(body),
+    });
   },
 
   adminJackpot(token: string) {

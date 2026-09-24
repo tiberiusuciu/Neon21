@@ -4,6 +4,7 @@ import { ThemeProvider } from "./lib/theme";
 import { ToastProvider } from "./lib/toast";
 import { SocketProvider } from "./lib/SocketProvider";
 import { AmbientCanvas } from "./components/AmbientCanvas";
+import { GoldenHourFx } from "./components/GoldenHourFx";
 import { NamedRoute, ProtectedRoute } from "./components/ProtectedRoute";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
@@ -56,6 +57,7 @@ export default function App() {
         <AuthProvider>
           <SocketProvider>
             <div className="app-shell">
+              <GoldenHourFx />
               <AppRoutes />
             </div>
           </SocketProvider>

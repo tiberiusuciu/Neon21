@@ -646,6 +646,16 @@ h3 {
   align-items: end;
 }
 
+.admin-golden-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.golden-hour-live-label {
+  color: #c9a227;
+}
+
 .admin-jackpot-form .field {
   flex: 1 1 10rem;
   margin: 0;
@@ -5863,7 +5873,7 @@ h3 {
   position: absolute;
   top: -4px;
   left: 50%;
-  z-index: 4;
+  z-index: 9;
   width: 0;
   height: 0;
   margin-left: -7px;
@@ -5871,6 +5881,82 @@ h3 {
   border-right: 7px solid transparent;
   border-top: 12px solid #c8b8e8;
   filter: drop-shadow(0 0 6px color-mix(in srgb, #8a68d0 70%, transparent));
+}
+
+.seat-spin-loupe {
+  pointer-events: none;
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  z-index: 7;
+  width: 58px;
+  height: 42px;
+  margin-left: -29px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1.5px solid color-mix(in srgb, #e8dcf8 58%, transparent);
+  background: #0c0a14;
+  box-shadow:
+    0 0 14px color-mix(in srgb, #8a68d0 38%, transparent),
+    0 3px 10px color-mix(in srgb, #000 50%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 14%, transparent);
+}
+
+.seat-spin-loupe-zoom {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: scale(3.25);
+}
+
+.seat-spin-loupe-disc {
+  position: absolute;
+  left: -62px;
+  top: -10px;
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  overflow: hidden;
+  will-change: transform;
+  transition-property: transform;
+  background: #16141f;
+}
+
+.seat-spin-loupe-hairline {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 1px;
+  margin-left: -0.5px;
+  background: color-mix(in srgb, #ffe9a8 80%, transparent);
+  box-shadow: 0 0 5px color-mix(in srgb, #ffe9a8 55%, transparent);
+}
+
+.seat-spin-loupe-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  border-radius: inherit;
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, #fff 16%, transparent) 0%,
+    transparent 38%,
+    transparent 62%,
+    color-mix(in srgb, #7a5cff 8%, transparent) 100%
+  );
+  box-shadow: inset 0 -6px 10px color-mix(in srgb, #000 28%, transparent);
+}
+
+.seat-spin-wheel.is-spinning .seat-spin-loupe {
+  border-color: color-mix(in srgb, #fff 72%, transparent);
+  box-shadow:
+    0 0 18px color-mix(in srgb, #c8a0ff 48%, transparent),
+    0 3px 10px color-mix(in srgb, #000 50%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, #fff 22%, transparent);
 }
 
 .seat-spin-edge-particles {
@@ -6424,6 +6510,119 @@ h3 {
   .jackpot-particles,
   .jackpot-rings {
     display: none;
+  }
+}
+
+/* —— Golden Hour —— */
+.header-golden {
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #c9a227 35%, transparent),
+    0 0 24px color-mix(in srgb, #c9a227 12%, transparent);
+}
+
+.header-golden .brand-accent {
+  color: #c9a227;
+}
+
+.golden-hour-lobby {
+  margin: 0 0 1rem;
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in srgb, #c9a227 40%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #c9a227 14%, transparent),
+    color-mix(in srgb, #8a6a20 8%, transparent)
+  );
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+}
+
+.golden-hour-lobby.is-active {
+  border-color: color-mix(in srgb, #e8c84a 55%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, #c9a227 22%, transparent);
+}
+
+.golden-hour-fx {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  overflow: hidden;
+}
+
+.golden-hour-fx-banner {
+  position: absolute;
+  top: calc(var(--header-h) + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.28rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #f5e6a8 92%, #fff);
+  background: color-mix(in srgb, #3a2e10 78%, transparent);
+  border: 1px solid color-mix(in srgb, #c9a227 45%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, #c9a227 25%, transparent);
+  white-space: nowrap;
+}
+
+.golden-hour-particle {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff6c8, #c9a227 55%, transparent);
+  opacity: 0;
+  filter: blur(0.2px);
+}
+
+.golden-hour-particle-left {
+  left: 0;
+  animation: golden-hour-drift-right linear infinite;
+}
+
+.golden-hour-particle-right {
+  right: 0;
+  animation: golden-hour-drift-left linear infinite;
+}
+
+@keyframes golden-hour-drift-right {
+  0% {
+    opacity: 0;
+    transform: translate(0, 8px);
+  }
+  12% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(42vw, -18px);
+  }
+}
+
+@keyframes golden-hour-drift-left {
+  0% {
+    opacity: 0;
+    transform: translate(0, 8px);
+  }
+  12% {
+    opacity: 0.45;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-42vw, -18px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .golden-hour-particle {
+    display: none;
+  }
+
+  .golden-hour-fx-banner {
+    animation: none;
   }
 }
 

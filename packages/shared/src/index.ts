@@ -126,6 +126,21 @@ export type AdminGrantVoucherResponse = z.infer<
   typeof AdminGrantVoucherResponseSchema
 >;
 
+export const GoldenHourPublicSchema = z.object({
+  disabled: z.boolean(),
+  active: z.boolean(),
+  activeUntil: z.number().int().nullable(),
+  nextStartsAt: z.number().int().nullable(),
+});
+export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
+
+export const AdminGoldenHourDisableBodySchema = z.object({
+  disabled: z.boolean(),
+});
+export type AdminGoldenHourDisableBody = z.infer<
+  typeof AdminGoldenHourDisableBodySchema
+>;
+
 export const AdminHandOutcomeSchema = z.object({
   id: z.string(),
   resultCents: z.number().int(),

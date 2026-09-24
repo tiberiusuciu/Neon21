@@ -48,6 +48,10 @@ import { recordHandOutcomes, recordHandOutcomesSafe, type HandOutcomeInput } fro
 import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
 import {
+  goldenLossPayout,
+  goldenWinPayout,
+} from "../lib/golden-hour.js";
+import {
   getAvailablePotCents,
   getSpinSeatProgress,
   jackpotTakeFromLosses,
@@ -847,7 +851,7 @@ export class TableRoom {
   }
 
   /**
-   * Dealer blackjack: insurance pays 2:1 → credit 3× stake (stake back + 2× win).
+   * Dealer blackjack: insurance pays 2:1 → credit stake + profit (×1.5 profit in Golden Hour).
    * Main bet is already locked; with insurance the round nets to even on the main wager.
    */
   private async payInsuranceWins(gen: number): Promise<void> {
@@ -857,8 +861,24 @@ export class TableRoom {
     for (const seat of this.seats) {
       if (!seat || seat.insuranceCents <= 0) continue;
       if (isDebugSeatUser(seat.userId)) continue;
-      const payout = seat.insuranceCents * 3;
+      const { creditCents: payout } = goldenWinPayout(
+        seat.insuranceCents,
+        seat.insuranceCents * 2
+      );
       const bal = await creditCents(seat.userId, payout);
+      if (!this.alive(gen)) return;
+      this.cb.onWalletUpdate(seat.userId, bal);
+    }
+  }
+
+  /** Insurance lost (no dealer BJ): refund half during Golden Hour. */
+  private async settleInsuranceLosses(gen: number): Promise<void> {
+    for (const seat of this.seats) {
+      if (!seat || seat.insuranceCents <= 0) continue;
+      if (isDebugSeatUser(seat.userId)) continue;
+      const { refundCents } = goldenLossPayout(seat.insuranceCents);
+      if (refundCents <= 0) continue;
+      const bal = await creditCents(seat.userId, refundCents);
       if (!this.alive(gen)) return;
       this.cb.onWalletUpdate(seat.userId, bal);
     }
@@ -867,7 +887,11 @@ export class TableRoom {
   private async afterInsuranceOrSkip(gen: number) {
     const dealerBj = isBlackjack(this.dealer.cards);
 
-    await this.payInsuranceWins(gen);
+    if (dealerBj) {
+      await this.payInsuranceWins(gen);
+    } else {
+      await this.settleInsuranceLosses(gen);
+    }
     if (!this.alive(gen)) return;
 
     if (dealerBj) {
@@ -881,7 +905,13 @@ export class TableRoom {
             this.cb.onWalletUpdate(seat.userId, bal);
             hand.resultCents = 0;
           } else {
-            hand.resultCents = -hand.betCents;
+            const loss = goldenLossPayout(hand.betCents);
+            hand.resultCents = loss.resultCents;
+            if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
+              const bal = await creditCents(seat.userId, loss.refundCents);
+              if (!this.alive(gen)) return;
+              this.cb.onWalletUpdate(seat.userId, bal);
+            }
           }
           hand.stood = true;
         }
@@ -1159,8 +1189,9 @@ export class TableRoom {
       }
       if (seat.insuranceCents > 0) {
         const insResult = dealerBj
-          ? seat.insuranceCents * 2
-          : -seat.insuranceCents;
+          ? goldenWinPayout(seat.insuranceCents, seat.insuranceCents * 2)
+              .resultCents
+          : goldenLossPayout(seat.insuranceCents).resultCents;
         batch.push({
           resultCents: insResult,
           betCents: seat.insuranceCents,
@@ -1464,8 +1495,12 @@ export class TableRoom {
         const playerVal = evaluateHand(hand.cards);
 
         if (playerBj && !dealerBj) {
-          const win = Math.floor(hand.betCents * 2.5);
-          hand.resultCents = win - hand.betCents;
+          const baseProfit = Math.floor(hand.betCents * 2.5) - hand.betCents;
+          const { resultCents, creditCents: win } = goldenWinPayout(
+            hand.betCents,
+            baseProfit
+          );
+          hand.resultCents = resultCents;
           if (!isDebugSeatUser(seat.userId)) {
             deferredPayouts.push({ userId: seat.userId, cents: win });
           }
@@ -1473,13 +1508,22 @@ export class TableRoom {
         }
 
         if (playerVal.bust) {
-          hand.resultCents = -hand.betCents;
+          const loss = goldenLossPayout(hand.betCents);
+          hand.resultCents = loss.resultCents;
+          if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
+            const bal = await creditCents(seat.userId, loss.refundCents);
+            if (!this.alive(gen)) return;
+            this.cb.onWalletUpdate(seat.userId, bal);
+          }
           continue;
         }
 
         if (dealerVal.bust) {
-          const win = hand.betCents * 2;
-          hand.resultCents = hand.betCents;
+          const { resultCents, creditCents: win } = goldenWinPayout(
+            hand.betCents,
+            hand.betCents
+          );
+          hand.resultCents = resultCents;
           if (!isDebugSeatUser(seat.userId)) {
             deferredPayouts.push({ userId: seat.userId, cents: win });
           }
@@ -1488,13 +1532,22 @@ export class TableRoom {
 
         const playerTotal = bestTotal(hand.cards);
         if (playerTotal > dealerTotal) {
-          const win = hand.betCents * 2;
-          hand.resultCents = hand.betCents;
+          const { resultCents, creditCents: win } = goldenWinPayout(
+            hand.betCents,
+            hand.betCents
+          );
+          hand.resultCents = resultCents;
           if (!isDebugSeatUser(seat.userId)) {
             deferredPayouts.push({ userId: seat.userId, cents: win });
           }
         } else if (playerTotal < dealerTotal) {
-          hand.resultCents = -hand.betCents;
+          const loss = goldenLossPayout(hand.betCents);
+          hand.resultCents = loss.resultCents;
+          if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
+            const bal = await creditCents(seat.userId, loss.refundCents);
+            if (!this.alive(gen)) return;
+            this.cb.onWalletUpdate(seat.userId, bal);
+          }
         } else {
           hand.resultCents = 0;
           if (!isDebugSeatUser(seat.userId)) {

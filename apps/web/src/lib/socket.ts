@@ -10,12 +10,15 @@ import type {
   JackpotDelta,
   JackpotClaimEntry,
   JackpotWinBroadcast,
+  GoldenHourPublic,
 } from "@neon21/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 export type ClientToServerEvents = {
   "lobby:subscribe": () => void;
+  "golden-hour:subscribe": () => void;
+  "golden-hour:unsubscribe": () => void;
   "jackpot:subscribe": () => void;
   "jackpot:unsubscribe": () => void;
   "table:join": (payload: { tableId: string }) => void;
@@ -65,6 +68,9 @@ export type ServerToClientEvents = {
   "jackpot:delta": (payload: JackpotDelta) => void;
   "jackpot:claim": (payload: JackpotClaimEntry) => void;
   "jackpot:win": (payload: JackpotWinBroadcast) => void;
+  "golden-hour:state": (payload: GoldenHourPublic) => void;
+  "golden-hour:started": (payload: GoldenHourPublic) => void;
+  "golden-hour:ended": (payload: GoldenHourPublic) => void;
 };
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

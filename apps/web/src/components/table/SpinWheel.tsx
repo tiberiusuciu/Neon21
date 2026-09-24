@@ -32,24 +32,18 @@ const EDGE_PARTICLES = 18;
 const TIMER_R = 56;
 const TIMER_C = 2 * Math.PI * TIMER_R;
 
-/** Pearlescent opal stripes — every land feels precious. */
-const PEARL = [
-  "url(#seat-spin-pearl-a)",
-  "url(#seat-spin-pearl-b)",
-  "url(#seat-spin-pearl-c)",
-  "url(#seat-spin-pearl-d)",
-] as const;
+const PEARL_KEYS = ["a", "b", "c", "d"] as const;
 
-function tileFill(t: WheelTile, index: number): string {
+function tileFill(t: WheelTile, index: number, p: string): string {
   if (index === 0 || (t.kind === "percent" && t.pctBps >= 10_000)) {
-    return "url(#seat-spin-jackpot-grad)";
+    return `url(#${p}-jackpot-grad)`;
   }
-  if (t.kind === "flat") return "url(#seat-spin-pearl-dud)";
-  if (t.pctBps >= 2_000) return "url(#seat-spin-pearl-rare)";
-  if (t.pctBps >= 1_000) return "url(#seat-spin-pearl-high)";
-  if (t.pctBps >= 200) return "url(#seat-spin-pearl-mid)";
-  if (t.pctBps >= 100) return "url(#seat-spin-pearl-one)";
-  return PEARL[Math.floor(index / 2) % PEARL.length]!;
+  if (t.kind === "flat") return `url(#${p}-pearl-dud)`;
+  if (t.pctBps >= 2_000) return `url(#${p}-pearl-rare)`;
+  if (t.pctBps >= 1_000) return `url(#${p}-pearl-high)`;
+  if (t.pctBps >= 200) return `url(#${p}-pearl-mid)`;
+  if (t.pctBps >= 100) return `url(#${p}-pearl-one)`;
+  return `url(#${p}-pearl-${PEARL_KEYS[Math.floor(index / 2) % PEARL_KEYS.length]!})`;
 }
 
 function isOnePercent(t: WheelTile): boolean {
@@ -57,7 +51,7 @@ function isOnePercent(t: WheelTile): boolean {
 }
 
 /** Merge consecutive same-fill tiles into readable bands (odds stay 100 tiles). */
-function buildBands() {
+function buildBands(p: string) {
   const bands: {
     start: number;
     end: number;
@@ -67,7 +61,7 @@ function buildBands() {
   }[] = [];
   for (let i = 0; i < JACKPOT_WHEEL.length; i++) {
     const t = JACKPOT_WHEEL[i]!;
-    const fill = tileFill(t, i);
+    const fill = tileFill(t, i, p);
     const last = bands[bands.length - 1];
     if (last && last.fill === fill) {
       last.end = i + 1;
@@ -94,6 +88,93 @@ function bandPath(start: number, end: number): string {
   const y1 = CY + R * Math.sin(a1);
   const large = span * SEG > 180 ? 1 : 0;
   return `M ${CX} ${CY} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`;
+}
+
+function WheelFace({ prefix }: { prefix: string }) {
+  const wedges = useMemo(() => {
+    return buildBands(prefix).map((b) => {
+      const span = b.end - b.start;
+      const stroke =
+        span >= 3 ? "rgba(200, 220, 255, 0.22)" : "rgba(160, 180, 220, 0.1)";
+      const strokeWidth = span >= 3 ? 0.22 : 0.07;
+      const wedgeClass = b.jackpot
+        ? "seat-spin-wedge-jackpot"
+        : b.onePct
+          ? "seat-spin-wedge-one"
+          : "seat-spin-wedge";
+      return (
+        <path
+          key={`${b.start}-${b.end}`}
+          d={bandPath(b.start, b.end)}
+          fill={b.fill}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+          className={wedgeClass}
+        />
+      );
+    });
+  }, [prefix]);
+
+  return (
+    <svg className="seat-spin-svg" viewBox="0 0 100 100" aria-hidden>
+      <defs>
+        <radialGradient id={`${prefix}-jackpot-grad`} cx="38%" cy="32%" r="78%">
+          <stop offset="0%" stopColor="#a8ffe8" />
+          <stop offset="28%" stopColor="#3ec9a8" />
+          <stop offset="58%" stopColor="#2a8fc4" />
+          <stop offset="100%" stopColor="#1a4a7a" />
+        </radialGradient>
+        <linearGradient id={`${prefix}-pearl-a`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6a6280" />
+          <stop offset="45%" stopColor="#3a3450" />
+          <stop offset="100%" stopColor="#1e2438" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-b`} x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#7a5a68" />
+          <stop offset="50%" stopColor="#4a3040" />
+          <stop offset="100%" stopColor="#2a2038" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-c`} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#4a7068" />
+          <stop offset="48%" stopColor="#2a4848" />
+          <stop offset="100%" stopColor="#1e3048" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-d`} x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#6a6050" />
+          <stop offset="55%" stopColor="#403828" />
+          <stop offset="100%" stopColor="#2a2438" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-one`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#e8d090" />
+          <stop offset="40%" stopColor="#a88840" />
+          <stop offset="100%" stopColor="#5a4820" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-mid`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#6a9888" />
+          <stop offset="50%" stopColor="#2a5848" />
+          <stop offset="100%" stopColor="#1a3850" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-high`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a08098" />
+          <stop offset="45%" stopColor="#583850" />
+          <stop offset="100%" stopColor="#302048" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-rare`} x1="20%" y1="0%" x2="80%" y2="100%">
+          <stop offset="0%" stopColor="#d0b878" />
+          <stop offset="35%" stopColor="#886848" />
+          <stop offset="70%" stopColor="#684060" />
+          <stop offset="100%" stopColor="#283858" />
+        </linearGradient>
+        <linearGradient id={`${prefix}-pearl-dud`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#586070" />
+          <stop offset="55%" stopColor="#303848" />
+          <stop offset="100%" stopColor="#1a202c" />
+        </linearGradient>
+      </defs>
+      <circle cx={CX} cy={CY} r={R} fill="#16141f" />
+      {wedges}
+    </svg>
+  );
 }
 
 export function SpinWheel({
@@ -206,31 +287,6 @@ export function SpinWheel({
     }
   }, [spin.phase, spin.userId]);
 
-  const wedges = useMemo(() => {
-    const bands = buildBands();
-    return bands.map((b) => {
-      const span = b.end - b.start;
-      const stroke =
-        span >= 3 ? "rgba(200, 220, 255, 0.22)" : "rgba(160, 180, 220, 0.1)";
-      const strokeWidth = span >= 3 ? 0.22 : 0.07;
-      const wedgeClass = b.jackpot
-        ? "seat-spin-wedge-jackpot"
-        : b.onePct
-          ? "seat-spin-wedge-one"
-          : "seat-spin-wedge";
-      return (
-        <path
-          key={`${b.start}-${b.end}`}
-          d={bandPath(b.start, b.end)}
-          fill={b.fill}
-          stroke={stroke}
-          strokeWidth={strokeWidth}
-          className={wedgeClass}
-        />
-      );
-    });
-  }, []);
-
   const spinning = spin.phase === "result" && !animDone;
   const showResult =
     spin.phase === "result" && animDone && spin.payoutCents != null;
@@ -245,6 +301,11 @@ export function SpinWheel({
       : 1;
   const offerSeconds =
     offerLeftMs != null ? Math.ceil(offerLeftMs / 1000) : null;
+  const discStyle = {
+    transform: `rotate(${rot}deg)`,
+    transitionDuration: spinning || rot > 0 ? `${SPIN_MS}ms` : "0ms",
+    transitionTimingFunction: "cubic-bezier(0.08, 0.82, 0.12, 1)",
+  } as CSSProperties;
 
   return (
     <div
@@ -294,6 +355,15 @@ export function SpinWheel({
             />
           </svg>
         )}
+        <div className="seat-spin-loupe" aria-hidden>
+          <div className="seat-spin-loupe-zoom">
+            <div className="seat-spin-loupe-disc" style={discStyle}>
+              <WheelFace prefix="seat-spin-loupe" />
+            </div>
+          </div>
+          <div className="seat-spin-loupe-hairline" />
+          <div className="seat-spin-loupe-glass" />
+        </div>
         <div className="seat-spin-pointer" aria-hidden />
         <div
           className={`seat-spin-edge-particles${emitHot ? " is-hot" : ""}`}
@@ -314,78 +384,8 @@ export function SpinWheel({
             />
           ))}
         </div>
-        <div
-          ref={discRef}
-          className="seat-spin-disc"
-          style={{
-            transform: `rotate(${rot}deg)`,
-            transitionDuration: spinning || rot > 0 ? `${SPIN_MS}ms` : "0ms",
-            transitionTimingFunction: "cubic-bezier(0.08, 0.82, 0.12, 1)",
-          }}
-        >
-          <svg className="seat-spin-svg" viewBox="0 0 100 100" aria-hidden>
-            <defs>
-              <radialGradient
-                id="seat-spin-jackpot-grad"
-                cx="38%"
-                cy="32%"
-                r="78%"
-              >
-                <stop offset="0%" stopColor="#a8ffe8" />
-                <stop offset="28%" stopColor="#3ec9a8" />
-                <stop offset="58%" stopColor="#2a8fc4" />
-                <stop offset="100%" stopColor="#1a4a7a" />
-              </radialGradient>
-              <linearGradient id="seat-spin-pearl-a" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#6a6280" />
-                <stop offset="45%" stopColor="#3a3450" />
-                <stop offset="100%" stopColor="#1e2438" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-b" x1="100%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#7a5a68" />
-                <stop offset="50%" stopColor="#4a3040" />
-                <stop offset="100%" stopColor="#2a2038" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-c" x1="0%" y1="100%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="#4a7068" />
-                <stop offset="48%" stopColor="#2a4848" />
-                <stop offset="100%" stopColor="#1e3048" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-d" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#6a6050" />
-                <stop offset="55%" stopColor="#403828" />
-                <stop offset="100%" stopColor="#2a2438" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-one" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#e8d090" />
-                <stop offset="40%" stopColor="#a88840" />
-                <stop offset="100%" stopColor="#5a4820" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-mid" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#6a9888" />
-                <stop offset="50%" stopColor="#2a5848" />
-                <stop offset="100%" stopColor="#1a3850" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-high" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#a08098" />
-                <stop offset="45%" stopColor="#583850" />
-                <stop offset="100%" stopColor="#302048" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-rare" x1="20%" y1="0%" x2="80%" y2="100%">
-                <stop offset="0%" stopColor="#d0b878" />
-                <stop offset="35%" stopColor="#886848" />
-                <stop offset="70%" stopColor="#684060" />
-                <stop offset="100%" stopColor="#283858" />
-              </linearGradient>
-              <linearGradient id="seat-spin-pearl-dud" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#586070" />
-                <stop offset="55%" stopColor="#303848" />
-                <stop offset="100%" stopColor="#1a202c" />
-              </linearGradient>
-            </defs>
-            <circle cx={CX} cy={CY} r={R} fill="#16141f" />
-            {wedges}
-          </svg>
+        <div ref={discRef} className="seat-spin-disc" style={discStyle}>
+          <WheelFace prefix="seat-spin" />
           <div className="seat-spin-jackpot-fx" aria-hidden>
             {Array.from({ length: 8 }, (_, i) => (
               <span key={i} style={{ ["--i" as string]: i }} />

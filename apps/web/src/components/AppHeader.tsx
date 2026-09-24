@@ -7,10 +7,12 @@ import { useToast } from "../lib/toast";
 import { formatCents, formatCountdown, formatHeaderCents } from "../lib/format";
 import { useCashFx } from "../lib/cashFx";
 import { useAnimatedCents } from "../lib/useAnimatedCents";
+import { useGameSocket } from "../lib/SocketProvider";
 import { BrandMark } from "./BrandMark";
 
 export function AppHeader() {
   const { user, wallet, claim, refresh } = useAuth();
+  const { goldenHour } = useGameSocket();
   const { walletRef, walletPulse, walletSpend, walletPush } = useCashFx();
   const amountRef = useRef<HTMLSpanElement>(null);
   const toast = useToast();
@@ -94,7 +96,9 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="header">
+      <header
+        className={`header${goldenHour?.active ? " header-golden" : ""}`}
+      >
         <div className="header-inner">
           <Link to="/lobby" className="brand">
             <BrandMark />

@@ -6,13 +6,16 @@ import { useAuth } from "../lib/auth";
 import { api, ApiError } from "../lib/api";
 import { useToast } from "../lib/toast";
 import { useGameSocket } from "../lib/SocketProvider";
+import { formatCountdown } from "../lib/format";
 
 export function LobbyPage() {
   const { token } = useAuth();
   const toast = useToast();
-  const { lobbyTables, subscribeLobby, connected } = useGameSocket();
+  const { lobbyTables, subscribeLobby, connected, goldenHour } =
+    useGameSocket();
   const [fallback, setFallback] = useState<LobbyTable[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     if (!connected) return;
@@ -46,7 +49,26 @@ export function LobbyPage() {
     if (lobbyTables.length > 0) setLoading(false);
   }, [lobbyTables]);
 
+  useEffect(() => {
+    if (!goldenHour || goldenHour.disabled) return;
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, [goldenHour]);
+
   const tables = lobbyTables.length > 0 ? lobbyTables : fallback;
+
+  let goldenLabel: string | null = null;
+  if (goldenHour && !goldenHour.disabled) {
+    if (goldenHour.active && goldenHour.activeUntil != null) {
+      goldenLabel = `Golden Hour live — ends in ${formatCountdown(
+        Math.max(0, goldenHour.activeUntil - now)
+      )}`;
+    } else if (goldenHour.nextStartsAt != null) {
+      goldenLabel = `Golden Hour in ${formatCountdown(
+        Math.max(0, goldenHour.nextStartsAt - now)
+      )}`;
+    }
+  }
 
   return (
     <motion.div
@@ -56,6 +78,16 @@ export function LobbyPage() {
     >
       <h1 className="page-title">Lobby</h1>
       <p className="page-sub">Open tables. Join a seat when you are ready.</p>
+
+      {goldenLabel && (
+        <div
+          className={`golden-hour-lobby${
+            goldenHour?.active ? " is-active" : ""
+          }`}
+        >
+          {goldenLabel}
+        </div>
+      )}
 
       {loading && <p className="muted">Loading tables…</p>}
 

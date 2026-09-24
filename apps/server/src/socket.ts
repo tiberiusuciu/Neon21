@@ -12,6 +12,10 @@ import {
   loadChatHistory,
   markChatRead,
 } from "./lib/table-chat.js";
+import {
+  getGoldenHourPublic,
+  setGoldenHourBroadcaster,
+} from "./lib/golden-hour.js";
 
 const TableIdSchema = z.object({ tableId: z.string().min(1) });
 const SeatTakeSchema = z.object({ seatIndex: z.number().int().min(0).max(6) });
@@ -107,6 +111,15 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
 
   const pool = initPool(io);
 
+  setGoldenHourBroadcaster((state, transition) => {
+    io.emit("golden-hour:state", state);
+    if (transition === "started") {
+      io.emit("golden-hour:started", state);
+    } else if (transition === "ended") {
+      io.emit("golden-hour:ended", state);
+    }
+  });
+
   io.use((socket, next) => {
     const token = socket.handshake.auth?.token as string | undefined;
     if (!token) {
@@ -125,10 +138,20 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
   io.on("connection", (socket) => {
     const userId = socket.data.userId as string;
     socket.join(`user:${userId}`);
+    socket.emit("golden-hour:state", getGoldenHourPublic());
 
     socket.on("lobby:subscribe", () => {
       socket.join("lobby");
       socket.emit("lobby:tables", { tables: pool.list() });
+    });
+
+    socket.on("golden-hour:subscribe", () => {
+      socket.join("golden-hour");
+      socket.emit("golden-hour:state", getGoldenHourPublic());
+    });
+
+    socket.on("golden-hour:unsubscribe", () => {
+      socket.leave("golden-hour");
     });
 
     socket.on("jackpot:subscribe", () => {

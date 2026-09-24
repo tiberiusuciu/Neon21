@@ -92,6 +92,15 @@ model JackpotAdjustment {
   @@index([createdAt])
 }
 
+/** Singleton schedule for the Golden Hour event. */
+model GoldenHourState {
+  id           String    @id @default("golden_hour")
+  disabled     Boolean   @default(false)
+  activeUntil  DateTime?
+  nextStartsAt DateTime?
+  updatedAt    DateTime  @updatedAt
+}
+
 model Table {
   id           String   @id @default(cuid())
   name         String   @unique
