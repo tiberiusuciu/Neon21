@@ -7669,6 +7669,173 @@ html[data-resolved="dark"] .table-debug-field select {
   overflow: hidden;
 }
 
+.jackpot-win-fx {
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  overflow: hidden;
+}
+
+.jackpot-win-glow {
+  position: absolute;
+  inset: -10%;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 35%, color-mix(in srgb, #ffe9a8 28%, transparent), transparent 62%),
+    radial-gradient(ellipse 50% 45% at 20% 70%, color-mix(in srgb, #c89bff 22%, transparent), transparent 60%),
+    radial-gradient(ellipse 50% 45% at 80% 65%, color-mix(in srgb, #5ee1ff 18%, transparent), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 90%, color-mix(in srgb, #ff6b9d 16%, transparent), transparent 55%);
+  animation: jackpot-win-glow-pulse 2.4s ease-in-out infinite;
+}
+
+.jackpot-win-flash {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 40%,
+    color-mix(in srgb, #fff 35%, transparent),
+    transparent 55%
+  );
+  animation: jackpot-win-flash 3.2s ease-in-out infinite;
+  opacity: 0;
+}
+
+.jackpot-win-orb {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--c, #ffe9a8) 55%, transparent),
+    transparent 70%
+  );
+  filter: blur(8px);
+  opacity: 0;
+  animation: jackpot-win-orb-pulse ease-in-out infinite;
+}
+
+.jackpot-win-rain {
+  position: absolute;
+  top: -8%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff,
+    var(--c, #ffe9a8) 45%,
+    transparent 75%
+  );
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--c, #ffe9a8) 90%, transparent),
+    0 0 14px color-mix(in srgb, var(--c, #ffe9a8) 55%, transparent);
+  opacity: 0;
+  animation: jackpot-win-rain-fall linear infinite;
+}
+
+.jackpot-win-confetti {
+  position: absolute;
+  top: -6%;
+  border-radius: 2px;
+  opacity: 0;
+  box-shadow: 0 0 8px color-mix(in srgb, #fff 40%, transparent);
+  animation: jackpot-win-confetti-fall linear infinite;
+  transform-origin: center;
+}
+
+.table-page.is-jackpot-win::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 19;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse 65% 55% at 50% 40%,
+    color-mix(in srgb, #ffe9a8 12%, transparent),
+    color-mix(in srgb, #c89bff 8%, transparent) 45%,
+    transparent 70%
+  );
+  animation: jackpot-win-glow-pulse 2.8s ease-in-out infinite;
+}
+
+@keyframes jackpot-win-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.75;
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.2);
+  }
+}
+
+@keyframes jackpot-win-flash {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+  }
+  78% {
+    opacity: 0.55;
+  }
+  86% {
+    opacity: 0.1;
+  }
+  92% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes jackpot-win-orb-pulse {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.15);
+  }
+}
+
+@keyframes jackpot-win-rain-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -5vh) scale(0.5);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--drift, 0), 110vh) scale(0.35);
+  }
+}
+
+@keyframes jackpot-win-confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -4vh) rotate(var(--rot0, 0deg)) scale(0.6);
+  }
+  10% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.15;
+    transform: translate(
+        calc(var(--spin, 1) * 40px),
+        112vh
+      )
+      rotate(calc(var(--rot0, 0deg) + var(--spin, 1) * 720deg))
+      scale(0.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jackpot-win-fx,
+  .table-page.is-jackpot-win::after {
+    display: none !important;
+  }
+}
+
 .golden-hour-particle {
   position: absolute;
   border-radius: 50%;

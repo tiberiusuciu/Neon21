@@ -28,8 +28,10 @@ import {
 import { loadRoundHistory, saveRoundHistory } from "../lib/roundHistory";
 import { useToast } from "../lib/toast";
 import { scheduleScrollSeatIntoClearView } from "../lib/scrollSeatIntoClearView";
+import { JackpotWinFx } from "../components/table/JackpotWinFx";
 
 const HISTORY_MAX = 24;
+const JACKPOT_WIN_FX_MS = 30_000;
 const SHOW_TABLE_DEBUG =
   import.meta.env.VITE_STAGING === "true" || import.meta.env.DEV;
 
@@ -98,6 +100,7 @@ export function TablePage() {
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>(() =>
     tableId ? loadRoundHistory(tableId) : []
   );
+  const [jackpotFxUntil, setJackpotFxUntil] = useState<number | null>(null);
   const celebratedSettle = useRef(false);
   const celebratedSpin = useRef<string | null>(null);
   const spentBetRound = useRef(false);
@@ -275,6 +278,13 @@ export function TablePage() {
 
   const onSpinReveal = useCallback(
     (s: TableSpinState) => {
+      const isJackpot =
+        s.tileIndex === 0 ||
+        (s.kind === "percent" && s.pctBps === 10_000);
+      if (isJackpot) {
+        setJackpotFxUntil(Date.now() + JACKPOT_WIN_FX_MS);
+      }
+
       if (s.userId !== user?.id) return;
       const key = `${s.tileIndex}-${s.payoutCents}-${s.potBeforeCents}`;
       if (celebratedSpin.current === key) return;
@@ -289,6 +299,17 @@ export function TablePage() {
   useEffect(() => {
     if (!spin) celebratedSpin.current = null;
   }, [spin]);
+
+  useEffect(() => {
+    if (jackpotFxUntil == null) return;
+    const ms = jackpotFxUntil - Date.now();
+    if (ms <= 0) {
+      setJackpotFxUntil(null);
+      return;
+    }
+    const t = window.setTimeout(() => setJackpotFxUntil(null), ms);
+    return () => window.clearTimeout(t);
+  }, [jackpotFxUntil]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -852,13 +873,16 @@ export function TablePage() {
     return <p className="muted">Missing table id.</p>;
   }
 
+  const jackpotFxLive = jackpotFxUntil != null;
+
   return (
     <motion.div
-      className={`table-page${spin ? " is-spin-spotlight" : ""}${spin?.phase === "result" ? " is-spin-active" : ""}`}
+      className={`table-page${spin ? " is-spin-spotlight" : ""}${spin?.phase === "result" ? " is-spin-active" : ""}${jackpotFxLive ? " is-jackpot-win" : ""}`}
       initial={{ y: 8 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25 }}
     >
+      <JackpotWinFx until={jackpotFxUntil} />
       <div className="table-toolbar">
         <div className="table-toolbar-top">
           <h1 className="page-title table-title">{tableState?.name ?? "Table"}</h1>
