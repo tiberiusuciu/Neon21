@@ -398,7 +398,7 @@ h3 {
   padding: 0;
   border: none;
   cursor: default;
-  background: color-mix(in srgb, var(--fg) 28%, transparent);
+  background: transparent;
   -webkit-tap-highlight-color: transparent;
 }
 
