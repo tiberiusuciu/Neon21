@@ -29,7 +29,7 @@ const OFFER_URGENT_MS = 5_000;
 const CX = 50;
 const CY = 50;
 const R = 48;
-const EDGE_PARTICLES = 18;
+const EDGE_PARTICLES = 56;
 const TIMER_R = 56;
 const TIMER_C = 2 * Math.PI * TIMER_R;
 
@@ -616,7 +616,9 @@ export function SpinWheel({
           <span className="seat-spin-pointer-core" />
         </div>
         <div
-          className={`seat-spin-edge-particles${emitHot ? " is-hot" : ""}`}
+          className={`seat-spin-edge-particles${emitHot ? " is-hot" : ""}${
+            spinning ? " is-spinning-emit" : ""
+          }`}
           aria-hidden
         >
           {Array.from({ length: EDGE_PARTICLES }, (_, i) => (
@@ -624,11 +626,11 @@ export function SpinWheel({
               key={i}
               style={
                 {
-                  ["--a"]: `${(i / EDGE_PARTICLES) * 360}deg`,
-                  ["--d"]: `${18 + (i % 4) * 7}px`,
-                  ["--s"]: `${1.4 + (i % 3) * 0.7}px`,
-                  ["--dur"]: `${1.4 + (i % 5) * 0.28}s`,
-                  ["--del"]: `${(i * 0.11) % 1.6}s`,
+                  ["--a"]: `${(i / EDGE_PARTICLES) * 360 + (i % 7) * 3.1}deg`,
+                  ["--d"]: `${22 + (i % 6) * 9 + (i % 3) * 4}px`,
+                  ["--s"]: `${1.5 + (i % 4) * 0.65}px`,
+                  ["--dur"]: `${0.85 + (i % 7) * 0.18}s`,
+                  ["--del"]: `${(i * 0.047) % 1.15}s`,
                 } as CSSProperties
               }
             />

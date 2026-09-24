@@ -7040,10 +7040,16 @@ html[data-resolved="dark"] .table-debug-field select {
   height: var(--s, 2px);
   margin: calc(var(--s, 2px) / -2);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffffff, #f0d8ff 45%, #a8e8ff);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #f8f0ff,
+    #d4a8ff 38%,
+    #9b6cff 68%,
+    #5a2ab8
+  );
   box-shadow:
-    0 0 5px color-mix(in srgb, #ffffff 95%, transparent),
-    0 0 10px color-mix(in srgb, #e8b8ff 65%, transparent);
+    0 0 4px color-mix(in srgb, #e8c8ff 90%, transparent),
+    0 0 9px color-mix(in srgb, #b07cff 70%, transparent);
   opacity: 0;
   animation:
     seat-spin-edge-emit var(--dur, 1.8s) ease-out infinite,
@@ -7055,10 +7061,32 @@ html[data-resolved="dark"] .table-debug-field select {
   animation-duration: calc(var(--dur, 1.8s) * 0.72), calc(var(--dur, 1.8s) * 0.28);
 }
 
+.seat-spin-edge-particles.is-spinning-emit i {
+  background: radial-gradient(
+    circle at 30% 28%,
+    #ffffff,
+    #f0d8ff 28%,
+    #c89bff 52%,
+    #8b4dff 78%,
+    #4a1a9a
+  );
+  box-shadow:
+    0 0 5px color-mix(in srgb, #fff 95%, transparent),
+    0 0 10px color-mix(in srgb, #e0b8ff 90%, transparent),
+    0 0 18px color-mix(in srgb, #a86cff 75%, transparent),
+    0 0 28px color-mix(in srgb, #6b2fe0 45%, transparent);
+  animation:
+    seat-spin-edge-emit-spin var(--dur, 0.9s) ease-out infinite,
+    seat-spin-edge-shimmer calc(var(--dur, 0.9s) * 0.32) ease-in-out infinite;
+  animation-delay: var(--del, 0s), var(--del, 0s);
+}
+
 .seat-spin-wheel.is-spinning .seat-spin-edge-particles i {
   box-shadow:
-    0 0 7px color-mix(in srgb, #ffffff 100%, transparent),
-    0 0 14px color-mix(in srgb, #c8a0ff 85%, transparent);
+    0 0 6px color-mix(in srgb, #ffffff 100%, transparent),
+    0 0 12px color-mix(in srgb, #e0b8ff 95%, transparent),
+    0 0 22px color-mix(in srgb, #b07cff 80%, transparent),
+    0 0 34px color-mix(in srgb, #7a3dff 50%, transparent);
 }
 
 .seat-spin-disc {
@@ -7306,13 +7334,35 @@ html[data-resolved="dark"] .table-debug-field select {
   }
 }
 
+@keyframes seat-spin-edge-emit-spin {
+  0% {
+    opacity: 0;
+    transform: rotate(var(--a, 0deg)) translateY(-54px) scale(0.25);
+    filter: brightness(1.2);
+  }
+  10% {
+    opacity: 1;
+    filter: brightness(1.85);
+  }
+  45% {
+    opacity: 0.95;
+    filter: brightness(1.4);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(var(--a, 0deg))
+      translateY(calc(-54px - var(--d, 28px) * 1.35)) scale(0.15);
+    filter: brightness(0.85);
+  }
+}
+
 @keyframes seat-spin-edge-shimmer {
   0%,
   100% {
-    filter: brightness(1);
+    filter: brightness(1) saturate(1);
   }
   50% {
-    filter: brightness(1.9);
+    filter: brightness(2.15) saturate(1.35);
   }
 }
 
@@ -7684,16 +7734,25 @@ html[data-resolved="light"] .seat-you {
 }
 
 html[data-resolved="light"] .seat-spin-edge-particles i {
-  background: radial-gradient(circle at 35% 30%, #1a9e68, #0a3d28 50%, #052818);
+  background: radial-gradient(
+    circle at 35% 30%,
+    #f8f0ff,
+    #c89bff 40%,
+    #7a3dff 72%,
+    #3a1480
+  );
   box-shadow:
-    0 0 5px color-mix(in srgb, #0f8f5c 80%, transparent),
-    0 0 10px color-mix(in srgb, #0a3d28 55%, transparent);
+    0 0 4px color-mix(in srgb, #d4a8ff 85%, transparent),
+    0 0 10px color-mix(in srgb, #8b4dff 60%, transparent);
 }
 
+html[data-resolved="light"] .seat-spin-edge-particles.is-spinning-emit i,
 html[data-resolved="light"] .seat-spin-wheel.is-spinning .seat-spin-edge-particles i {
   box-shadow:
-    0 0 7px color-mix(in srgb, #0f8f5c 90%, transparent),
-    0 0 14px color-mix(in srgb, #0a3d28 70%, transparent);
+    0 0 5px color-mix(in srgb, #fff 90%, transparent),
+    0 0 11px color-mix(in srgb, #e0b8ff 90%, transparent),
+    0 0 20px color-mix(in srgb, #a86cff 70%, transparent),
+    0 0 30px color-mix(in srgb, #6b2fe0 45%, transparent);
 }
 
 html[data-resolved="light"] .golden-hour-particle {
