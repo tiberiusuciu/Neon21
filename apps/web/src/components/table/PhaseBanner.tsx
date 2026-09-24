@@ -7,6 +7,7 @@ type Props = {
   isYourTurn: boolean;
   isHolding?: boolean;
   needsInsurance?: boolean;
+  hasSeatedPlayers?: boolean;
 };
 
 export function PhaseBanner({
@@ -14,19 +15,21 @@ export function PhaseBanner({
   isYourTurn,
   isHolding,
   needsInsurance,
+  hasSeatedPlayers,
 }: Props) {
   const { title, hint } = getPhaseBannerCopy({
     phase,
     isYourTurn,
     isHolding,
     needsInsurance,
+    hasSeatedPlayers,
   });
 
   return (
     <div className="phase-banner-slot" aria-live="polite">
       <AnimatePresence mode="sync" initial={false}>
         <motion.div
-          key={`${phase}-${isYourTurn}-${isHolding}-${needsInsurance}`}
+          key={`${phase}-${isYourTurn}-${isHolding}-${needsInsurance}-${hasSeatedPlayers}`}
           className={[
             "phase-banner",
             `phase-${phase}`,

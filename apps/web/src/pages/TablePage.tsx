@@ -338,6 +338,10 @@ export function TablePage() {
   }, [phase, mySeat, playSpend]);
 
   const seated = !!mySeat;
+  const hasSeatedPlayers = useMemo(
+    () => (tableState?.seats ?? []).some((s) => s.userId != null),
+    [tableState]
+  );
 
   // Client safety net: leave the seat if broke during betting with nothing in play.
   useEffect(() => {
@@ -606,7 +610,9 @@ export function TablePage() {
     if (phase === "dealer") return "Dealer is playing";
     if (phase === "dealing") return "Cards dealing…";
     if (phase === "settle") return "Round complete";
-    if (phase === "betting") return "Betting open";
+    if (phase === "betting") {
+      return hasSeatedPlayers ? "Betting open" : "Waiting for players";
+    }
     if (phase === "insurance") {
       return showInsurance
         ? "Insurance — Take or decline"
@@ -622,6 +628,7 @@ export function TablePage() {
     activeHandOrdinal,
     tableState,
     showInsurance,
+    hasSeatedPlayers,
   ]);
 
   const showBet = seated && phase === "betting";
@@ -633,8 +640,9 @@ export function TablePage() {
         isYourTurn: isMyTurn && !isHolding,
         isHolding,
         needsInsurance: showInsurance,
+        hasSeatedPlayers,
       }),
-    [phase, isMyTurn, isHolding, showInsurance]
+    [phase, isMyTurn, isHolding, showInsurance, hasSeatedPlayers]
   );
   const actionHand = canAct ? myActiveHand : queueHand;
   const canDouble = useMemo(() => {
@@ -934,6 +942,7 @@ export function TablePage() {
         isYourTurn={isMyTurn && !isHolding}
         isHolding={isHolding}
         needsInsurance={showInsurance}
+        hasSeatedPlayers={hasSeatedPlayers}
       />
 
       {!seated && (

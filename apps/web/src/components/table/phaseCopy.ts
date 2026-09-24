@@ -17,8 +17,16 @@ export function getPhaseBannerCopy(opts: {
   isYourTurn?: boolean;
   isHolding?: boolean;
   needsInsurance?: boolean;
+  hasSeatedPlayers?: boolean;
 }): { title: string; hint: string } {
-  const { phase, isYourTurn, isHolding, needsInsurance } = opts;
+  const { phase, isYourTurn, isHolding, needsInsurance, hasSeatedPlayers } =
+    opts;
+  if (phase === "betting" && hasSeatedPlayers === false) {
+    return {
+      title: "Waiting for players",
+      hint: "Sit at a seat to open betting",
+    };
+  }
   const base = COPY[phase];
   let title = base.title;
   let hint = base.hint;

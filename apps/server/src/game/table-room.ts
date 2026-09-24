@@ -249,6 +249,7 @@ export class TableRoom {
     }
     this.scheduledFn = null;
     this.pausedRemainingMs = null;
+    this.phaseEndsAt = null;
   }
 
   private schedule(ms: number, fn: () => void) {
@@ -472,7 +473,11 @@ export class TableRoom {
     );
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
-    this.broadcast();
+    if (this.phase === "betting" && !this.spin) {
+      this.onBettingActivity();
+    } else {
+      this.broadcast();
+    }
     return true;
   }
 
@@ -585,15 +590,21 @@ export class TableRoom {
       this.broadcast();
       return;
     }
+    if (this.seatedCount() === 0) {
+      this.allBetClamped = false;
+      this.clearTimer();
+      this.broadcast();
+      return;
+    }
     if (this.allSeatedHaveBets()) {
       this.allBetClamped = true;
       this.schedule(ALL_BET_CLAMP_MS, () => void this.lockBetsAndDeal());
-    } else if (this.allBetClamped) {
-      // Someone cleared or joined without a bet — restore the long window.
+    } else if (this.allBetClamped || this.timer == null) {
+      // Cleared clamp, first seat after idle, or no clock running yet.
       this.allBetClamped = false;
       this.schedule(BETTING_MS, () => void this.lockBetsAndDeal());
     }
-    // Still waiting on a seat: leave the existing long timer alone.
+    // Still waiting on a seat with the long timer already running: leave it.
     this.broadcast();
   }
 
@@ -651,7 +662,9 @@ export class TableRoom {
       seat.insuranceCents = 0;
       seat.insuranceResolved = false;
     }
-    this.schedule(BETTING_MS, () => void this.lockBetsAndDeal());
+    if (this.seatedCount() > 0) {
+      this.schedule(BETTING_MS, () => void this.lockBetsAndDeal());
+    }
     this.broadcast();
   }
 
@@ -1470,6 +1483,12 @@ export class TableRoom {
 
   private resumeBettingAfterSpin(remainingBettingMs: number) {
     if (this.phase !== "betting" || this.destroyed) return;
+    if (this.seatedCount() === 0) {
+      this.allBetClamped = false;
+      this.clearTimer();
+      this.broadcast();
+      return;
+    }
     const ms = Math.max(SPIN_RESUME_MIN_MS, remainingBettingMs);
     this.schedule(ms, () => void this.lockBetsAndDeal());
     this.broadcast();
@@ -1647,7 +1666,11 @@ export class TableRoom {
       n += 1;
     }
     if (n > 0) {
-      this.broadcast();
+      if (this.phase === "betting" && !this.spin) {
+        this.onBettingActivity();
+      } else {
+        this.broadcast();
+      }
       this.cb.onSeatedChanged(this.id);
       this.cb.onLobbyChanged();
     }
