@@ -5848,10 +5848,48 @@ h3 {
 .seat-bj-pip.is-lit {
   background: color-mix(in srgb, var(--accent) 85%, #fff);
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
+  transition: box-shadow 0.35s var(--ease), background 0.35s var(--ease);
+}
+
+.seat-bj-meter[data-heat="1"] .seat-bj-pip.is-lit {
+  box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.seat-bj-meter[data-heat="2"] .seat-bj-pip.is-lit {
+  box-shadow:
+    0 0 6px color-mix(in srgb, var(--accent) 55%, transparent),
+    0 0 10px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.seat-bj-meter[data-heat="3"] .seat-bj-pip.is-lit {
+  background: color-mix(in srgb, var(--accent) 90%, #fff);
+  box-shadow:
+    0 0 7px color-mix(in srgb, var(--accent) 65%, transparent),
+    0 0 14px color-mix(in srgb, #f0c674 28%, transparent);
+}
+
+.seat-bj-meter[data-heat="4"] .seat-bj-pip.is-lit {
+  background: color-mix(in srgb, var(--accent) 95%, #fff);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--accent) 75%, transparent),
+    0 0 16px color-mix(in srgb, #f0c674 40%, transparent),
+    0 0 22px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.seat-bj-meter[data-heat="5"] .seat-bj-pip.is-lit {
+  background: #fffef5;
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--accent) 85%, transparent),
+    0 0 20px color-mix(in srgb, #f0c674 55%, transparent);
 }
 
 .seat-bj-pip.is-pop {
   animation: seat-bj-pip-pop 0.72s cubic-bezier(0.22, 1.4, 0.36, 1) both;
+}
+
+.seat-bj-pip.is-wave {
+  animation: seat-bj-pip-wave 0.52s ease-out both;
+  animation-delay: calc(var(--wave-i, 0) * 48ms);
 }
 
 .seat-bj-pip.is-celebrate {
@@ -5934,6 +5972,24 @@ h3 {
     opacity: 1;
     background: color-mix(in srgb, var(--accent) 85%, #fff);
     box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+}
+
+@keyframes seat-bj-pip-wave {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  40% {
+    transform: scale(1.55);
+    filter: brightness(1.45);
+    box-shadow:
+      0 0 12px color-mix(in srgb, var(--accent) 90%, transparent),
+      0 0 20px color-mix(in srgb, #f0c674 50%, transparent);
+  }
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
   }
 }
 
@@ -6024,6 +6080,7 @@ h3 {
 
 @media (prefers-reduced-motion: reduce) {
   .seat-bj-pip.is-pop,
+  .seat-bj-pip.is-wave,
   .seat-bj-pip.is-celebrate,
   .seat-bj-pip.is-clear,
   .seat-bj-voucher.is-bump,

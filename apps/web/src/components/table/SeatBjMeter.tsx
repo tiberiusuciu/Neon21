@@ -8,6 +8,7 @@ import {
 const PIP_COUNT = 5;
 const POP_MS = 720;
 const BETWEEN_FILLS_MS = 90;
+const WAVE_MS = 520;
 const CELEBRATE_MS = 980;
 const CLEAR_MS = 560;
 const VOUCHER_BUMP_MS = 520;
@@ -19,7 +20,7 @@ type Props = {
   seatKey: string;
 };
 
-type PipFx = "idle" | "pop" | "celebrate" | "clear";
+type PipFx = "idle" | "pop" | "wave" | "celebrate" | "clear";
 
 function prefersReducedMotion(): boolean {
   return (
@@ -31,6 +32,7 @@ function prefersReducedMotion(): boolean {
 /**
  * Visual BJ→voucher meter. Server snaps 4→0 on the 5th BJ; we stage fill →
  * celebrate → clear locally so the last pip and ticket bump still play.
+ * Join/hydration voucher jumps snap silently (no celebrate).
  */
 export function SeatBjMeter({
   bjTowardSpin,
@@ -98,6 +100,25 @@ export function SeatBjMeter({
     setVoucherBump(false);
   }
 
+  async function playWave(through: number) {
+    const n = Math.max(0, through);
+    setPipFx((prev) => {
+      const next = prev.slice() as PipFx[];
+      for (let i = 0; i < PIP_COUNT; i++) {
+        next[i] = i < n ? "wave" : "idle";
+      }
+      return next;
+    });
+    await wait(WAVE_MS);
+    setPipFx((prev) => {
+      const next = prev.slice() as PipFx[];
+      for (let i = 0; i < PIP_COUNT; i++) {
+        if (next[i] === "wave") next[i] = "idle";
+      }
+      return next;
+    });
+  }
+
   async function animFillTo(toLit: number) {
     let cur = litRef.current;
     while (cur < toLit) {
@@ -107,6 +128,7 @@ export function SeatBjMeter({
       setPip(i, "pop");
       await wait(POP_MS);
       setPip(i, "idle");
+      await playWave(i + 1);
       cur = i + 1;
       if (cur < toLit) await wait(BETWEEN_FILLS_MS);
     }
@@ -157,6 +179,7 @@ export function SeatBjMeter({
     }
 
     if (!ready.current) {
+      snap(targetBj, targetVouchers);
       prevTargetBj.current = targetBj;
       prevTargetV.current = targetVouchers;
       ready.current = true;
@@ -176,9 +199,16 @@ export function SeatBjMeter({
     }
 
     const gained = Math.max(0, targetVouchers - prevV);
+    // Cycle complete: progress wrapped (4→0). Skip celebrate on join/admin hydrate.
+    const completedCycle = gained > 0 && targetBj < prevBj;
+
+    if (completedCycle) {
+      enqueue(() => animComplete(targetBj, targetVouchers));
+      return;
+    }
 
     if (gained > 0) {
-      enqueue(() => animComplete(targetBj, targetVouchers));
+      snap(targetBj, targetVouchers);
       return;
     }
 
@@ -195,9 +225,12 @@ export function SeatBjMeter({
 
   useEffect(() => () => clearTimers(), []);
 
+  const heat = Math.min(PIP_COUNT, Math.max(0, lit));
+
   return (
     <div
       className={`seat-bj-meter${burst ? " is-burst" : ""}`}
+      data-heat={heat}
       title="Blackjacks toward next jackpot spin"
       aria-label={`${targetBj} of 5 blackjacks toward next spin`}
     >
@@ -206,14 +239,23 @@ export function SeatBjMeter({
         const fx = pipFx[i] ?? "idle";
         const cls = [
           "seat-bj-pip",
-          on || fx === "clear" || fx === "celebrate" ? "is-lit" : "",
+          on || fx === "clear" || fx === "celebrate" || fx === "wave"
+            ? "is-lit"
+            : "",
           fx === "pop" ? "is-pop" : "",
+          fx === "wave" ? "is-wave" : "",
           fx === "celebrate" ? "is-celebrate" : "",
           fx === "clear" ? "is-clear" : "",
         ]
           .filter(Boolean)
           .join(" ");
-        return <span key={i} className={cls} />;
+        return (
+          <span
+            key={i}
+            className={cls}
+            style={{ ["--wave-i" as string]: i } as CSSProperties}
+          />
+        );
       })}
       {vouchers > 0 && (
         <span

@@ -411,8 +411,8 @@ export class TableRoom {
       bjTowardSpin: 0,
       spinVouchers: 0,
     };
+    await this.refreshSeatSpinProgress(userId);
     this.broadcast();
-    void this.refreshSeatSpinProgress(userId).then(() => this.broadcast());
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
 
@@ -1180,7 +1180,7 @@ export class TableRoom {
     await this.runSettle(gen);
   }
 
-  private recordRoundStats() {
+  private async recordRoundStats(): Promise<void> {
     const byUser = new Map<string, HandOutcomeInput[]>();
     let lossAbsCents = 0;
     const dealerBj = isBlackjack(this.dealer.cards);
@@ -1223,21 +1223,30 @@ export class TableRoom {
       if (existing) existing.push(...batch);
       else byUser.set(seat.userId, batch);
     }
+
+    const bjJobs: Promise<void>[] = [];
     for (const [userId, hands] of byUser) {
       const newBlackjacks = hands.filter((h) => h.isBlackjack).length;
       if (newBlackjacks > 0) {
-        void recordHandOutcomes(userId, hands)
-          .then(() => this.afterBlackjackSettle(userId, newBlackjacks))
-          .catch((err) =>
-            console.error("[stats] recordHandOutcomes failed", userId, err)
-          );
+        bjJobs.push(
+          recordHandOutcomes(userId, hands)
+            .then(() => this.afterBlackjackSettle(userId, newBlackjacks))
+            .catch((err) =>
+              console.error("[stats] recordHandOutcomes failed", userId, err)
+            )
+        );
       } else {
         recordHandOutcomesSafe(userId, hands);
       }
     }
+
     const deltaCents = jackpotTakeFromLosses(lossAbsCents);
     if (deltaCents > 0) {
       this.cb.onJackpotDelta(deltaCents);
+    }
+
+    if (bjJobs.length > 0) {
+      await Promise.all(bjJobs);
     }
   }
 
@@ -1245,7 +1254,6 @@ export class TableRoom {
     try {
       await maybeGrantSpinVouchers(userId, newBlackjacks);
       await this.refreshSeatSpinProgress(userId);
-      this.broadcast();
     } catch (err) {
       console.error("[jackpot] voucher grant failed", userId, err);
     }
@@ -1596,7 +1604,9 @@ export class TableRoom {
     }
 
     // After wallet settles so HandOutcome.balanceAfterCents is post-payout.
-    this.recordRoundStats();
+    // Await BJ voucher grants so pip celebrate lands during settle, not next bet.
+    await this.recordRoundStats();
+    if (!this.alive(gen)) return;
     this.broadcast();
 
     await this.ejectBrokePlayers();
