@@ -82,6 +82,10 @@ export class TableRoom {
   private allBetClamped = false;
   private turnResolve: (() => void) | null = null;
   private insuranceWait: (() => void) | null = null;
+  /** False once the insurance window closes (timer / all decided). */
+  private insuranceOpen = false;
+  /** In-flight insurance:take debits — settle waits until these finish. */
+  private insurancePending = 0;
   private cb: RoomCallbacks;
   /** Staging: bots stand immediately instead of waiting out the turn timer. */
   private debugBotsHold = true;
@@ -727,6 +731,8 @@ export class TableRoom {
   private async runInsurance(gen: number) {
     this.phase = "insurance";
     this.insuranceWait = null;
+    this.insuranceOpen = true;
+    this.insurancePending = 0;
     for (const seat of this.seats) {
       if (!seat?.hands.length) continue;
       seat.insuranceResolved = false;
@@ -739,7 +745,14 @@ export class TableRoom {
       this.broadcast();
     });
     this.insuranceWait = null;
+    this.insuranceOpen = false;
     if (!this.alive(gen)) return;
+
+    // Drain takes that were mid-debit when the window closed.
+    for (let i = 0; i < 100 && this.insurancePending > 0; i++) {
+      await this.delay(25);
+      if (!this.alive(gen)) return;
+    }
 
     for (const seat of this.seats) {
       if (!seat?.hands.length) continue;
@@ -752,7 +765,8 @@ export class TableRoom {
   }
 
   private maybeFinishInsuranceEarly() {
-    if (this.phase !== "insurance") return;
+    if (this.phase !== "insurance" || !this.insuranceOpen) return;
+    if (this.insurancePending > 0) return;
     const active = this.seats.filter((s) => s && s.hands.length > 0) as SeatState[];
     if (active.length === 0) return;
     if (!active.every((s) => s.insuranceResolved)) return;
@@ -766,17 +780,27 @@ export class TableRoom {
   }
 
   async takeInsurance(userId: string): Promise<string | null> {
-    if (this.phase !== "insurance") return "Not insurance phase";
+    if (this.phase !== "insurance" || !this.insuranceOpen) {
+      return "Not insurance phase";
+    }
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";
     const seat = this.seats[seatIdx]!;
     if (!seat.hands.length) return "Not in round";
     if (seat.insuranceResolved || seat.insuranceCents > 0) return "Already decided";
-    const mainBet = seat.hands[0].betCents;
+    const mainBet = seat.hands[0]!.betCents;
     const cost = Math.floor(mainBet / 2);
     if (cost < 1) return "Invalid";
+
+    this.insurancePending += 1;
     try {
       const bal = await debitCents(userId, cost);
+      // Window closed while debiting — only keep the stake if we still own this take.
+      if (this.phase !== "insurance") {
+        const refunded = await creditCents(userId, cost);
+        this.cb.onWalletUpdate(userId, refunded);
+        return "Insurance closed";
+      }
       this.cb.onWalletUpdate(userId, bal);
       seat.insuranceCents = cost;
       seat.insuranceResolved = true;
@@ -786,6 +810,9 @@ export class TableRoom {
     } catch (err) {
       if (err instanceof InsufficientFundsError) return "Insufficient funds";
       throw err;
+    } finally {
+      this.insurancePending = Math.max(0, this.insurancePending - 1);
+      this.maybeFinishInsuranceEarly();
     }
   }
 
@@ -802,20 +829,29 @@ export class TableRoom {
     return null;
   }
 
+  /**
+   * Dealer blackjack: insurance pays 2:1 → credit 3× stake (stake back + 2× win).
+   * Main bet is already locked; with insurance the round nets to even on the main wager.
+   */
+  private async payInsuranceWins(gen: number): Promise<void> {
+    if (this.dealer.cards[0]?.rank !== "A") return;
+    if (!isBlackjack(this.dealer.cards)) return;
+
+    for (const seat of this.seats) {
+      if (!seat || seat.insuranceCents <= 0) continue;
+      if (isDebugSeatUser(seat.userId)) continue;
+      const payout = seat.insuranceCents * 3;
+      const bal = await creditCents(seat.userId, payout);
+      if (!this.alive(gen)) return;
+      this.cb.onWalletUpdate(seat.userId, bal);
+    }
+  }
+
   private async afterInsuranceOrSkip(gen: number) {
     const dealerBj = isBlackjack(this.dealer.cards);
 
-    if (this.dealer.cards[0]?.rank === "A") {
-      for (const seat of this.seats) {
-        if (!seat || seat.insuranceCents <= 0) continue;
-        if (dealerBj) {
-          const payout = seat.insuranceCents * 3;
-          const bal = await creditCents(seat.userId, payout);
-          if (!this.alive(gen)) return;
-          this.cb.onWalletUpdate(seat.userId, bal);
-        }
-      }
-    }
+    await this.payInsuranceWins(gen);
+    if (!this.alive(gen)) return;
 
     if (dealerBj) {
       this.dealer.holeRevealed = true;
