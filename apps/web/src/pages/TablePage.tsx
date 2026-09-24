@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import type { PublicSeat, TablePhase, TableSpinState } from "@neon21/shared";
 import { MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
@@ -840,6 +840,16 @@ export function TablePage() {
         <div className="table-toolbar-top">
           <h1 className="page-title table-title">{tableState?.name ?? "Table"}</h1>
           <div className="table-toolbar-actions">
+            <Link
+              to="/jackpot"
+              className="table-pot"
+              title="House jackpot"
+            >
+              <span className="table-pot-label">Pot</span>
+              <span className="table-pot-value">
+                {formatCents(jackpotTakeCents)}
+              </span>
+            </Link>
             {tableState != null && (
               <span className="table-spectators" title="Spectators">
                 <svg

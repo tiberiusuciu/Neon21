@@ -1141,6 +1141,45 @@ h3 {
   font-weight: 600;
 }
 
+.table-pot {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  margin-right: 0.2rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid color-mix(in srgb, var(--line) 85%, transparent);
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+  transition:
+    border-color 0.2s var(--ease),
+    background 0.2s var(--ease);
+}
+
+.table-pot:hover,
+.table-pot:focus-visible {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface));
+  outline: none;
+}
+
+.table-pot-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.table-pot-value {
+  font-family: var(--font-money);
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+
 .table-spectators-icon {
   flex-shrink: 0;
   opacity: 0.85;
