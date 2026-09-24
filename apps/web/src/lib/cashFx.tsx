@@ -82,8 +82,8 @@ type CashFxApi = {
 
 const CashFxContext = createContext<CashFxApi | null>(null);
 
-const CONFETTI_COLORS = ["#7cffb2", "#f0c674", "#fff", "#7ab8ff", "#ff8fab", "#ffd24a"];
-const FIREWORK_COLORS = ["#ff4d6d", "#f0c674", "#7cffb2", "#7ab8ff", "#fff", "#ff8fab"];
+const CONFETTI_COLORS = ["#f0c674", "#ffe9a8", "#e8c76a", "#fff6c8", "#d4a84a", "#7cffb2"];
+const FIREWORK_COLORS = ["#f0c674", "#ffe9a8", "#ff4d6d", "#7cffb2", "#fff", "#e8c76a"];
 
 export function winTierFor(cents: number): WinTier {
   if (cents >= 50_000) return "mega";

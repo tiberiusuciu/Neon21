@@ -251,14 +251,17 @@ h3 {
 }
 
 .balance-pulse {
-  color: var(--accent);
+  color: #e8c76a;
+  text-shadow: 0 0 12px color-mix(in srgb, #e8c76a 42%, transparent);
 }
 
 .balance-pulse-medium,
 .balance-pulse-big,
 .balance-pulse-mega,
 .balance-pulse-jackpot {
-  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);
+  text-shadow:
+    0 0 14px color-mix(in srgb, #f0c674 55%, transparent),
+    0 0 28px color-mix(in srgb, #d4a84a 28%, transparent);
 }
 
 .balance-pulse-mega,
@@ -266,9 +269,16 @@ h3 {
   font-weight: 800;
 }
 
-.balance-pulse-jackpot {
+.balance-pulse-big,
+.balance-pulse-mega {
   color: #f0c674;
-  text-shadow: 0 0 18px color-mix(in srgb, #f0c674 60%, transparent);
+}
+
+.balance-pulse-jackpot {
+  color: #ffe9a8;
+  text-shadow:
+    0 0 16px color-mix(in srgb, #f0c674 65%, transparent),
+    0 0 32px color-mix(in srgb, #e8c76a 35%, transparent);
 }
 
 .balance-spend {
@@ -285,8 +295,13 @@ h3 {
   color: #f0c674;
 }
 
+.balance-pulse .balance-lerp-up,
+.balance-pulse .balance-lerp-down {
+  color: inherit;
+}
+
 .balance-lerp-up {
-  color: var(--accent);
+  color: #e8c76a;
   transition: color 0.15s var(--ease);
 }
 
@@ -3050,8 +3065,10 @@ h3 {
   font-weight: 800;
   font-size: 1.35rem;
   letter-spacing: -0.02em;
-  color: var(--accent);
-  text-shadow: 0 2px 18px color-mix(in srgb, #000 45%, transparent);
+  color: #f0c674;
+  text-shadow:
+    0 0 14px color-mix(in srgb, #f0c674 45%, transparent),
+    0 2px 18px color-mix(in srgb, #000 45%, transparent);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
