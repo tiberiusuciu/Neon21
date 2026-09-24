@@ -665,6 +665,112 @@ h3 {
   max-width: 28rem;
 }
 
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.settings-page-head {
+  width: 100%;
+  max-width: 26rem;
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.settings-page-head .page-title {
+  margin-bottom: 0.2rem;
+}
+
+.settings-page-head .page-sub {
+  margin-bottom: 1.25rem;
+}
+
+.settings-card {
+  width: 100%;
+  max-width: 26rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.15rem 0;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--fg) 4%, transparent),
+    0 12px 28px color-mix(in srgb, var(--fg) 5%, transparent);
+  overflow: hidden;
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 1.15rem 1.25rem 1.25rem;
+}
+
+.settings-section + .settings-section {
+  border-top: 1px solid var(--line);
+}
+
+.settings-section-title {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.settings-section-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.settings-theme {
+  align-self: stretch;
+  display: flex;
+  width: 100%;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.settings-theme button {
+  flex: 1;
+  text-transform: capitalize;
+}
+
+.settings-name-form {
+  gap: 0.75rem;
+  margin: 0.15rem 0 0;
+}
+
+.settings-name-form .form-actions {
+  margin: 0;
+  justify-content: flex-end;
+}
+
+.settings-section-danger {
+  padding-top: 0.95rem;
+  padding-bottom: 1rem;
+  background: color-mix(in srgb, var(--danger) 5%, transparent);
+}
+
+.settings-sign-out {
+  align-self: stretch;
+  color: var(--danger) !important;
+  border-color: color-mix(in srgb, var(--danger) 28%, transparent) !important;
+}
+
+.settings-sign-out:hover:not(:disabled),
+.settings-sign-out:focus-visible:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 12%, transparent) !important;
+  border-color: color-mix(in srgb, var(--danger) 45%, transparent) !important;
+}
+
+
 .admin-search {
   flex-direction: row;
   align-items: end;

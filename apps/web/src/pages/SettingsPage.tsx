@@ -37,19 +37,23 @@ export function SettingsPage() {
 
   return (
     <motion.div
+      className="settings-page"
       initial={{ y: 8 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <h1 className="page-title">Settings</h1>
-      <p className="page-sub">Appearance and account.</p>
+      <header className="settings-page-head">
+        <h1 className="page-title">Settings</h1>
+        <p className="page-sub">Appearance and account.</p>
+      </header>
 
-      <div className="settings-block">
-        <div>
-          <p className="muted" style={{ margin: "0 0 0.5rem", fontSize: "0.85rem" }}>
-            Theme
+      <div className="settings-card">
+        <section className="settings-section">
+          <h2 className="settings-section-title">Appearance</h2>
+          <p className="settings-section-hint">
+            Choose how Neon21 looks on this device.
           </p>
-          <div className="segmented" role="group" aria-label="Theme">
+          <div className="segmented settings-theme" role="group" aria-label="Theme">
             {MODES.map((mode) => (
               <button
                 key={mode}
@@ -61,48 +65,50 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
-        </div>
+        </section>
 
         {user && (
-          <form className="form" onSubmit={onSaveName}>
-            <div className="field">
-              <label htmlFor="settings-name">Display name</label>
-              <input
-                id="settings-name"
-                type="text"
-                autoComplete="nickname"
-                required
-                maxLength={100}
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
-            <p className="muted" style={{ margin: 0, fontSize: "0.9rem" }}>
-              {user.email}
-            </p>
-            <div className="form-actions">
-              <button
-                type="submit"
-                className="btn btn-ghost"
-                disabled={busy || name.trim() === user.name}
-              >
-                {busy ? "Saving…" : "Save name"}
-              </button>
-            </div>
-          </form>
+          <section className="settings-section">
+            <h2 className="settings-section-title">Account</h2>
+            <p className="settings-section-hint">{user.email}</p>
+            <form className="form settings-name-form" onSubmit={onSaveName}>
+              <div className="field">
+                <label htmlFor="settings-name">Display name</label>
+                <input
+                  id="settings-name"
+                  type="text"
+                  autoComplete="nickname"
+                  required
+                  maxLength={100}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+              <div className="form-actions">
+                <button
+                  type="submit"
+                  className="btn"
+                  disabled={busy || name.trim() === user.name}
+                >
+                  {busy ? "Saving…" : "Save name"}
+                </button>
+              </div>
+            </form>
+          </section>
         )}
 
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={{ alignSelf: "flex-start" }}
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-        >
-          Sign out
-        </button>
+        <section className="settings-section settings-section-danger">
+          <button
+            type="button"
+            className="btn btn-ghost settings-sign-out"
+            onClick={() => {
+              logout();
+              navigate("/login");
+            }}
+          >
+            Sign out
+          </button>
+        </section>
       </div>
     </motion.div>
   );
