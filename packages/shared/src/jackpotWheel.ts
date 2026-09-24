@@ -96,3 +96,16 @@ export function payoutForTile(
   if (tile.kind === "flat") return Math.min(tile.cents, availableCents);
   return Math.floor((availableCents * tile.pctBps) / 10_000);
 }
+
+/** Reconstruct wheel label from a stored claim (label is not persisted). */
+export function formatClaimLabel(
+  kind: string,
+  pctBps: number,
+  payoutCents: number
+): string {
+  if (kind === "flat") return `$${(payoutCents / 100).toFixed(0)}`;
+  const tile = JACKPOT_WHEEL.find(
+    (t) => t.kind === "percent" && t.pctBps === pctBps
+  );
+  return tile?.label ?? `${(pctBps / 100).toFixed(1)}%`;
+}

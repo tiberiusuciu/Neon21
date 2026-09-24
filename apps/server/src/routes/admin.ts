@@ -17,9 +17,11 @@ import { getPool } from "../game/table-pool.js";
 import {
   countOpenVouchers,
   getAdjustmentsSumCents,
+  getAdminJackpotLedger,
   getAvailablePotCents,
   getClaimsSumCents,
   getGrossTakeCents,
+  getRawPotCents,
   setAvailablePotCents,
 } from "../lib/jackpot.js";
 import {
@@ -147,18 +149,28 @@ export async function adminRoutes(app: FastifyInstance) {
     { preHandler: [app.authenticate] },
     async (request, reply) => {
       if (!(await requireAdmin(request, reply))) return;
-      const [takeCents, grossTakeCents, claimsSumCents, adjustmentsCents] =
-        await Promise.all([
-          getAvailablePotCents(),
-          getGrossTakeCents(),
-          getClaimsSumCents(),
-          getAdjustmentsSumCents(),
-        ]);
-      return {
+      const [
         takeCents,
+        rawPotCents,
         grossTakeCents,
         claimsSumCents,
         adjustmentsCents,
+        ledger,
+      ] = await Promise.all([
+        getAvailablePotCents(),
+        getRawPotCents(),
+        getGrossTakeCents(),
+        getClaimsSumCents(),
+        getAdjustmentsSumCents(),
+        getAdminJackpotLedger(80),
+      ]);
+      return {
+        takeCents,
+        rawPotCents,
+        grossTakeCents,
+        claimsSumCents,
+        adjustmentsCents,
+        ledger,
       };
     }
   );

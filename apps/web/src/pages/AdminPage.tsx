@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import type {
   AdminHandHistoryResponse,
   AdminHandOutcome,
+  AdminJackpotLedgerEntry,
   AdminJackpotResponse,
   AdminUserRow,
   GoldenHourPublic,
@@ -27,6 +28,30 @@ function handTag(h: AdminHandOutcome): { text: string; cls: string } {
   if (h.resultCents > 0) return { text: "Win", cls: "tag-win" };
   if (h.resultCents < 0) return { text: "Loss", cls: "tag-loss" };
   return { text: "Push", cls: "tag-push" };
+}
+
+function ledgerTag(e: AdminJackpotLedgerEntry): { text: string; cls: string } {
+  if (e.kind === "claim") return { text: "Claim", cls: "tag-loss" };
+  if (e.kind === "take") return { text: "Take", cls: "tag-win" };
+  return { text: "Adj", cls: "tag-push" };
+}
+
+function ledgerDetail(e: AdminJackpotLedgerEntry): string {
+  if (e.kind === "claim") {
+    const who = e.userName ?? "?";
+    const tile = e.label ?? "?";
+    const table = e.tableName ? ` · ${e.tableName}` : "";
+    const before =
+      e.potBeforeCents != null ? ` · pot was ${formatCents(e.potBeforeCents)}` : "";
+    return `${who} hit ${tile}${table}${before}`;
+  }
+  if (e.kind === "take") {
+    const who = e.userName ?? "player";
+    const loss =
+      e.lossCents != null ? ` from ${formatCents(e.lossCents)} loss` : "";
+    return `${who}${loss}`;
+  }
+  return e.note?.trim() || "admin adjustment";
 }
 
 function formatHandTime(iso: string): string {
@@ -486,6 +511,13 @@ export function AdminPage() {
           <>
             <p style={{ margin: "0 0 0.35rem" }}>
               Available <strong>{formatCents(jackpot.takeCents)}</strong>
+              {jackpot.rawPotCents < 0 && (
+                <span className="muted">
+                  {" "}
+                  (raw {formatCents(jackpot.rawPotCents)} — claims exceeded
+                  funding)
+                </span>
+              )}
             </p>
             <p
               className="muted"
@@ -516,6 +548,50 @@ export function AdminPage() {
                 {settingJackpot ? "Saving…" : "Set pot"}
               </button>
             </form>
+
+            <div className="admin-jackpot-ledger">
+              <h3 className="admin-section-title">Vault ledger</h3>
+              <p
+                className="muted"
+                style={{ margin: "0 0 0.65rem", fontSize: "0.8rem" }}
+              >
+                Take = 5% of each loss · Claim = spin payout · Adj = admin set
+              </p>
+              {jackpot.ledger.length === 0 ? (
+                <p className="muted">No vault activity yet.</p>
+              ) : (
+                <ul className="admin-hand-list admin-ledger-list">
+                  {jackpot.ledger.map((e) => {
+                    const tag = ledgerTag(e);
+                    const pnlCls =
+                      e.deltaCents > 0
+                        ? "admin-hand-win"
+                        : e.deltaCents < 0
+                          ? "admin-hand-loss"
+                          : "admin-hand-push";
+                    return (
+                      <li key={e.id} className="admin-hand-row admin-ledger-row">
+                        <span
+                          className={`stats-tag admin-hand-tag ${tag.cls}`}
+                        >
+                          {tag.text}
+                        </span>
+                        <span className={`admin-hand-pnl ${pnlCls}`}>
+                          {e.deltaCents > 0 ? "+" : ""}
+                          {formatCents(e.deltaCents)}
+                        </span>
+                        <span className="muted admin-hand-bet admin-ledger-detail">
+                          {ledgerDetail(e)}
+                        </span>
+                        <span className="muted admin-hand-time">
+                          {formatHandTime(e.createdAt)}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </>
         ) : (
           <p className="muted">Could not load jackpot.</p>

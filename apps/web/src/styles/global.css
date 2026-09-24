@@ -645,7 +645,31 @@ h3 {
 
 .admin-jackpot {
   margin-bottom: 1.5rem;
-  max-width: 36rem;
+  max-width: 42rem;
+}
+
+.admin-jackpot-ledger {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+}
+
+.admin-ledger-list {
+  max-height: 28rem;
+}
+
+.admin-ledger-row {
+  grid-template-columns: 3.2rem 4.5rem minmax(0, 1fr);
+}
+
+.admin-ledger-row .admin-hand-time {
+  grid-column: 2 / -1;
+}
+
+.admin-ledger-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-section-title {

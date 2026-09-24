@@ -85,11 +85,37 @@ export type AdminResetStatsResponse = z.infer<
   typeof AdminResetStatsResponseSchema
 >;
 
+/** Admin vault ledger row: loss take (+), spin claim (−), or admin adjustment. */
+export const AdminJackpotLedgerEntrySchema = z.object({
+  id: z.string(),
+  kind: z.enum(["take", "claim", "adjustment"]),
+  deltaCents: z.number().int(),
+  createdAt: z.string(),
+  /** Loss take: player whose loss funded the vault. */
+  userName: z.string().optional(),
+  /** Claim: wheel label e.g. "100%" / "$25". */
+  label: z.string().optional(),
+  pctBps: z.number().int().optional(),
+  payoutCents: z.number().int().optional(),
+  potBeforeCents: z.number().int().optional(),
+  tableName: z.string().optional(),
+  /** Adjustment note (e.g. admin email). */
+  note: z.string().nullable().optional(),
+  /** Absolute player loss that produced this take (before 5%). */
+  lossCents: z.number().int().optional(),
+});
+export type AdminJackpotLedgerEntry = z.infer<
+  typeof AdminJackpotLedgerEntrySchema
+>;
+
 export const AdminJackpotResponseSchema = z.object({
   takeCents: z.number().int().nonnegative(),
+  /** Unclamped ledger (can be negative if claims exceeded funding). */
+  rawPotCents: z.number().int(),
   grossTakeCents: z.number().int(),
   claimsSumCents: z.number().int().nonnegative(),
   adjustmentsCents: z.number().int(),
+  ledger: z.array(AdminJackpotLedgerEntrySchema),
 });
 export type AdminJackpotResponse = z.infer<typeof AdminJackpotResponseSchema>;
 

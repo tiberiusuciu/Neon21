@@ -1,3 +1,5 @@
+import type { AdminJackpotLedgerEntry } from "@neon21/shared";
+import { formatClaimLabel } from "@neon21/shared";
 import { prisma } from "./prisma.js";
 import { env } from "../env.js";
 
@@ -183,4 +185,88 @@ export async function listRecentClaims(limit = 40) {
     orderBy: { createdAt: "desc" },
     take: limit,
   });
+}
+
+export async function listRecentAdjustments(limit = 40) {
+  return prisma.jackpotAdjustment.findMany({
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+}
+
+/** Recent loss rows that contributed ≥1¢ take (5% of |result|). */
+export async function listRecentTakeOutcomes(limit = 80) {
+  const epoch = jackpotStartsAt();
+  return prisma.handOutcome.findMany({
+    where: {
+      createdAt: { gte: epoch },
+      resultCents: { lt: 0 },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit * 3,
+    select: {
+      id: true,
+      resultCents: true,
+      createdAt: true,
+      user: { select: { name: true } },
+    },
+  });
+}
+
+/** Merged newest-first vault history for admin audit. */
+export async function getAdminJackpotLedger(
+  limit = 80
+): Promise<AdminJackpotLedgerEntry[]> {
+  const [claims, adjustments, outcomes] = await Promise.all([
+    listRecentClaims(limit),
+    listRecentAdjustments(limit),
+    listRecentTakeOutcomes(limit),
+  ]);
+
+  const entries: AdminJackpotLedgerEntry[] = [];
+
+  for (const c of claims) {
+    entries.push({
+      id: `claim:${c.id}`,
+      kind: "claim",
+      deltaCents: -c.payoutCents,
+      createdAt: c.createdAt.toISOString(),
+      userName: c.userName,
+      label: formatClaimLabel(c.kind, c.pctBps, c.payoutCents),
+      pctBps: c.pctBps,
+      payoutCents: c.payoutCents,
+      potBeforeCents: c.potBeforeCents,
+      tableName: c.tableName,
+    });
+  }
+
+  for (const a of adjustments) {
+    entries.push({
+      id: `adj:${a.id}`,
+      kind: "adjustment",
+      deltaCents: a.deltaCents,
+      createdAt: a.createdAt.toISOString(),
+      note: a.note,
+    });
+  }
+
+  for (const o of outcomes) {
+    const lossAbs = -o.resultCents;
+    const take = jackpotTakeFromLosses(lossAbs);
+    if (take <= 0) continue;
+    entries.push({
+      id: `take:${o.id}`,
+      kind: "take",
+      deltaCents: take,
+      createdAt: o.createdAt.toISOString(),
+      userName: o.user.name,
+      lossCents: lossAbs,
+    });
+  }
+
+  entries.sort(
+    (a, b) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+  return entries.slice(0, limit);
 }
