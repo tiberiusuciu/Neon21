@@ -38,6 +38,8 @@ export function ChipTray({
   const chips = visibleChipDenominations(balanceCents);
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
+  /** Suppress duplicate remove from contextmenu / click after a hold. */
+  const removeConsumed = useRef(false);
 
   function clearLong() {
     if (longTimer.current != null) {
@@ -54,6 +56,14 @@ export function ChipTray({
     }
     if (!canBetAnything) return;
     onAdd(cents);
+  }
+
+  function removeOnce(cents: number) {
+    if (removeConsumed.current) return;
+    if (pendingBetCents <= 0) return;
+    removeConsumed.current = true;
+    longFired.current = true;
+    onRemove(cents);
   }
 
   return (
@@ -99,10 +109,10 @@ export function ChipTray({
                 e.stopPropagation();
                 if (e.button !== 0 || removing) return;
                 longFired.current = false;
+                removeConsumed.current = false;
                 clearLong();
                 longTimer.current = window.setTimeout(() => {
-                  longFired.current = true;
-                  if (canRemove) applyChip(c, true);
+                  if (canRemove) removeOnce(c);
                 }, 380);
               }}
               onPointerUp={(e) => {
@@ -114,12 +124,14 @@ export function ChipTray({
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (canRemove) applyChip(c, true);
+                // Touch long-press often fires contextmenu after our hold timer.
+                if (canRemove) removeOnce(c);
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                if (longFired.current) {
+                if (longFired.current || removeConsumed.current) {
                   longFired.current = false;
+                  removeConsumed.current = false;
                   return;
                 }
                 applyChip(c, removing || e.shiftKey);
