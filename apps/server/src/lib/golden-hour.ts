@@ -4,6 +4,10 @@ import { prisma } from "./prisma.js";
 const ROW_ID = "golden_hour";
 export const GOLDEN_HOUR_DURATION_MS = 60 * 60 * 1000;
 const HOUR_MS = 60 * 60 * 1000;
+/** Inclusive min gap between Golden Hour windows. */
+export const GOLDEN_HOUR_COOLDOWN_MIN_MS = 4 * HOUR_MS;
+/** Inclusive max gap between Golden Hour windows. */
+export const GOLDEN_HOUR_COOLDOWN_MAX_MS = 12 * HOUR_MS;
 
 type Row = {
   id: string;
@@ -22,7 +26,12 @@ let broadcaster: Broadcaster | null = null;
 let ticking = false;
 
 function randomCooldownMs(): number {
-  return (1 + Math.floor(Math.random() * 12)) * HOUR_MS;
+  const span =
+    GOLDEN_HOUR_COOLDOWN_MAX_MS - GOLDEN_HOUR_COOLDOWN_MIN_MS + HOUR_MS;
+  const steps = Math.max(1, Math.floor(span / HOUR_MS));
+  return (
+    GOLDEN_HOUR_COOLDOWN_MIN_MS + Math.floor(Math.random() * steps) * HOUR_MS
+  );
 }
 
 function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
@@ -185,23 +194,36 @@ export function isGoldenHourActive(): boolean {
   return getGoldenHourPublic().active;
 }
 
+/** Standard win payout (no global Golden Hour multiplier). */
 export function goldenWinPayout(
   betCents: number,
   profitCents: number
 ): { resultCents: number; creditCents: number } {
-  const profit = isGoldenHourActive()
-    ? Math.floor(profitCents * 1.5)
-    : profitCents;
-  return { resultCents: profit, creditCents: betCents + profit };
+  return { resultCents: profitCents, creditCents: betCents + profitCents };
 }
 
+/** Standard loss payout (no global Golden Hour rebate). */
 export function goldenLossPayout(betCents: number): {
   resultCents: number;
   refundCents: number;
 } {
-  if (!isGoldenHourActive()) {
-    return { resultCents: -betCents, refundCents: 0 };
-  }
+  return { resultCents: -betCents, refundCents: 0 };
+}
+
+/** Per-hand Golden Hand token: 1.5× profit. */
+export function goldenHandWinPayout(
+  betCents: number,
+  profitCents: number
+): { resultCents: number; creditCents: number } {
+  const profit = Math.floor(profitCents * 1.5);
+  return { resultCents: profit, creditCents: betCents + profit };
+}
+
+/** Per-hand Golden Hand token: half loss refunded. */
+export function goldenHandLossPayout(betCents: number): {
+  resultCents: number;
+  refundCents: number;
+} {
   const loss = Math.floor(betCents / 2);
   return { resultCents: -loss, refundCents: betCents - loss };
 }

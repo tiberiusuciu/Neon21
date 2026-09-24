@@ -196,7 +196,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     const offGhStarted = onEvent(s, "golden-hour:started", (state) => {
       setGoldenHour(state);
       toastSuccess.current(
-        "Golden Hour has begun — wins ×1.5, losses halved"
+        "Golden Hour — the house treasury is vulnerable"
       );
     });
     const offGhEnded = onEvent(s, "golden-hour:ended", (state) => {

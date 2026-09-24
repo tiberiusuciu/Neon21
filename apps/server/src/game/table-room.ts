@@ -52,10 +52,13 @@ import { prisma } from "../lib/prisma.js";
 import {
   goldenLossPayout,
   goldenWinPayout,
+  isGoldenHourActive,
 } from "../lib/golden-hour.js";
 import {
   getAvailablePotCents,
   getSpinSeatProgress,
+  JACKPOT_LOSS_TAKE_BPS,
+  JACKPOT_LOSS_TAKE_BPS_GOLDEN,
   jackpotTakeFromLosses,
   maybeGrantSpinVouchers,
 } from "../lib/jackpot.js";
@@ -1196,29 +1199,39 @@ export class TableRoom {
 
   private async recordRoundStats(): Promise<void> {
     const byUser = new Map<string, HandOutcomeInput[]>();
-    let lossAbsCents = 0;
+    let deltaCents = 0;
+    const takeBps = isGoldenHourActive()
+      ? JACKPOT_LOSS_TAKE_BPS_GOLDEN
+      : JACKPOT_LOSS_TAKE_BPS;
     const dealerBj = isBlackjack(this.dealer.cards);
     for (const seat of this.seats) {
       if (!seat?.hands.length) continue;
       const batch: HandOutcomeInput[] = [];
       for (const hand of seat.hands) {
         if (hand.resultCents == null) continue;
+        const take =
+          !isDebugSeatUser(seat.userId) && hand.resultCents < 0
+            ? jackpotTakeFromLosses(-hand.resultCents, takeBps)
+            : 0;
         batch.push({
           resultCents: hand.resultCents,
           betCents: hand.betCents,
           isBlackjack: !hand.fromSplit && isBlackjack(hand.cards),
           doubled: hand.doubled,
           bust: evaluateHand(hand.cards).bust,
+          jackpotTakeCents: take,
         });
-        if (!isDebugSeatUser(seat.userId) && hand.resultCents < 0) {
-          lossAbsCents += -hand.resultCents;
-        }
+        deltaCents += take;
       }
       if (seat.insuranceCents > 0) {
         const insResult = dealerBj
           ? goldenWinPayout(seat.insuranceCents, seat.insuranceCents * 2)
               .resultCents
           : goldenLossPayout(seat.insuranceCents).resultCents;
+        const take =
+          !isDebugSeatUser(seat.userId) && insResult < 0
+            ? jackpotTakeFromLosses(-insResult, takeBps)
+            : 0;
         batch.push({
           resultCents: insResult,
           betCents: seat.insuranceCents,
@@ -1226,10 +1239,9 @@ export class TableRoom {
           doubled: false,
           bust: false,
           isInsurance: true,
+          jackpotTakeCents: take,
         });
-        if (!isDebugSeatUser(seat.userId) && insResult < 0) {
-          lossAbsCents += -insResult;
-        }
+        deltaCents += take;
       }
       if (batch.length === 0) continue;
       if (isDebugSeatUser(seat.userId)) continue;
@@ -1254,7 +1266,6 @@ export class TableRoom {
       }
     }
 
-    const deltaCents = jackpotTakeFromLosses(lossAbsCents);
     if (deltaCents > 0) {
       this.cb.onJackpotDelta(deltaCents);
     }

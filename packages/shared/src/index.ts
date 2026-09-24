@@ -66,7 +66,7 @@ export type AdminTopUpResponse = z.infer<typeof AdminTopUpResponseSchema>;
 export const AdminResetStatsBodySchema = z.discriminatedUnion("period", [
   z.object({
     period: z.literal("season"),
-    /** When true, pot shrinks by this player's 5% loss take in range. Default keeps pot. */
+    /** When true, pot shrinks by this player's stored vault take in range. Default keeps pot. */
     removeJackpotTake: z.boolean().optional(),
   }),
   z.object({
@@ -88,7 +88,7 @@ export const AdminResetStatsResponseSchema = z.object({
   period: z.enum(["season", "alltime", "custom"]),
   from: z.string().nullable(),
   to: z.string().nullable(),
-  /** 5% take from deleted losses (epoch-aware). */
+  /** Stored vault take from deleted losses (epoch-aware). */
   jackpotTakeCents: z.number().int().nonnegative(),
   /** True when that take was removed from the pot (not preserved via adjustment). */
   jackpotTakeRemoved: z.boolean(),
@@ -113,7 +113,7 @@ export const AdminJackpotLedgerEntrySchema = z.object({
   tableName: z.string().optional(),
   /** Adjustment note (e.g. admin email). */
   note: z.string().nullable().optional(),
-  /** Absolute player loss that produced this take (before 5%). */
+  /** Absolute player loss that produced this take. */
   lossCents: z.number().int().optional(),
 });
 export type AdminJackpotLedgerEntry = z.infer<
@@ -493,7 +493,7 @@ export const LeaderboardResponseSchema = z.object({
 });
 export type LeaderboardResponse = z.infer<typeof LeaderboardResponseSchema>;
 
-/** Available jackpot pot (5% of losses since epoch − spin claims). */
+/** Available jackpot pot (loss take since epoch − spin claims). */
 export const JackpotClaimEntrySchema = z.object({
   id: z.string(),
   userId: z.string(),

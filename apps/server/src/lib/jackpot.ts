@@ -8,6 +8,8 @@ export const JACKPOT_EPOCH = new Date("2026-09-23T20:40:00.000Z");
 
 /** Share of player losses (hand + insurance) that funds the vault. */
 export const JACKPOT_LOSS_TAKE_BPS = 500; // 5%
+/** Vault take during Golden Hour (Heist). */
+export const JACKPOT_LOSS_TAKE_BPS_GOLDEN = 1000; // 10%
 
 export function jackpotStartsAt(): Date {
   const raw = env.JACKPOT_STARTS_AT?.trim();
@@ -16,27 +18,26 @@ export function jackpotStartsAt(): Date {
   return Number.isNaN(d.getTime()) ? JACKPOT_EPOCH : d;
 }
 
-/** Cents contributed to the vault from a batch of absolute losses. */
-export function jackpotTakeFromLosses(lossAbsCents: number): number {
-  if (lossAbsCents <= 0) return 0;
-  return Math.floor((lossAbsCents * JACKPOT_LOSS_TAKE_BPS) / 10_000);
+/** Cents contributed to the vault from absolute losses at the given take rate. */
+export function jackpotTakeFromLosses(
+  lossAbsCents: number,
+  bps: number = JACKPOT_LOSS_TAKE_BPS
+): number {
+  if (lossAbsCents <= 0 || bps <= 0) return 0;
+  return Math.floor((lossAbsCents * bps) / 10_000);
 }
 
 /**
- * Gross vault funding = 5% of all player losses since epoch.
+ * Gross vault funding = sum of per-outcome jackpotTakeCents since epoch.
  * Player wins never reduce this; only JackpotClaim payouts do.
  */
 export async function getGrossTakeCents(): Promise<number> {
   const epoch = jackpotStartsAt();
   const agg = await prisma.handOutcome.aggregate({
-    where: {
-      createdAt: { gte: epoch },
-      resultCents: { lt: 0 },
-    },
-    _sum: { resultCents: true },
+    where: { createdAt: { gte: epoch } },
+    _sum: { jackpotTakeCents: true },
   });
-  const lossAbs = -(agg._sum.resultCents ?? 0);
-  return jackpotTakeFromLosses(lossAbs);
+  return agg._sum.jackpotTakeCents ?? 0;
 }
 
 export async function getClaimsSumCents(): Promise<number> {
@@ -190,19 +191,20 @@ export async function listRecentAdjustments(limit = 40) {
   });
 }
 
-/** Recent loss rows that contributed ≥1¢ take (5% of |result|). */
+/** Recent outcomes that contributed ≥1¢ vault take. */
 export async function listRecentTakeOutcomes(limit = 80) {
   const epoch = jackpotStartsAt();
   return prisma.handOutcome.findMany({
     where: {
       createdAt: { gte: epoch },
-      resultCents: { lt: 0 },
+      jackpotTakeCents: { gt: 0 },
     },
     orderBy: { createdAt: "desc" },
-    take: limit * 3,
+    take: limit,
     select: {
       id: true,
       resultCents: true,
+      jackpotTakeCents: true,
       createdAt: true,
       user: { select: { name: true } },
     },
@@ -244,21 +246,14 @@ export async function getAdminJackpotLedger(
     note: a.note,
   }));
 
-  const takeEntries: AdminJackpotLedgerEntry[] = [];
-  for (const o of outcomes) {
-    const lossAbs = -o.resultCents;
-    const take = jackpotTakeFromLosses(lossAbs);
-    if (take <= 0) continue;
-    takeEntries.push({
-      id: `take:${o.id}`,
-      kind: "take",
-      deltaCents: take,
-      createdAt: o.createdAt.toISOString(),
-      userName: o.user.name,
-      lossCents: lossAbs,
-    });
-    if (takeEntries.length >= takeCap) break;
-  }
+  const takeEntries: AdminJackpotLedgerEntry[] = outcomes.map((o) => ({
+    id: `take:${o.id}`,
+    kind: "take" as const,
+    deltaCents: o.jackpotTakeCents,
+    createdAt: o.createdAt.toISOString(),
+    userName: o.user.name,
+    lossCents: o.resultCents < 0 ? -o.resultCents : 0,
+  }));
 
   const reserved = claimEntries.length + adjEntries.length;
   const takeSlots = Math.max(0, limit - reserved);

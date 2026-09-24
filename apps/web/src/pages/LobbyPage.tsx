@@ -60,11 +60,11 @@ export function LobbyPage() {
   let goldenLabel: string | null = null;
   if (goldenHour && !goldenHour.disabled) {
     if (goldenHour.active && goldenHour.activeUntil != null) {
-      goldenLabel = `Golden Hour live — ends in ${formatCountdown(
+      goldenLabel = `Heist live — ends in ${formatCountdown(
         Math.max(0, goldenHour.activeUntil - now)
       )}`;
     } else if (goldenHour.nextStartsAt != null) {
-      goldenLabel = `Golden Hour in ${formatCountdown(
+      goldenLabel = `Next heist in ${formatCountdown(
         Math.max(0, goldenHour.nextStartsAt - now)
       )}`;
     }

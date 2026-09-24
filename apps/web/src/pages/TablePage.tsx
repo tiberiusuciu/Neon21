@@ -913,7 +913,7 @@ export function TablePage() {
             {goldenHour?.active && goldenHour.activeUntil != null && (
               <span
                 className="table-golden-hour"
-                title="Golden Hour — wins ×1.5, losses halved"
+                title="Golden Hour — jackpot grows faster, rebates & hand bonuses live"
               >
                 <span className="table-golden-hour-label">Golden</span>
                 <span className="table-golden-hour-time">
@@ -925,7 +925,9 @@ export function TablePage() {
             )}
             <Link
               to="/jackpot"
-              className={`table-pot${potBump ? " is-bump" : ""}`}
+              className={`table-pot${potBump ? " is-bump" : ""}${
+                potBump && goldenHour?.active ? " is-heist" : ""
+              }`}
               title="House jackpot"
             >
               <span className="table-pot-label">Pot</span>

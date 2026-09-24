@@ -90,7 +90,8 @@ function JackpotParticles({
 export function JackpotPage() {
   const { token } = useAuth();
   const toast = useToast();
-  const { socket, subscribeJackpot, unsubscribeJackpot } = useGameSocket();
+  const { socket, subscribeJackpot, unsubscribeJackpot, goldenHour } =
+    useGameSocket();
   const [takeCents, setTakeCents] = useState(0);
   const [claims, setClaims] = useState<JackpotClaimEntry[]>([]);
   const [claimsPage, setClaimsPage] = useState(0);
@@ -251,6 +252,7 @@ export function JackpotPage() {
               inHole ? "is-hole" : "",
               deltaFlash === "up" ? "is-flash-up" : "",
               deltaFlash === "down" ? "is-flash-down" : "",
+              deltaFlash === "up" && goldenHour?.active ? "is-heist" : "",
               celebrateTier > 0 ? `is-celebrate is-tier-${celebrateTier}` : "",
               `is-glow-tier-${tier}`,
             ]
@@ -319,6 +321,9 @@ export function JackpotPage() {
             <div className="jackpot-readout">
               <div className="jackpot-hero-label">
                 House jackpot
+                {goldenHour?.active && (
+                  <span className="jackpot-heist-tag"> Heist</span>
+                )}
                 {previewCents != null && (
                   <span className="jackpot-preview-tag"> preview</span>
                 )}
@@ -329,7 +334,9 @@ export function JackpotPage() {
               <p className="jackpot-hero-hint">
                 {inHole
                   ? "The vault is empty"
-                  : "Grows with play · shrinks when someone spins"}
+                  : goldenHour?.active
+                    ? "Treasury exposed — vault take doubled"
+                    : "Grows with play · shrinks when someone spins"}
               </p>
             </div>
           </div>

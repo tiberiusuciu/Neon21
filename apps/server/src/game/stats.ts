@@ -8,6 +8,7 @@ export type HandOutcomeInput = {
   doubled: boolean;
   bust: boolean;
   isInsurance?: boolean;
+  jackpotTakeCents?: number;
 };
 
 type OutcomeLike = {
@@ -117,6 +118,7 @@ export async function recordHandOutcomes(
         bust: h.bust,
         isInsurance: h.isInsurance ?? false,
         balanceAfterCents,
+        jackpotTakeCents: h.jackpotTakeCents ?? 0,
       })),
     });
   });

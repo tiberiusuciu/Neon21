@@ -23,7 +23,6 @@ import {
   getGrossTakeCents,
   getRawPotCents,
   jackpotStartsAt,
-  jackpotTakeFromLosses,
   setAvailablePotCents,
 } from "../lib/jackpot.js";
 import {
@@ -447,25 +446,21 @@ export async function adminRoutes(app: FastifyInstance) {
                 createdAt: { gte: from!, lt: to! },
               };
 
-        const lossCreatedAt =
-          period === "alltime"
-            ? { gte: epoch }
-            : {
-                gte: from!.getTime() > epoch.getTime() ? from! : epoch,
-                lt: to!,
-              };
-
-        const lossAgg = await tx.handOutcome.aggregate({
+        const takeAgg = await tx.handOutcome.aggregate({
           where: {
-            userId,
-            resultCents: { lt: 0 },
-            createdAt: lossCreatedAt,
+            ...outcomeWhere,
+            createdAt:
+              period === "alltime"
+                ? { gte: epoch }
+                : {
+                    gte: from!.getTime() > epoch.getTime() ? from! : epoch,
+                    lt: to!,
+                  },
+            jackpotTakeCents: { gt: 0 },
           },
-          _sum: { resultCents: true },
+          _sum: { jackpotTakeCents: true },
         });
-        const jackpotTakeCents = jackpotTakeFromLosses(
-          -(lossAgg._sum.resultCents ?? 0)
-        );
+        const jackpotTakeCents = takeAgg._sum.jackpotTakeCents ?? 0;
 
         if (!removeJackpotTake && jackpotTakeCents > 0) {
           await tx.jackpotAdjustment.create({

@@ -44,10 +44,13 @@ model HandOutcome {
   isInsurance      Boolean  @default(false)
   /** Wallet balance after this outcome settled (null on legacy rows). */
   balanceAfterCents Int?
+  /** Cents contributed to the jackpot vault from this outcome (0 if win/push). */
+  jackpotTakeCents Int @default(0)
   createdAt        DateTime @default(now())
 
   @@index([userId, createdAt])
   @@index([userId, isBlackjack, createdAt])
+  @@index([createdAt, jackpotTakeCents])
 }
 
 model SpinVoucher {

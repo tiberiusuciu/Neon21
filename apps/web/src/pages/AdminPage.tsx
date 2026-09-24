@@ -483,7 +483,7 @@ export function AdminPage() {
               className="muted"
               style={{ margin: "0 0 0.75rem", fontSize: "0.8rem" }}
             >
-              Wins ×1.5 profit · losses halved · 1h windows · random 1–12h gap
+              Wins ×1.5 / half-loss only via Golden Hands · vault take 10% · 1h windows · random 4–12h gap
             </p>
             <div className="admin-golden-actions">
               <button
