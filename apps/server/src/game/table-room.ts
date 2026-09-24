@@ -516,9 +516,6 @@ export class TableRoom {
     cents: number
   ): Promise<string | null> {
     if (this.phase !== "betting") return "Not betting";
-    if (!(CHIP_DENOMINATIONS_CENTS as readonly number[]).includes(cents)) {
-      return "Invalid chip";
-    }
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";
     const seat = this.seats[seatIdx]!;
@@ -528,7 +525,13 @@ export class TableRoom {
     const available = bal - seat.pendingBetCents;
     if (available <= 0) return "Insufficient funds";
 
-    // Chip fits → add chip. Chip too big → all-in with remaining balance.
+    const isDenom = (CHIP_DENOMINATIONS_CENTS as readonly number[]).includes(
+      cents
+    );
+    const isAllInExact = cents === available;
+    if (!isDenom && !isAllInExact) return "Invalid chip";
+
+    // Chip fits → add chip. Oversized / exact remaining → all-in.
     const add = cents <= available ? cents : available;
 
     if (seat.pendingBetCents === 0 && add < MIN_BET_CENTS) {

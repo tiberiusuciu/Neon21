@@ -223,17 +223,35 @@ export const ClaimResponseSchema = z.object({
 export type ClaimResponse = z.infer<typeof ClaimResponseSchema>;
 
 export const CHIP_DENOMINATIONS_CENTS = [
-  500, 1000, 2500, 5000, 10000, 50000, 100000,
+  500, // $5
+  1000, // $10
+  2500, // $25
+  5000, // $50
+  10000, // $100
+  50000, // $500
+  100000, // $1k
+  1_000_000, // $10k
+  10_000_000, // $100k
 ] as const;
 export type ChipDenominationCents = (typeof CHIP_DENOMINATIONS_CENTS)[number];
 
-/** Big chips only appear once bankroll can use them. */
+/** Always show small chips; mid/high tiers unlock once bankroll can cover them. */
 export function visibleChipDenominations(
   balanceCents: number
 ): ChipDenominationCents[] {
   return CHIP_DENOMINATIONS_CENTS.filter(
     (c) => c <= 10_000 || balanceCents >= c
   );
+}
+
+/** Compact chip face label ($10k → "10k"). */
+export function chipFaceLabel(cents: number): string {
+  const dollars = cents / 100;
+  if (dollars >= 1000) {
+    const k = dollars / 1000;
+    return Number.isInteger(k) ? `${k}k` : `${k}k`;
+  }
+  return String(dollars);
 }
 
 export const MIN_BET_CENTS = 500;

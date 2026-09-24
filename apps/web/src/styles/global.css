@@ -3086,6 +3086,42 @@ h3 {
   color: #f5e6c0;
 }
 
+.chip-btn-mega {
+  border-color: color-mix(in srgb, #c89bff 65%, var(--line));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, #f0d8ff 22%, var(--bg-elevated)),
+    color-mix(in srgb, #8b4dff 18%, var(--bg-elevated))
+  );
+  color: #f5e8ff;
+  box-shadow: 0 0 10px color-mix(in srgb, #a86cff 28%, transparent);
+}
+
+.chip-btn-allin-dedicated {
+  min-width: 3.1rem;
+  border-color: color-mix(in srgb, var(--accent) 75%, var(--line));
+  background: linear-gradient(
+    165deg,
+    color-mix(in srgb, var(--accent) 35%, var(--bg-elevated)),
+    color-mix(in srgb, var(--accent) 12%, var(--bg-elevated))
+  );
+  color: var(--btn-fg);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  flex-direction: column;
+  gap: 0.05rem;
+  padding: 0.35rem 0.4rem;
+}
+
+.chip-btn-allin-dedicated .chip-allin-amt {
+  font-size: 0.55rem;
+  font-weight: 700;
+  opacity: 0.85;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .chip-allin-tag {
   position: absolute;
   top: -0.35rem;

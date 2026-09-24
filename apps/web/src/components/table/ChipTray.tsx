@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   MIN_BET_CENTS,
+  chipFaceLabel,
   visibleChipDenominations,
 } from "@neon21/shared";
 import { formatCents } from "../../lib/format";
@@ -16,7 +17,7 @@ type Props = {
   onReuse: () => void;
 };
 
-const CHIP_KEYS = ["Q", "W", "E", "R", "T", "Y", "U"] as const;
+const CHIP_KEYS = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O"] as const;
 
 export function ChipTray({
   pendingBetCents,
@@ -36,9 +37,10 @@ export function ChipTray({
   const canReuse =
     lastBetCents >= MIN_BET_CENTS && lastBetCents <= balanceCents;
   const chips = visibleChipDenominations(balanceCents);
+  const showAllIn =
+    !removing && canBetAnything && remaining > 0;
   const longTimer = useRef<number | null>(null);
   const longFired = useRef(false);
-  /** Suppress duplicate remove from contextmenu / click after a hold. */
   const removeConsumed = useRef(false);
 
   function clearLong() {
@@ -97,7 +99,7 @@ export function ChipTray({
                 disabled ? "chip-btn-disabled" : "",
                 allIn ? "chip-btn-allin" : "",
                 removing ? "chip-btn-remove" : "",
-                c >= 50_000 ? "chip-btn-high" : "",
+                c >= 1_000_000 ? "chip-btn-mega" : c >= 50_000 ? "chip-btn-high" : "",
               ]
                 .filter(Boolean)
                 .join(" ")}
@@ -105,7 +107,6 @@ export function ChipTray({
               whileHover={!disabled ? { y: -2 } : undefined}
               disabled={disabled}
               onPointerDown={(e) => {
-                // Keep drawer drag from stealing chip taps.
                 e.stopPropagation();
                 if (e.button !== 0 || removing) return;
                 longFired.current = false;
@@ -124,7 +125,6 @@ export function ChipTray({
               onContextMenu={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                // Touch long-press often fires contextmenu after our hold timer.
                 if (canRemove) removeOnce(c);
               }}
               onClick={(e) => {
@@ -148,13 +148,30 @@ export function ChipTray({
             >
               <span>
                 {removing ? "−" : ""}
-                {c / 100}
+                {chipFaceLabel(c)}
               </span>
               {allIn && <span className="chip-allin-tag">all in</span>}
               {!removing && <kbd className="kbd chip-kbd">{keyLabel}</kbd>}
             </motion.button>
           );
         })}
+        {showAllIn && (
+          <motion.button
+            type="button"
+            className="chip-btn chip-btn-allin-dedicated"
+            whileTap={{ scale: 0.88 }}
+            whileHover={{ y: -2 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAdd(remaining);
+            }}
+            title={`All in ${formatCents(remaining)} (A)`}
+          >
+            <span>ALL</span>
+            <span className="chip-allin-amt">{formatCents(remaining)}</span>
+            <kbd className="kbd chip-kbd">A</kbd>
+          </motion.button>
+        )}
       </div>
       <div className="chip-actions">
         <motion.button

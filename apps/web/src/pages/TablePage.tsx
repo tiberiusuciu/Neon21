@@ -842,6 +842,7 @@ export function TablePage() {
     canSit: !seated,
     emptySeatIndexes,
     balanceCents,
+    pendingBetCents: mySeat?.pendingBetCents ?? 0,
     onHit: hit,
     onStand: stand,
     onDouble: double,
@@ -872,7 +873,7 @@ export function TablePage() {
       return `${parts.join(" · ")}${suffix} · ${z}`;
     }
     if (showInsurance) return `Y / T Take · N Decline · ${z}`;
-    if (showBet) return `Q–T chips · C Clear · D Reuse · ${z}`;
+    if (showBet) return `Q–O chips · A All-in · C Clear · D Reuse · ${z}`;
     if (!seated) return `1–7 Sit · ${z}`;
     return z;
   }, [showActions, showPreActions, showInsurance, showBet, seated, canSplit]);

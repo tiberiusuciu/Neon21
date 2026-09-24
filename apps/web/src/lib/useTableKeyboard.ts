@@ -13,6 +13,7 @@ type Args = {
   canSit: boolean;
   emptySeatIndexes: number[];
   balanceCents: number;
+  pendingBetCents?: number;
   onHit: () => void;
   onStand: () => void;
   onDouble: () => void;
@@ -49,6 +50,7 @@ export function useTableKeyboard({
   canSit,
   emptySeatIndexes,
   balanceCents,
+  pendingBetCents = 0,
   onHit,
   onStand,
   onDouble,
@@ -81,7 +83,7 @@ export function useTableKeyboard({
       }
 
       if (showBet) {
-        const chipIdx = "qwertyu".indexOf(key);
+        const chipIdx = "qwertyuio".indexOf(key);
         if (chipIdx >= 0) {
           const chips = visibleChipDenominations(balanceCents);
           const cents = chips[chipIdx];
@@ -89,6 +91,14 @@ export function useTableKeyboard({
             e.preventDefault();
             if (e.shiftKey) onRemoveBet(cents);
             else onAddBet(cents);
+          }
+          return;
+        }
+        if (key === "a" && !e.shiftKey) {
+          const remaining = Math.max(0, balanceCents - pendingBetCents);
+          if (remaining > 0) {
+            e.preventDefault();
+            onAddBet(remaining);
           }
           return;
         }
@@ -180,6 +190,7 @@ export function useTableKeyboard({
     canSit,
     emptySeatIndexes,
     balanceCents,
+    pendingBetCents,
     onHit,
     onStand,
     onDouble,
