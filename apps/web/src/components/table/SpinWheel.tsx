@@ -260,6 +260,14 @@ export function SpinWheel({
       style={{ ["--spin-i" as string]: String(intensity) } as CSSProperties}
     >
       <div className="seat-spin-bloom" aria-hidden />
+      {spin.potBeforeCents != null && (
+        <div className="seat-spin-pot">
+          <span className="seat-spin-pot-label">Pot</span>
+          <span className="seat-spin-pot-value">
+            {formatCents(spin.potBeforeCents)}
+          </span>
+        </div>
+      )}
       <div className="seat-spin-stage">
         {spin.phase === "offer" && (
           <svg

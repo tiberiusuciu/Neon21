@@ -1257,6 +1257,7 @@ export class TableRoom {
       phase: "offer",
       remainingBettingMs: remaining,
       offerEndsAt,
+      potBeforeCents: available,
     };
     this.broadcast();
     const gen = this.generation;
