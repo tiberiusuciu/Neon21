@@ -3038,23 +3038,46 @@ h3 {
 
 .chip-golden-progress {
   display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.2rem 0.45rem;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, #e8c76a 40%, transparent);
-  background: color-mix(in srgb, #c9a227 12%, transparent);
+  align-items: baseline;
+  gap: 0.28rem;
+  margin-left: 0.45rem;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
   font-size: 0.72rem;
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: #e8c76a;
+  letter-spacing: 0.02em;
+  color: color-mix(in srgb, #e8c76a 72%, var(--muted));
   white-space: nowrap;
+  line-height: inherit;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.chip-golden-progress::before {
+  content: "·";
+  margin-right: 0.05rem;
+  opacity: 0.55;
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .chip-golden-progress-label {
-  opacity: 0.7;
-  font-size: 0.65rem;
-  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.55;
+  color: inherit;
+}
+
+.chip-golden-progress-value {
+  font-weight: 650;
 }
 
 .seat-golden-hand .seat-bet-aura {

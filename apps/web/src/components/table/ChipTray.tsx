@@ -91,6 +91,19 @@ export function ChipTray({
           {" "}
           · available {formatCents(remaining)}
         </span>
+        <span
+          className="chip-golden-progress"
+          role="status"
+          aria-live="polite"
+          aria-label={`${goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
+        >
+          <span className="chip-golden-progress-label" aria-hidden>
+            GH
+          </span>
+          <span className="chip-golden-progress-value">
+            {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+          </span>
+        </span>
       </motion.div>
       <div className="chip-row">
         {chips.map((c, i) => {
@@ -183,13 +196,6 @@ export function ChipTray({
         )}
       </div>
       <div className="chip-actions">
-        <span
-          className="chip-golden-progress"
-          title={`Golden Hour hands toward next Golden Hand (${GOLDEN_HANDS_PER_HANDS} hands = 1 token)`}
-        >
-          <span className="chip-golden-progress-label">GH</span>
-          {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
-        </span>
         {(goldenHandArmed || goldenHands > 0) && onToggleGoldenHand && (
           <motion.button
             type="button"
