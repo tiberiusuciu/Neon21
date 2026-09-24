@@ -237,6 +237,7 @@ export function SeatBjMeter({
       {Array.from({ length: PIP_COUNT }, (_, i) => {
         const on = i < lit;
         const fx = pipFx[i] ?? "idle";
+        const celebrating = fx === "celebrate" || burst;
         const cls = [
           "seat-bj-pip",
           on || fx === "clear" || fx === "celebrate" || fx === "wave"
@@ -254,7 +255,26 @@ export function SeatBjMeter({
             key={i}
             className={cls}
             style={{ ["--wave-i" as string]: i } as CSSProperties}
-          />
+          >
+            {celebrating && (
+              <span className="seat-bj-pip-spark" aria-hidden>
+                {Array.from({ length: 7 }, (_, j) => (
+                  <i
+                    key={j}
+                    style={
+                      {
+                        ["--i"]: j,
+                        ["--a"]: `${(j / 7) * 360 + i * 17 + (j % 3) * 9}deg`,
+                        ["--d"]: `${6 + (j % 4) * 3.5}px`,
+                        ["--s"]: `${1.2 + (j % 3) * 0.45}px`,
+                        ["--del"]: `${j * 28 + i * 12}ms`,
+                      } as CSSProperties
+                    }
+                  />
+                ))}
+              </span>
+            )}
+          </span>
         );
       })}
       {vouchers > 0 && (
@@ -262,23 +282,6 @@ export function SeatBjMeter({
           className={`seat-bj-voucher${voucherBump ? " is-bump" : ""}`}
         >
           ×{vouchers}
-        </span>
-      )}
-      {burst && (
-        <span className="seat-bj-burst" aria-hidden>
-          {Array.from({ length: 12 }, (_, i) => (
-            <i
-              key={i}
-              style={
-                {
-                  ["--i"]: i,
-                  ["--a"]: `${(i / 12) * 360 + (i % 3) * 11}deg`,
-                  ["--d"]: `${8 + (i % 4) * 4}px`,
-                  ["--s"]: `${1.4 + (i % 3) * 0.5}px`,
-                } as CSSProperties
-              }
-            />
-          ))}
         </span>
       )}
     </div>
