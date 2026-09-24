@@ -5418,11 +5418,6 @@ h3 {
   box-shadow: 0 0 6px color-mix(in srgb, var(--accent) 55%, transparent);
 }
 
-.seat-bj-meter.has-voucher .seat-bj-pip.is-lit {
-  background: #f0c674;
-  box-shadow: 0 0 8px color-mix(in srgb, #f0c674 60%, transparent);
-}
-
 .seat-bj-voucher {
   margin-left: 4px;
   font-size: 0.65rem;

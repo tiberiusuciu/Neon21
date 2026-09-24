@@ -149,16 +149,17 @@ export function SeatView({
             {isYou && <span className="seat-you-tag">(You)</span>}
             {!seat.connected && <span className="seat-away-tag">away</span>}
           </div>
-          {(seat.bjTowardSpin != null || (seat.spinVouchers ?? 0) > 0) && (
+          {seat.pendingBetCents <= 0 &&
+            (seat.bjTowardSpin != null || (seat.spinVouchers ?? 0) > 0) && (
             <div
-              className={`seat-bj-meter${(seat.spinVouchers ?? 0) > 0 ? " has-voucher" : ""}`}
-              title="Blackjacks toward jackpot spin"
-              aria-label={`${seat.bjTowardSpin ?? 0} of 5 blackjacks toward spin`}
+              className="seat-bj-meter"
+              title="Blackjacks toward next jackpot spin"
+              aria-label={`${seat.bjTowardSpin ?? 0} of 5 blackjacks toward next spin`}
             >
               {Array.from({ length: 5 }, (_, i) => (
                 <span
                   key={i}
-                  className={`seat-bj-pip${i < (seat.bjTowardSpin ?? 0) || (seat.spinVouchers ?? 0) > 0 ? " is-lit" : ""}`}
+                  className={`seat-bj-pip${i < (seat.bjTowardSpin ?? 0) ? " is-lit" : ""}`}
                 />
               ))}
               {(seat.spinVouchers ?? 0) > 0 && (
