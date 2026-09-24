@@ -3,6 +3,7 @@ import { useGameSocket } from "../lib/SocketProvider";
 
 const PARTICLE_COUNT = 18;
 
+/** Edge particles while Golden Hour is live. Banner lives in page chrome (table/lobby). */
 export function GoldenHourFx() {
   const { goldenHour } = useGameSocket();
   const active = goldenHour?.active === true;
@@ -24,9 +25,6 @@ export function GoldenHourFx() {
 
   return (
     <div className="golden-hour-fx" aria-hidden>
-      <div className="golden-hour-fx-banner">
-        Golden Hour — wins ×1.5 · losses halved
-      </div>
       {particles.map((p) => (
         <span
           key={p.id}

@@ -85,6 +85,7 @@ export function TablePage() {
     sendChat,
     subscribeJackpot,
     unsubscribeJackpot,
+    goldenHour,
   } = useGameSocket();
   const { playWin, playSpend, playPush } = useCashFx();
   const { ref: feltMeasureRef, height: feltHeight } = useAutoHeight<HTMLDivElement>();
@@ -485,10 +486,12 @@ export function TablePage() {
   }, [turnLocked]);
 
   useEffect(() => {
-    if (endsAt == null && pauseEndsAt == null) return;
+    const goldenActive =
+      goldenHour?.active === true && goldenHour.activeUntil != null;
+    if (endsAt == null && pauseEndsAt == null && !goldenActive) return;
     const id = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(id);
-  }, [endsAt, pauseEndsAt]);
+  }, [endsAt, pauseEndsAt, goldenHour?.active, goldenHour?.activeUntil]);
 
   const [turnBudgetMs, setTurnBudgetMs] = useState(25_000);
   const [betBudgetMs, setBetBudgetMs] = useState(40_000);
@@ -860,6 +863,19 @@ export function TablePage() {
         <div className="table-toolbar-top">
           <h1 className="page-title table-title">{tableState?.name ?? "Table"}</h1>
           <div className="table-toolbar-actions">
+            {goldenHour?.active && goldenHour.activeUntil != null && (
+              <span
+                className="table-golden-hour"
+                title="Golden Hour — wins ×1.5, losses halved"
+              >
+                <span className="table-golden-hour-label">Golden</span>
+                <span className="table-golden-hour-time">
+                  {formatCountdown(
+                    Math.max(0, goldenHour.activeUntil - now)
+                  )}
+                </span>
+              </span>
+            )}
             <Link
               to="/jackpot"
               className="table-pot"

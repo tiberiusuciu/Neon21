@@ -1182,6 +1182,38 @@ h3 {
     background 0.2s var(--ease);
 }
 
+.table-golden-hour {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.28rem;
+  margin-right: 0.15rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, #c9a227 50%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #c9a227 18%, transparent),
+    color-mix(in srgb, #8a6a20 10%, transparent)
+  );
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table-golden-hour-label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, #c9a227 88%, var(--fg));
+}
+
+.table-golden-hour-time {
+  font-family: var(--font-money);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e8c76a;
+}
+
 .table-pot:hover,
 .table-pot:focus-visible {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
@@ -1222,6 +1254,18 @@ h3 {
   .table-toolbar-actions .btn {
     padding-left: 0.55rem;
     padding-right: 0.55rem;
+  }
+
+  .table-golden-hour-label {
+    font-size: 0;
+    letter-spacing: 0;
+  }
+
+  .table-golden-hour-label::before {
+    content: "GH";
+    font-size: 0.62rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
   }
 }
 
@@ -6751,24 +6795,6 @@ h3 {
   overflow: hidden;
 }
 
-.golden-hour-fx-banner {
-  position: absolute;
-  top: calc(var(--header-h) + 6px);
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 0.28rem 0.85rem;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, #f5e6a8 92%, #fff);
-  background: color-mix(in srgb, #3a2e10 78%, transparent);
-  border: 1px solid color-mix(in srgb, #c9a227 45%, transparent);
-  box-shadow: 0 0 16px color-mix(in srgb, #c9a227 25%, transparent);
-  white-space: nowrap;
-}
-
 .golden-hour-particle {
   position: absolute;
   border-radius: 50%;
@@ -6818,10 +6844,6 @@ h3 {
 @media (prefers-reduced-motion: reduce) {
   .golden-hour-particle {
     display: none;
-  }
-
-  .golden-hour-fx-banner {
-    animation: none;
   }
 }
 
