@@ -94,6 +94,10 @@ export function TablePage() {
   const balanceCents = wallet?.balanceCents ?? user?.balanceCents ?? 0;
   const [jackpotTakeCents, setJackpotTakeCents] = useState(0);
   const jackpotTakeRef = useRef(0);
+  const [potBump, setPotBump] = useState<{ id: number; cents: number } | null>(
+    null
+  );
+  const potBumpId = useRef(0);
 
   const [now, setNow] = useState(() => Date.now());
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -146,6 +150,10 @@ export function TablePage() {
       const next = Math.max(0, jackpotTakeRef.current + deltaCents);
       jackpotTakeRef.current = next;
       setJackpotTakeCents(next);
+      if (deltaCents > 0) {
+        potBumpId.current += 1;
+        setPotBump({ id: potBumpId.current, cents: deltaCents });
+      }
     });
     const offClaim = onEvent(socket, "jackpot:claim", (claim) => {
       const next = Math.max(0, jackpotTakeRef.current - claim.payoutCents);
@@ -157,6 +165,12 @@ export function TablePage() {
       offClaim();
     };
   }, [socket]);
+
+  useEffect(() => {
+    if (!potBump) return;
+    const t = window.setTimeout(() => setPotBump(null), 1400);
+    return () => window.clearTimeout(t);
+  }, [potBump]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -911,13 +925,34 @@ export function TablePage() {
             )}
             <Link
               to="/jackpot"
-              className="table-pot"
+              className={`table-pot${potBump ? " is-bump" : ""}`}
               title="House jackpot"
             >
+              <svg
+                className="table-pot-icon"
+                viewBox="0 0 24 24"
+                width="13"
+                height="13"
+                aria-hidden
+              >
+                <path
+                  fill="currentColor"
+                  d="M7 9V7a5 5 0 0 1 10 0v2h1a2 2 0 0 1 2 2v2c0 3.87-3.13 7-7 7h0c-3.87 0-7-3.13-7-7v-2a2 2 0 0 1 2-2h1Zm2-2v2h6V7a3 3 0 0 0-6 0Zm-2 5v1c0 2.76 2.24 5 5 5s5-2.24 5-5v-1H7Z"
+                />
+              </svg>
               <span className="table-pot-label">Pot</span>
               <span className="table-pot-value">
                 {formatCents(jackpotTakeCents)}
               </span>
+              {potBump && (
+                <span
+                  key={potBump.id}
+                  className="table-pot-delta"
+                  onAnimationEnd={() => setPotBump(null)}
+                >
+                  +{formatCents(potBump.cents)}
+                </span>
+              )}
             </Link>
             {tableState != null && (
               <span className="table-spectators" title="Spectators">

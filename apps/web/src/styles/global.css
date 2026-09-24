@@ -1605,8 +1605,9 @@ h3 {
 }
 
 .table-pot {
+  position: relative;
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 0.3rem;
   margin-right: 0.2rem;
   padding: 0.2rem 0.45rem;
@@ -1618,6 +1619,50 @@ h3 {
   transition:
     border-color 0.2s var(--ease),
     background 0.2s var(--ease);
+}
+
+.table-pot-icon {
+  display: none;
+  flex-shrink: 0;
+  color: var(--muted);
+  opacity: 0.95;
+}
+
+.table-pot.is-bump .table-pot-value {
+  color: color-mix(in srgb, #5ecf8a 72%, var(--fg));
+  transition: color 0.2s var(--ease);
+}
+
+.table-pot-delta {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.15rem);
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-family: var(--font-money);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, #5ecf8a 78%, transparent);
+  white-space: nowrap;
+  animation: table-pot-delta-rise 1.35s var(--ease) forwards;
+}
+
+@keyframes table-pot-delta-rise {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(0.25rem);
+  }
+  12% {
+    opacity: 0.85;
+  }
+  70% {
+    opacity: 0.55;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-0.85rem);
+  }
 }
 
 .table-golden-hour {
@@ -1744,6 +1789,17 @@ h3 {
 
   .table-pot-label {
     display: none;
+  }
+
+  .table-pot-icon {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .table-pot-delta {
+    animation: none;
+    opacity: 0.7;
   }
 }
 
