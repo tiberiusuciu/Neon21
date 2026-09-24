@@ -594,6 +594,17 @@ export function TablePage() {
       if (isMyTurn && splitHandCount > 0 && activeHandOrdinal != null) {
         return `Hand ${activeHandOrdinal} of ${splitHandCount} — act now`;
       }
+      if (isMyTurn && queuedAction) {
+        const label =
+          queuedAction === "hit"
+            ? "Hit"
+            : queuedAction === "stand"
+              ? "Hold"
+              : queuedAction === "double"
+                ? "Double"
+                : "Split";
+        return `Playing queued ${label}…`;
+      }
       if (isMyTurn) return "Your turn — act now";
       if (activeSeatName) {
         const ai = tableState?.activeSeatIndex;
@@ -629,6 +640,7 @@ export function TablePage() {
     tableState,
     showInsurance,
     hasSeatedPlayers,
+    queuedAction,
   ]);
 
   const showBet = seated && phase === "betting";
@@ -637,12 +649,12 @@ export function TablePage() {
     () =>
       getPhaseBannerCopy({
         phase,
-        isYourTurn: isMyTurn && !isHolding,
+        isYourTurn: isMyTurn && !isHolding && !queuedAction,
         isHolding,
         needsInsurance: showInsurance,
         hasSeatedPlayers,
       }),
-    [phase, isMyTurn, isHolding, showInsurance, hasSeatedPlayers]
+    [phase, isMyTurn, isHolding, showInsurance, hasSeatedPlayers, queuedAction]
   );
   const actionHand = canAct ? myActiveHand : queueHand;
   const canDouble = useMemo(() => {
@@ -939,7 +951,7 @@ export function TablePage() {
 
       <PhaseBanner
         phase={phase}
-        isYourTurn={isMyTurn && !isHolding}
+        isYourTurn={isMyTurn && !isHolding && !queuedAction}
         isHolding={isHolding}
         needsInsurance={showInsurance}
         hasSeatedPlayers={hasSeatedPlayers}

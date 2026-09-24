@@ -138,10 +138,17 @@ export function ActionBar({
       return;
     }
     if (panelKey === "hold" || panelKey === "bust") return;
+    // Queued action auto-fires on turn — keep peek, don't flash "your turn" open.
+    if (panelKey === "act" && queuedAction) {
+      clearCollapseTimer();
+      peekPinnedRef.current = true;
+      setDrawer("peek");
+      return;
+    }
     clearCollapseTimer();
     peekPinnedRef.current = false;
     setDrawer("open");
-  }, [panelKey]);
+  }, [panelKey, queuedAction]);
 
   // Insurance decision peeks the drawer; when play resumes the panel may
   // still be "queue", so force-open if they can still pick a pre-action.
@@ -157,6 +164,11 @@ export function ActionBar({
       return;
     }
     if (showActions) {
+      if (queuedAction) {
+        peekPinnedRef.current = true;
+        setDrawer("peek");
+        return;
+      }
       clearCollapseTimer();
       peekPinnedRef.current = false;
       setDrawer("open");
@@ -471,10 +483,14 @@ export function ActionBar({
           : "Tap to choose"
         : bannerHint ?? "Plays when it’s your turn";
   } else if (showActions) {
-    peekTitle = bannerTitle ?? "Your move";
+    peekTitle = queuedAction
+      ? `Playing ${QUEUE_LABEL[queuedAction]}`
+      : bannerTitle ?? "Your move";
     peekHint =
       drawer === "peek"
-        ? "Tap to change"
+        ? queuedAction
+          ? "Auto-playing"
+          : "Tap to change"
         : bannerHint ?? "What will you do?";
   }
 
