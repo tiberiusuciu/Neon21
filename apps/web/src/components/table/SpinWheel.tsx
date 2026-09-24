@@ -58,6 +58,7 @@ function buildBands(p: string) {
     fill: string;
     jackpot: boolean;
     onePct: boolean;
+    label: string | null;
   }[] = [];
   for (let i = 0; i < JACKPOT_WHEEL.length; i++) {
     const t = JACKPOT_WHEEL[i]!;
@@ -65,6 +66,7 @@ function buildBands(p: string) {
     const last = bands[bands.length - 1];
     if (last && last.fill === fill) {
       last.end = i + 1;
+      if (last.label != null && last.label !== t.label) last.label = null;
     } else {
       bands.push({
         start: i,
@@ -72,6 +74,7 @@ function buildBands(p: string) {
         fill,
         jackpot: i === 0,
         onePct: isOnePercent(t),
+        label: t.label,
       });
     }
   }
@@ -90,9 +93,27 @@ function bandPath(start: number, end: number): string {
   return `M ${CX} ${CY} L ${x0} ${y0} A ${R} ${R} 0 ${large} 1 ${x1} ${y1} Z`;
 }
 
-function WheelFace({ prefix }: { prefix: string }) {
-  const wedges = useMemo(() => {
-    return buildBands(prefix).map((b) => {
+function bandLabelPos(start: number, end: number) {
+  const midDeg = -90 + ((start + end) / 2) * SEG;
+  const a = (midDeg * Math.PI) / 180;
+  const lr = 37;
+  return {
+    x: CX + lr * Math.cos(a),
+    y: CY + lr * Math.sin(a),
+    rot: midDeg + 90,
+  };
+}
+
+function WheelFace({
+  prefix,
+  showLabels = false,
+}: {
+  prefix: string;
+  showLabels?: boolean;
+}) {
+  const { wedges, labels } = useMemo(() => {
+    const bands = buildBands(prefix);
+    const wedges = bands.map((b) => {
       const span = b.end - b.start;
       const stroke =
         span >= 3 ? "rgba(200, 220, 255, 0.22)" : "rgba(160, 180, 220, 0.1)";
@@ -113,7 +134,48 @@ function WheelFace({ prefix }: { prefix: string }) {
         />
       );
     });
-  }, [prefix]);
+    const labels = showLabels
+      ? bands
+          .filter((b) => {
+            if (!b.label) return false;
+            if (b.jackpot || b.onePct || b.end - b.start >= 2) return true;
+            const t = JACKPOT_WHEEL[b.start]!;
+            return t.kind === "percent" && t.pctBps >= 200;
+          })
+          .map((b) => {
+            const span = b.end - b.start;
+            const { x, y, rot } = bandLabelPos(b.start, b.end);
+            const fontSize = b.jackpot
+              ? 3.4
+              : span >= 6
+                ? 2.8
+                : span >= 3
+                  ? 2.3
+                  : 1.9;
+            return (
+              <text
+                key={`lbl-${b.start}-${b.end}`}
+                x={x}
+                y={y}
+                fill="#f5ecd8"
+                stroke="#0a0812"
+                strokeWidth={0.55}
+                paintOrder="stroke"
+                fontSize={fontSize}
+                fontWeight={700}
+                textAnchor="middle"
+                dominantBaseline="middle"
+                transform={`rotate(${rot} ${x} ${y})`}
+                className="seat-spin-wedge-label"
+                style={{ pointerEvents: "none" }}
+              >
+                {b.label}
+              </text>
+            );
+          })
+      : null;
+    return { wedges, labels };
+  }, [prefix, showLabels]);
 
   return (
     <svg className="seat-spin-svg" viewBox="0 0 100 100" aria-hidden>
@@ -173,6 +235,7 @@ function WheelFace({ prefix }: { prefix: string }) {
       </defs>
       <circle cx={CX} cy={CY} r={R} fill="#16141f" />
       {wedges}
+      {labels}
     </svg>
   );
 }
@@ -359,7 +422,7 @@ export function SpinWheel({
           <div className="seat-spin-loupe-frame" />
           <div className="seat-spin-loupe-zoom">
             <div className="seat-spin-loupe-disc" style={discStyle}>
-              <WheelFace prefix="seat-spin-loupe" />
+              <WheelFace prefix="seat-spin-loupe" showLabels />
             </div>
           </div>
           <div className="seat-spin-loupe-hairline" />

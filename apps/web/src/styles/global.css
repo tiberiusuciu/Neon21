@@ -6026,12 +6026,12 @@ h3 {
 .seat-spin-loupe {
   pointer-events: none;
   position: absolute;
-  top: -14px;
+  top: -18px;
   left: 50%;
   z-index: 7;
-  width: 62px;
-  height: 44px;
-  margin-left: -31px;
+  width: 68px;
+  height: 78px;
+  margin-left: -34px;
   overflow: hidden;
   border-radius: 8px;
   background: #0a0812;
@@ -6081,16 +6081,16 @@ h3 {
 .seat-spin-loupe-zoom {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 18%;
   width: 0;
   height: 0;
-  transform: scale(3.35);
+  transform: scale(4.6);
 }
 
 .seat-spin-loupe-disc {
   position: absolute;
   left: -62px;
-  top: -10px;
+  top: -8px;
   width: 124px;
   height: 124px;
   border-radius: 50%;
@@ -6098,6 +6098,13 @@ h3 {
   will-change: transform;
   transition-property: transform;
   background: #16141f;
+}
+
+.seat-spin-wedge-label {
+  paint-order: stroke fill;
+  stroke: color-mix(in srgb, #0a0812 75%, transparent);
+  stroke-width: 0.55px;
+  letter-spacing: 0.02em;
 }
 
 .seat-spin-loupe-hairline {
