@@ -110,6 +110,8 @@ export function SettingsPage() {
           </button>
         </section>
       </div>
+
+      <p className="settings-cred">Made by Tiberiu Suciu</p>
     </motion.div>
   );
 }

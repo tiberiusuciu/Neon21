@@ -796,6 +796,14 @@ h3 {
   border-color: color-mix(in srgb, var(--danger) 45%, transparent) !important;
 }
 
+.settings-cred {
+  margin: 1.75rem 0 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--muted) 72%, transparent);
+  text-align: center;
+}
+
 
 .admin-search {
   flex-direction: row;
