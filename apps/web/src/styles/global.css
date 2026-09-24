@@ -10,19 +10,42 @@
   --max: 960px;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   interpolate-size: allow-keywords;
+  /* Felt defaults = dark table (overridden in light) */
+  --felt: #143528;
+  --felt-mid: #0e241c;
+  --felt-deep: #122a20;
+  --felt-glow: #1a4a32;
+  --felt-fg: #e6f2ea;
+  --felt-seat: #06140f;
+  --felt-outline: color-mix(in srgb, var(--accent) 28%, transparent);
+  --felt-inset: color-mix(in srgb, #000 25%, transparent);
+  --felt-outline-w: 1px;
+  --fx-spark: #fffef8;
+  --fx-spark-2: #ffe9a8;
 }
 
 html[data-theme="light"],
 html:not([data-theme]) {
   --accent: #0f8f5c;
-  --bg: #eef1ee;
-  --bg-elevated: #f7f9f7;
+  --bg: #e8ece9;
+  --bg-elevated: #f4f7f5;
   --fg: #121412;
-  --muted: #5c6560;
-  --line: color-mix(in srgb, #121412 12%, transparent);
-  --surface: color-mix(in srgb, #ffffff 72%, transparent);
-  --danger: #c43c3c;
-  --glow: color-mix(in srgb, var(--accent) 28%, transparent);
+  --muted: #4a534e;
+  --line: color-mix(in srgb, #121412 14%, transparent);
+  --surface: color-mix(in srgb, #ffffff 82%, transparent);
+  --danger: #b83232;
+  --glow: color-mix(in srgb, var(--accent) 32%, transparent);
+  --felt: #f9fbfa;
+  --felt-mid: #f1f5f2;
+  --felt-deep: #e8efe9;
+  --felt-glow: #d5e4da;
+  --felt-fg: #121412;
+  --felt-seat: #ffffff;
+  --felt-outline: #0a3d28;
+  --felt-inset: color-mix(in srgb, #0a3d28 22%, transparent);
+  --felt-outline-w: 2.5px;
+  --fx-spark: #0a3d28;
+  --fx-spark-2: #0f8f5c;
   color-scheme: light;
 }
 
@@ -55,14 +78,25 @@ html[data-theme="dark"] {
 @media (prefers-color-scheme: light) {
   html[data-theme="system"] {
     --accent: #0f8f5c;
-    --bg: #eef1ee;
-    --bg-elevated: #f7f9f7;
+    --bg: #e8ece9;
+    --bg-elevated: #f4f7f5;
     --fg: #121412;
-    --muted: #5c6560;
-    --line: color-mix(in srgb, #121412 12%, transparent);
-    --surface: color-mix(in srgb, #ffffff 72%, transparent);
-    --danger: #c43c3c;
-    --glow: color-mix(in srgb, var(--accent) 28%, transparent);
+    --muted: #4a534e;
+    --line: color-mix(in srgb, #121412 14%, transparent);
+    --surface: color-mix(in srgb, #ffffff 82%, transparent);
+    --danger: #b83232;
+    --glow: color-mix(in srgb, var(--accent) 32%, transparent);
+    --felt: #f9fbfa;
+    --felt-mid: #f1f5f2;
+    --felt-deep: #e8efe9;
+    --felt-glow: #d5e4da;
+    --felt-fg: #121412;
+    --felt-seat: #ffffff;
+    --felt-outline: #0a3d28;
+    --felt-inset: color-mix(in srgb, #0a3d28 22%, transparent);
+    --felt-outline-w: 2.5px;
+    --fx-spark: #0a3d28;
+    --fx-spark-2: #0f8f5c;
     color-scheme: light;
   }
 }
@@ -948,8 +982,8 @@ h3 {
   background: radial-gradient(
     ellipse 55% 50% at 50% 42%,
     transparent 0%,
-    color-mix(in srgb, #020805 42%, transparent) 55%,
-    color-mix(in srgb, #010403 72%, transparent) 100%
+    color-mix(in srgb, var(--fg) 12%, transparent) 55%,
+    color-mix(in srgb, var(--fg) 28%, transparent) 100%
   );
   opacity: 0.85;
   transition: opacity 0.45s var(--ease);
@@ -960,8 +994,8 @@ h3 {
   background: radial-gradient(
     ellipse 48% 44% at 50% 42%,
     transparent 0%,
-    color-mix(in srgb, #020805 55%, transparent) 48%,
-    color-mix(in srgb, #000 78%, transparent) 100%
+    color-mix(in srgb, var(--fg) 18%, transparent) 48%,
+    color-mix(in srgb, var(--fg) 38%, transparent) 100%
   );
 }
 
@@ -1017,7 +1051,7 @@ h3 {
   flex-wrap: wrap;
   gap: 0.25rem 0.4rem;
   align-items: baseline;
-  text-shadow: 0 1px 2px color-mix(in srgb, #000 55%, transparent);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--fg) 18%, transparent);
 }
 
 .table-chat-time {
@@ -1483,11 +1517,22 @@ h3 {
   position: relative;
   border-radius: 18px;
   background:
-    radial-gradient(ellipse 80% 60% at 50% 40%, color-mix(in srgb, #1a4a32 70%, transparent), transparent 70%),
-    linear-gradient(160deg, #143528 0%, #0e241c 55%, #122a20 100%);
-  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent);
-  color: #e6f2ea;
+    radial-gradient(
+      ellipse 80% 60% at 50% 40%,
+      color-mix(in srgb, var(--felt-glow) 70%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(
+      160deg,
+      var(--felt) 0%,
+      var(--felt-mid) 55%,
+      var(--felt-deep) 100%
+    );
+  border: var(--felt-outline-w) solid var(--felt-outline);
+  box-shadow:
+    inset 0 0 0 1px var(--felt-inset),
+    0 1px 0 color-mix(in srgb, var(--felt-outline) 35%, transparent);
+  color: var(--felt-fg);
   overflow: hidden;
   transition:
     box-shadow 0.35s var(--ease),
@@ -1505,32 +1550,32 @@ h3 {
 }
 
 .felt-dealer {
-  border-color: color-mix(in srgb, #f0c674 45%, transparent);
+  border-color: color-mix(in srgb, #f0c674 55%, var(--felt-outline));
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent),
+    inset 0 0 0 1px var(--felt-inset),
     0 0 28px color-mix(in srgb, #f0c674 18%, transparent);
 }
 
 .felt-insurance {
-  border-color: color-mix(in srgb, #f0c674 55%, transparent);
+  border-color: color-mix(in srgb, #f0c674 65%, var(--felt-outline));
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent),
+    inset 0 0 0 1px var(--felt-inset),
     0 0 34px color-mix(in srgb, #f0c674 24%, transparent);
 }
 
 .felt-dealing {
-  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--felt-outline));
 }
 
 .felt-your-turn {
-  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--felt-outline));
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, #000 25%, transparent),
+    inset 0 0 0 1px var(--felt-inset),
     0 0 28px color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 .felt-settle {
-  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--felt-outline));
 }
 
 .dealer-zone {
@@ -1584,7 +1629,7 @@ h3 {
   font-size: 0.72rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, #e6f2ea 55%, transparent);
+  color: color-mix(in srgb, var(--felt-fg) 55%, transparent);
   font-weight: 650;
   display: inline-flex;
   align-items: center;
@@ -1687,8 +1732,8 @@ h3 {
   min-height: 7.5rem;
   padding: 0.55rem 0.4rem 1.35rem;
   border-radius: 12px;
-  border: 1px solid color-mix(in srgb, #e6f2ea 14%, transparent);
-  background: color-mix(in srgb, #06140f 45%, transparent);
+  border: 1px solid color-mix(in srgb, var(--felt-fg) 14%, transparent);
+  background: color-mix(in srgb, var(--felt-seat) 45%, transparent);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1710,7 +1755,7 @@ h3 {
 
 .seat-you {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);
-  background: color-mix(in srgb, var(--accent) 12%, #06140f);
+  background: color-mix(in srgb, var(--accent) 12%, var(--felt-seat));
 }
 
 .seat-active {
@@ -1725,7 +1770,7 @@ h3 {
   right: 0.45rem;
   height: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, #e6f2ea 14%, transparent);
+  background: color-mix(in srgb, var(--felt-fg) 14%, transparent);
   overflow: hidden;
   z-index: 2;
   pointer-events: none;
@@ -1735,7 +1780,7 @@ h3 {
   height: 100%;
   width: 100%;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 85%, #e6f2ea);
+  background: color-mix(in srgb, var(--accent) 85%, var(--felt-fg));
 }
 
 .seat-wait-timer.is-urgent .seat-wait-timer-fill {
@@ -1768,14 +1813,14 @@ h3 {
 .seat-away-tag {
   font-size: 0.65rem;
   font-weight: 600;
-  color: color-mix(in srgb, #e6f2ea 50%, transparent);
+  color: color-mix(in srgb, var(--felt-fg) 50%, transparent);
   text-transform: uppercase;
 }
 
 .seat-you-tag {
   font-size: 0.68rem;
   font-weight: 600;
-  color: color-mix(in srgb, var(--accent) 85%, #e6f2ea);
+  color: color-mix(in srgb, var(--accent) 85%, var(--felt-fg));
   opacity: 0.9;
 }
 
@@ -1794,7 +1839,7 @@ h3 {
   z-index: 3;
   font-size: 0.65rem;
   line-height: 1;
-  color: color-mix(in srgb, #e6f2ea 42%, transparent);
+  color: color-mix(in srgb, var(--felt-fg) 42%, transparent);
   pointer-events: none;
 }
 
@@ -1839,7 +1884,7 @@ h3 {
   font-weight: 750;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: color-mix(in srgb, #e6f2ea 45%, transparent);
+  color: color-mix(in srgb, var(--felt-fg) 45%, transparent);
   margin-bottom: 0.05rem;
 }
 
@@ -1858,11 +1903,11 @@ h3 {
 }
 
 .hand-waiting {
-  outline: 1px dashed color-mix(in srgb, #e6f2ea 22%, transparent);
+  outline: 1px dashed color-mix(in srgb, var(--felt-fg) 22%, transparent);
 }
 
 .hand-done {
-  outline: 1px solid color-mix(in srgb, #e6f2ea 14%, transparent);
+  outline: 1px solid color-mix(in srgb, var(--felt-fg) 14%, transparent);
   filter: saturate(0.75);
 }
 
@@ -1985,7 +2030,7 @@ h3 {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   background: color-mix(in srgb, var(--accent) 22%, transparent);
-  color: #e6f2ea;
+  color: var(--felt-fg);
 }
 
 .hand-badge-bust {
@@ -3536,8 +3581,8 @@ h3 {
 }
 
 .seat-bet-aura {
-  --aura: #7cffb2;
-  --aura-2: #b8ffe0;
+  --aura: var(--accent);
+  --aura-2: color-mix(in srgb, var(--accent) 55%, var(--felt-fg));
   --aura-glow: color-mix(in srgb, var(--aura) 32%, transparent);
   --bloom-scale: 0.85;
   --bloom-alpha: 0.18;
@@ -6153,8 +6198,8 @@ h3 {
   margin: 0.45rem auto 0.35rem;
   border-radius: 999px;
   overflow: hidden;
-  background: color-mix(in srgb, #e6f2ea 16%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #e6f2ea 12%, transparent);
+  background: color-mix(in srgb, var(--felt-fg) 16%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--felt-fg) 12%, transparent);
 }
 
 .seat-spin-timer {
@@ -6166,16 +6211,16 @@ h3 {
 }
 
 .seat-spin-timer-track {
-  stroke: color-mix(in srgb, #e6f2ea 28%, transparent);
+  stroke: color-mix(in srgb, var(--felt-fg) 28%, transparent);
   stroke-width: 4.5;
 }
 
 .seat-spin-timer-fill {
-  stroke: #7cffb2;
+  stroke: var(--accent);
   stroke-width: 4.5;
   stroke-linecap: round;
   transition: stroke-dashoffset 0.1s linear, stroke 0.25s ease;
-  filter: drop-shadow(0 0 6px color-mix(in srgb, #7cffb2 75%, transparent));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 75%, transparent));
 }
 
 .seat-spin-wheel.is-offer-urgent .seat-spin-timer-fill {
@@ -6629,9 +6674,9 @@ h3 {
   z-index: 30;
   font-size: 0.68rem !important;
   padding: 0.22rem 0.55rem !important;
-  background: color-mix(in srgb, #06140f 70%, transparent) !important;
-  border: 1px solid color-mix(in srgb, #e6f2ea 35%, transparent) !important;
-  color: #e6f2ea !important;
+  background: color-mix(in srgb, var(--felt-seat) 70%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--felt-fg) 35%, transparent) !important;
+  color: var(--felt-fg) !important;
   font-weight: 600 !important;
   pointer-events: auto;
   cursor: pointer;
@@ -7048,5 +7093,95 @@ h3 {
   .golden-hour-particle {
     display: none;
   }
+}
+
+/* —— Light mode: contrast for table FX / particles —— */
+html[data-resolved="light"] .seat {
+  border-color: color-mix(in srgb, var(--felt-outline) 42%, transparent);
+  background: color-mix(in srgb, var(--felt-seat) 90%, transparent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--felt-outline) 14%, transparent);
+}
+
+html[data-resolved="light"] .seat-you {
+  background: color-mix(in srgb, var(--accent) 10%, #fff);
+  border-color: color-mix(in srgb, var(--felt-outline) 70%, var(--accent));
+}
+
+html[data-resolved="light"] .seat-spin-edge-particles i {
+  background: radial-gradient(circle at 35% 30%, #1a9e68, #0a3d28 50%, #052818);
+  box-shadow:
+    0 0 5px color-mix(in srgb, #0f8f5c 80%, transparent),
+    0 0 10px color-mix(in srgb, #0a3d28 55%, transparent);
+}
+
+html[data-resolved="light"] .seat-spin-wheel.is-spinning .seat-spin-edge-particles i {
+  box-shadow:
+    0 0 7px color-mix(in srgb, #0f8f5c 90%, transparent),
+    0 0 14px color-mix(in srgb, #0a3d28 70%, transparent);
+}
+
+html[data-resolved="light"] .golden-hour-particle {
+  background: radial-gradient(circle at 35% 30%, #f0d060, #a07818 50%, #6a5010);
+  box-shadow: 0 0 6px color-mix(in srgb, #8a6810 55%, transparent);
+}
+
+html[data-resolved="light"] .seat-bj-burst i {
+  background: radial-gradient(circle at 35% 30%, #fffef8, #0f8f5c 45%, #0a3d28);
+  box-shadow:
+    0 0 4px color-mix(in srgb, #0f8f5c 80%, transparent),
+    0 0 10px color-mix(in srgb, #0a3d28 50%, transparent);
+}
+
+html[data-resolved="light"] .seat-bj-pip {
+  background: color-mix(in srgb, var(--felt-outline) 22%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--felt-outline) 35%, transparent);
+}
+
+html[data-resolved="light"] .jackpot-particle {
+  box-shadow:
+    0 0 5px var(--pc, #c9a227),
+    0 0 12px color-mix(in srgb, var(--pc, #c9a227) 65%, transparent),
+    0 1px 2px color-mix(in srgb, #000 22%, transparent);
+}
+
+html[data-resolved="light"] .seat-spin-jackpot-fx span {
+  background: color-mix(in srgb, var(--accent) 85%, #0a3d28);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 16px color-mix(in srgb, #0a3d28 40%, transparent);
+}
+
+html[data-resolved="light"] .seat-spin-cta-particles i {
+  background: radial-gradient(circle at 35% 30%, #fff8e0, #c9a227 45%, #6a5010);
+  box-shadow:
+    0 0 4px color-mix(in srgb, #a07818 90%, transparent),
+    0 0 8px color-mix(in srgb, #6a5010 55%, transparent);
+}
+
+html[data-resolved="light"] .cash-fx-label {
+  color: #7a5a10;
+  text-shadow:
+    0 1px 0 color-mix(in srgb, #fff 70%, transparent),
+    0 0 12px color-mix(in srgb, #c9a227 45%, transparent);
+}
+
+html[data-resolved="light"] .table-chat-name {
+  color: color-mix(in srgb, var(--accent) 92%, #000);
+}
+
+html[data-resolved="light"] .hand-badge {
+  color: #0a3d28;
+  background: color-mix(in srgb, var(--accent) 18%, #fff);
+}
+
+html[data-resolved="light"] .card-back {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      #0f5a3c,
+      #0f5a3c 4px,
+      #0a3d28 4px,
+      #0a3d28 8px
+    );
 }
 

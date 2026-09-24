@@ -82,8 +82,47 @@ type CashFxApi = {
 
 const CashFxContext = createContext<CashFxApi | null>(null);
 
-const CONFETTI_COLORS = ["#f0c674", "#ffe9a8", "#e8c76a", "#fff6c8", "#d4a84a", "#7cffb2"];
-const FIREWORK_COLORS = ["#f0c674", "#ffe9a8", "#ff4d6d", "#7cffb2", "#fff", "#e8c76a"];
+const CONFETTI_COLORS_DARK = [
+  "#f0c674",
+  "#ffe9a8",
+  "#e8c76a",
+  "#fff6c8",
+  "#d4a84a",
+  "#7cffb2",
+];
+const FIREWORK_COLORS_DARK = [
+  "#f0c674",
+  "#ffe9a8",
+  "#ff4d6d",
+  "#7cffb2",
+  "#fff",
+  "#e8c76a",
+];
+const CONFETTI_COLORS_LIGHT = [
+  "#0f8f5c",
+  "#0a3d28",
+  "#c9a227",
+  "#b83232",
+  "#1a5a9a",
+  "#6a3d8a",
+];
+const FIREWORK_COLORS_LIGHT = [
+  "#0f8f5c",
+  "#c9a227",
+  "#b83232",
+  "#1a5a9a",
+  "#0a3d28",
+  "#6a3d8a",
+];
+
+function fxPalette() {
+  const light =
+    typeof document !== "undefined" &&
+    document.documentElement.getAttribute("data-resolved") === "light";
+  return light
+    ? { confetti: CONFETTI_COLORS_LIGHT, firework: FIREWORK_COLORS_LIGHT }
+    : { confetti: CONFETTI_COLORS_DARK, firework: FIREWORK_COLORS_DARK };
+}
 
 export function winTierFor(cents: number): WinTier {
   if (cents >= 50_000) return "mega";
@@ -224,12 +263,13 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
         };
       });
 
+      const palette = fxPalette();
       const cn = reduced ? 0 : confettiCount(tier);
       const confetti: ConfettiBit[] = Array.from({ length: cn }, (_, i) => ({
         id: `c-${seq.current}-${i}`,
         x: ox + (Math.random() - 0.5) * (tier === "jackpot" ? 220 : 160),
         y: oy - 20 - Math.random() * 50,
-        color: CONFETTI_COLORS[i % CONFETTI_COLORS.length]!,
+        color: palette.confetti[i % palette.confetti.length]!,
         delay: Math.random() * (quick ? 0.12 : 0.25),
         drift: (Math.random() - 0.5) * 140,
         size: 5 + Math.random() * 7,
@@ -253,7 +293,7 @@ export function CashFxProvider({ children }: { children: ReactNode }) {
                   id: `fw-${seq.current}-${i}`,
                   x: fx,
                   y: fy,
-                  color: FIREWORK_COLORS[i % FIREWORK_COLORS.length]!,
+                  color: palette.firework[i % palette.firework.length]!,
                   delay: i * 0.06,
                   sparks,
                 };

@@ -28,8 +28,17 @@ function resolve(theme: ThemeMode): "light" | "dark" {
   return theme;
 }
 
-function applyDom(theme: ThemeMode) {
-  document.documentElement.setAttribute("data-theme", theme);
+function applyDom(theme: ThemeMode, resolvedAppearance: "light" | "dark") {
+  const root = document.documentElement;
+  root.setAttribute("data-theme", theme);
+  root.setAttribute("data-resolved", resolvedAppearance);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) {
+    meta.setAttribute(
+      "content",
+      resolvedAppearance === "light" ? "#e8ece9" : "#0a0c0b"
+    );
+  }
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -39,21 +48,32 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       ? stored
       : "system";
   });
-  const [resolved, setResolved] = useState<"light" | "dark">(() =>
-    resolve(
-      (localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "system"
-    )
-  );
+  const [resolved, setResolved] = useState<"light" | "dark">(() => {
+    const stored =
+      (localStorage.getItem(THEME_KEY) as ThemeMode | null) ?? "system";
+    const mode =
+      stored === "light" || stored === "dark" || stored === "system"
+        ? stored
+        : "system";
+    const r = resolve(mode);
+    applyDom(mode, r);
+    return r;
+  });
 
   useEffect(() => {
-    applyDom(theme);
-    setResolved(resolve(theme));
+    const next = resolve(theme);
+    setResolved(next);
+    applyDom(theme, next);
     localStorage.setItem(THEME_KEY, theme);
 
     if (theme !== "system") return;
 
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => setResolved(mq.matches ? "dark" : "light");
+    const onChange = () => {
+      const r = mq.matches ? "dark" : "light";
+      setResolved(r);
+      applyDom("system", r);
+    };
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [theme]);
