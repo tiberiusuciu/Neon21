@@ -100,6 +100,8 @@ export function TablePage() {
     null
   );
   const potBumpId = useRef(0);
+  const [rebateBump, setRebateBump] = useState(false);
+  const prevRebateCents = useRef<number | null>(null);
 
   const [now, setNow] = useState(() => Date.now());
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -173,6 +175,21 @@ export function TablePage() {
     const t = window.setTimeout(() => setPotBump(null), 1400);
     return () => window.clearTimeout(t);
   }, [potBump]);
+
+  useEffect(() => {
+    const next = goldenHourRebate?.rebateCents ?? null;
+    if (!goldenHour?.active) {
+      prevRebateCents.current = null;
+      setRebateBump(false);
+      return;
+    }
+    const prev = prevRebateCents.current;
+    prevRebateCents.current = next ?? 0;
+    if (prev == null || next == null || next <= prev) return;
+    setRebateBump(true);
+    const t = window.setTimeout(() => setRebateBump(false), 1400);
+    return () => window.clearTimeout(t);
+  }, [goldenHour?.active, goldenHourRebate?.rebateCents]);
 
   useEffect(() => {
     if (!tableId) return;
@@ -925,17 +942,22 @@ export function TablePage() {
                 </span>
               </span>
             )}
-            {goldenHour?.active && goldenHourRebate && (
+            {goldenHour?.active && (
               <span
-                className="table-golden-rebate"
+                className={`table-golden-rebate${
+                  rebateBump ? " is-bump" : ""
+                }`}
                 title="Projected net-loss rebate at end of Golden Hour"
               >
                 <span className="table-golden-rebate-label">Rebate</span>
                 <span className="table-golden-rebate-value">
-                  {formatCents(goldenHourRebate.rebateCents)}
+                  {formatCents(goldenHourRebate?.rebateCents ?? 0)}
                   <span className="table-golden-rebate-cap">
                     {" "}
-                    / {formatCents(goldenHourRebate.capCents)}
+                    /{" "}
+                    {formatCents(
+                      goldenHourRebate?.capCents ?? 500_000
+                    )}
                   </span>
                 </span>
               </span>

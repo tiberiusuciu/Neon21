@@ -1726,6 +1726,12 @@ h3 {
   font-size: 0.82rem;
   font-weight: 700;
   color: #7dffb0;
+  transition: color 0.2s var(--ease), text-shadow 0.2s var(--ease);
+}
+
+.table-golden-rebate.is-bump .table-golden-rebate-value {
+  color: #9dffc2;
+  text-shadow: 0 0 10px color-mix(in srgb, #5ecf8a 45%, transparent);
 }
 
 .table-golden-rebate-cap {

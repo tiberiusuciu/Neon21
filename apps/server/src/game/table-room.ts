@@ -1398,6 +1398,7 @@ export class TableRoom {
     }
 
     const bjJobs: Promise<void>[] = [];
+    const rebateJobs: Promise<void>[] = [];
     const ghWindow = isGoldenHourActive()
       ? getGoldenHourWindowStartedAt()
       : null;
@@ -1415,12 +1416,15 @@ export class TableRoom {
         recordHandOutcomesSafe(userId, hands);
       }
       if (ghWindow) {
-        void recordGoldenHourResults(
-          userId,
-          ghWindow,
-          hands.map((h) => h.resultCents)
-        ).catch((err) =>
-          console.error("[golden-hour] rebate track failed", userId, err)
+        rebateJobs.push(
+          recordGoldenHourResults(
+            userId,
+            ghWindow,
+            hands.map((h) => h.resultCents)
+          ).then(() => undefined)
+            .catch((err) => {
+              console.error("[golden-hour] rebate track failed", userId, err);
+            })
         );
         const played = hands.filter((h) => !h.isInsurance).length;
         if (played > 0) {
@@ -1443,6 +1447,10 @@ export class TableRoom {
             );
         }
       }
+    }
+
+    if (rebateJobs.length > 0) {
+      await Promise.all(rebateJobs);
     }
 
     if (deltaCents > 0) {
