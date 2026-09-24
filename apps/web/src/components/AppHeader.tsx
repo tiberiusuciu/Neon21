@@ -67,9 +67,6 @@ export function AppHeader() {
       <NavLink to="/lobby" onClick={() => setOpen(false)}>
         Lobby
       </NavLink>
-      <NavLink to="/stats" onClick={() => setOpen(false)}>
-        Stats
-      </NavLink>
       <NavLink to="/jackpot" onClick={() => setOpen(false)}>
         Jackpot
       </NavLink>

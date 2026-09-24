@@ -10,7 +10,6 @@ import { RegisterPage } from "./pages/RegisterPage";
 import { OnboardingNamePage } from "./pages/OnboardingNamePage";
 import { LobbyPage } from "./pages/LobbyPage";
 import { SettingsPage } from "./pages/SettingsPage";
-import { StatsPage } from "./pages/StatsPage";
 import { LeaderboardPage } from "./pages/LeaderboardPage";
 import { JackpotPage } from "./pages/JackpotPage";
 import { TablePage } from "./pages/TablePage";
@@ -36,7 +35,7 @@ function AppRoutes() {
           <Route path="/onboarding" element={<OnboardingNamePage />} />
           <Route element={<NamedRoute />}>
             <Route path="/lobby" element={<LobbyPage />} />
-            <Route path="/stats" element={<StatsPage />} />
+            <Route path="/stats" element={<Navigate to="/lobby" replace />} />
             <Route path="/jackpot" element={<JackpotPage />} />
             <Route path="/leaderboard" element={<LeaderboardPage />} />
             <Route path="/settings" element={<SettingsPage />} />
