@@ -60,6 +60,15 @@ export class TablePool {
     );
   }
 
+  /** Push updated Golden Hands inventory to seated tables. */
+  async refreshUserGoldenHands(userId: string) {
+    await Promise.all(
+      [...this.tables.values()].map((room) =>
+        room.notifyGoldenHandsGranted(userId)
+      )
+    );
+  }
+
   private createTable(): TableRoom {
     const id = randomUUID();
     const name = `Table ${this.nextNumber++}`;

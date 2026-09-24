@@ -90,6 +90,7 @@ export function AdminPage() {
   const [ghNow, setGhNow] = useState(() => Date.now());
   const [granting, setGranting] = useState(false);
   const [openVouchers, setOpenVouchers] = useState(0);
+  const [goldenHands, setGoldenHands] = useState(0);
   const [hands, setHands] = useState<AdminHandOutcome[]>([]);
   const [handsTotal, setHandsTotal] = useState(0);
   const [loadingHands, setLoadingHands] = useState(false);
@@ -145,11 +146,17 @@ export function AdminPage() {
 
   const applyHandHistory = useCallback((res: AdminHandHistoryResponse) => {
     setOpenVouchers(res.openVouchers);
+    setGoldenHands(res.goldenHands);
     setHands(res.hands);
     setHandsTotal(res.total);
     setSelected((prev) =>
       prev && prev.id === res.userId
-        ? { ...prev, balanceCents: res.balanceCents }
+        ? {
+            ...prev,
+            balanceCents: res.balanceCents,
+            openVouchers: res.openVouchers,
+            goldenHands: res.goldenHands,
+          }
         : prev
     );
   }, []);
@@ -319,12 +326,44 @@ export function AdminPage() {
     try {
       const res = await api.adminGrantVoucher(token, selected.id, { count: 1 });
       setOpenVouchers(res.openVouchers);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === selected.id
+            ? { ...u, openVouchers: res.openVouchers }
+            : u
+        )
+      );
       toast.success(
         `Granted 1 spin ticket · ${res.openVouchers} open`
       );
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to grant voucher"
+      );
+    } finally {
+      setGranting(false);
+    }
+  }
+
+  async function onGrantGoldenHands() {
+    if (!token || !selected) return;
+    setGranting(true);
+    try {
+      const res = await api.adminGrantGoldenHands(token, selected.id, {
+        count: 1,
+      });
+      setGoldenHands(res.goldenHands);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === selected.id ? { ...u, goldenHands: res.goldenHands } : u
+        )
+      );
+      toast.success(
+        `Granted 1 Golden Hand · ${res.goldenHands} held`
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to grant Golden Hand"
       );
     } finally {
       setGranting(false);
@@ -343,6 +382,7 @@ export function AdminPage() {
       setHands((prev) => [...prev, ...res.hands]);
       setHandsTotal(res.total);
       setOpenVouchers(res.openVouchers);
+      setGoldenHands(res.goldenHands);
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to load more hands"
@@ -646,7 +686,8 @@ export function AdminPage() {
                   <span className="admin-user-name">{u.name}</span>
                   <span className="muted admin-user-email">{u.email}</span>
                   <span className="admin-user-meta">
-                    {formatCents(u.balanceCents)} · {u.handsPlayed} hands
+                    {formatCents(u.balanceCents)} · {u.handsPlayed} hands ·{" "}
+                    {u.openVouchers ?? 0} spins · {u.goldenHands ?? 0} golden
                   </span>
                 </button>
               </li>
@@ -669,7 +710,8 @@ export function AdminPage() {
                   Balance {formatCents(selected.balanceCents)} · Net{" "}
                   {formatCents(selected.netProfitCents)} · {selected.handsPlayed}{" "}
                   hands · {openVouchers} spin
-                  {openVouchers === 1 ? "" : "s"}
+                  {openVouchers === 1 ? "" : "s"} · {goldenHands} Golden Hand
+                  {goldenHands === 1 ? "" : "s"}
                 </p>
               </div>
 
@@ -704,6 +746,14 @@ export function AdminPage() {
                 onClick={() => void onGrantVoucher()}
               >
                 {granting ? "Granting…" : "Grant spin ticket"}
+              </button>
+              <button
+                type="button"
+                className="btn btn-sm btn-ghost"
+                disabled={granting}
+                onClick={() => void onGrantGoldenHands()}
+              >
+                {granting ? "Granting…" : "Grant Golden Hand"}
               </button>
 
               <form className="form" onSubmit={onResetStats}>

@@ -107,9 +107,48 @@ export function AdminOpsSheet({ open, onClose }: Props) {
     try {
       const res = await api.adminGrantVoucher(token, selected.id, { count: 1 });
       toast.success(`Granted 1 spin · ${res.openVouchers} open`);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === selected.id
+            ? { ...u, openVouchers: res.openVouchers }
+            : u
+        )
+      );
+      setSelected((s) =>
+        s && s.id === selected.id
+          ? { ...s, openVouchers: res.openVouchers }
+          : s
+      );
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to grant voucher"
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onGrantGoldenHands() {
+    if (!token || !selected || busy) return;
+    setBusy(true);
+    try {
+      const res = await api.adminGrantGoldenHands(token, selected.id, {
+        count: 1,
+      });
+      toast.success(`Granted 1 Golden Hand · ${res.goldenHands} held`);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u.id === selected.id ? { ...u, goldenHands: res.goldenHands } : u
+        )
+      );
+      setSelected((s) =>
+        s && s.id === selected.id
+          ? { ...s, goldenHands: res.goldenHands }
+          : s
+      );
+    } catch (err) {
+      toast.error(
+        err instanceof ApiError ? err.message : "Failed to grant Golden Hand"
       );
     } finally {
       setBusy(false);
@@ -233,7 +272,11 @@ export function AdminOpsSheet({ open, onClose }: Props) {
                         onClick={() => setSelected(u)}
                       >
                         <span className="admin-ops-user-name">{u.name}</span>
-                        <span className="muted">{formatCents(u.balanceCents)}</span>
+                        <span className="muted">
+                          {formatCents(u.balanceCents)}
+                          {" · "}
+                          {u.openVouchers ?? 0}s / {u.goldenHands ?? 0}g
+                        </span>
                       </button>
                     </li>
                   ))}
@@ -245,6 +288,10 @@ export function AdminOpsSheet({ open, onClose }: Props) {
                       <strong>{selected.name}</strong>
                       <span className="muted">{selected.email}</span>
                       <span>{formatCents(selected.balanceCents)}</span>
+                      <span className="muted">
+                        {selected.openVouchers ?? 0} spins ·{" "}
+                        {selected.goldenHands ?? 0} golden
+                      </span>
                     </p>
 
                     <div className="admin-ops-presets">
@@ -283,6 +330,14 @@ export function AdminOpsSheet({ open, onClose }: Props) {
                       onClick={() => void onGrantVoucher()}
                     >
                       Grant spin ticket
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-ghost admin-ops-grant"
+                      disabled={busy}
+                      onClick={() => void onGrantGoldenHands()}
+                    >
+                      Grant Golden Hand
                     </button>
                   </div>
                 )}

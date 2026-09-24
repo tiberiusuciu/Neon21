@@ -71,6 +71,7 @@ type GameSocketApi = {
   debugSetBotsHold: (hold: boolean) => void;
   debugSetTimerPaused: (paused: boolean) => void;
   debugGrantVoucher: (count?: number) => void;
+  debugGrantGoldenHands: (count?: number) => void;
   debugSetSpinBias: (tileIndex: number | null) => void;
   subscribeJackpot: () => void;
   unsubscribeJackpot: () => void;
@@ -428,6 +429,13 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     },
     [socket]
   );
+  const debugGrantGoldenHands = useCallback(
+    (count = 1) => {
+      if (!socket) return;
+      emitEvent(socket, "debug:grantGoldenHands", { count });
+    },
+    [socket]
+  );
   const debugSetSpinBias = useCallback(
     (tileIndex: number | null) => {
       if (!socket) return;
@@ -475,6 +483,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       debugSetBotsHold,
       debugSetTimerPaused,
       debugGrantVoucher,
+      debugGrantGoldenHands,
       debugSetSpinBias,
       subscribeJackpot,
       unsubscribeJackpot,
@@ -518,6 +527,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       debugSetBotsHold,
       debugSetTimerPaused,
       debugGrantVoucher,
+      debugGrantGoldenHands,
       debugSetSpinBias,
       subscribeJackpot,
       unsubscribeJackpot,

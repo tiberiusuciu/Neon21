@@ -52,6 +52,7 @@ import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
 import {
   getGoldenHandsInventory,
+  grantGoldenHands,
   recordGoldenHourHandsPlayed,
   reserveGoldenHand,
   returnGoldenHand,
@@ -1999,6 +2000,19 @@ export class TableRoom {
     });
     await this.refreshSeatSpinProgress(userId);
     this.broadcast();
+    return null;
+  }
+
+  async debugGrantGoldenHands(
+    userId: string,
+    count = 1
+  ): Promise<string | null> {
+    if (isDebugSeatUser(userId)) return "Not for bots";
+    const n = Math.min(100, Math.max(1, Math.floor(count)));
+    const total = await grantGoldenHands(userId, n);
+    await this.refreshSeatGoldenHands(userId);
+    this.broadcast();
+    this.cb.onNotice(userId, `Debug: ${n} Golden Hand(s) · inventory ${total}`);
     return null;
   }
 

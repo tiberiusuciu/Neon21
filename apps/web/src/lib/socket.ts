@@ -56,6 +56,7 @@ export type ClientToServerEvents = {
   "debug:setBotsHold": (payload: { hold: boolean }) => void;
   "debug:setTimerPaused": (payload: { paused: boolean }) => void;
   "debug:grantVoucher": (payload?: { count?: number }) => void;
+  "debug:grantGoldenHands": (payload?: { count?: number }) => void;
   "debug:setSpinBias": (payload: { tileIndex: number | null }) => void;
 };
 

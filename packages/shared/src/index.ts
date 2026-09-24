@@ -38,6 +38,8 @@ export const AdminUserRowSchema = z.object({
   balanceCents: z.number().int(),
   handsPlayed: z.number().int(),
   netProfitCents: z.number().int(),
+  openVouchers: z.number().int().nonnegative().optional(),
+  goldenHands: z.number().int().nonnegative().optional(),
 });
 export type AdminUserRow = z.infer<typeof AdminUserRowSchema>;
 
@@ -164,6 +166,22 @@ export type AdminGrantVoucherResponse = z.infer<
   typeof AdminGrantVoucherResponseSchema
 >;
 
+export const AdminGrantGoldenHandsBodySchema = z.object({
+  count: z.number().int().min(1).max(100).optional().default(1),
+});
+export type AdminGrantGoldenHandsBody = z.infer<
+  typeof AdminGrantGoldenHandsBodySchema
+>;
+
+export const AdminGrantGoldenHandsResponseSchema = z.object({
+  userId: z.string(),
+  granted: z.number().int().positive(),
+  goldenHands: z.number().int().nonnegative(),
+});
+export type AdminGrantGoldenHandsResponse = z.infer<
+  typeof AdminGrantGoldenHandsResponseSchema
+>;
+
 export const GoldenHourPublicSchema = z.object({
   disabled: z.boolean(),
   active: z.boolean(),
@@ -214,6 +232,7 @@ export const AdminHandHistoryResponseSchema = z.object({
   userId: z.string(),
   balanceCents: z.number().int(),
   openVouchers: z.number().int().nonnegative(),
+  goldenHands: z.number().int().nonnegative(),
   hands: z.array(AdminHandOutcomeSchema),
   total: z.number().int().nonnegative(),
 });

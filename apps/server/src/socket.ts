@@ -618,6 +618,26 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
         if (err) socket.emit("game:error", { message: err });
       });
 
+      socket.on("debug:grantGoldenHands", async (raw) => {
+        const parsed = z
+          .object({ count: z.number().int().min(1).max(100).optional() })
+          .safeParse(raw ?? {});
+        if (!parsed.success) {
+          socket.emit("game:error", { message: "Invalid Golden Hands grant" });
+          return;
+        }
+        const room = debugRoom();
+        if (!room) {
+          socket.emit("game:error", { message: "Not at a table" });
+          return;
+        }
+        const err = await room.debugGrantGoldenHands(
+          userId,
+          parsed.data.count ?? 1
+        );
+        if (err) socket.emit("game:error", { message: err });
+      });
+
       socket.on("debug:setSpinBias", (raw) => {
         const parsed = z
           .object({

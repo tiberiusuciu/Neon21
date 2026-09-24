@@ -1,5 +1,7 @@
 import type {
   AdminGoldenHourDisableBody,
+  AdminGrantGoldenHandsBody,
+  AdminGrantGoldenHandsResponse,
   AdminGrantVoucherBody,
   AdminGrantVoucherResponse,
   AdminHandHistoryResponse,
@@ -243,6 +245,21 @@ export const api = {
   ) {
     return request<AdminGrantVoucherResponse>(
       `/admin/users/${userId}/grant-voucher`,
+      {
+        method: "POST",
+        token,
+        body: JSON.stringify(body),
+      }
+    );
+  },
+
+  adminGrantGoldenHands(
+    token: string,
+    userId: string,
+    body: AdminGrantGoldenHandsBody = { count: 1 }
+  ) {
+    return request<AdminGrantGoldenHandsResponse>(
+      `/admin/users/${userId}/grant-golden-hands`,
       {
         method: "POST",
         token,

@@ -4,6 +4,7 @@ import {
   AdminResetStatsBodySchema,
   AdminSetJackpotBodySchema,
   AdminGrantVoucherBodySchema,
+  AdminGrantGoldenHandsBodySchema,
   AdminGoldenHourDisableBodySchema,
   type AdminUserRow,
   type AdminHandOutcome,
@@ -26,6 +27,10 @@ import {
   setAvailablePotCents,
 } from "../lib/jackpot.js";
 import {
+  getGoldenHandsInventory,
+  grantGoldenHands,
+} from "../lib/golden-hands.js";
+import {
   adminEndGoldenHour,
   adminSetGoldenHourDisabled,
   adminStartGoldenHour,
@@ -39,6 +44,8 @@ function toAdminUser(u: {
   balanceCents: number;
   handsPlayed: number;
   netProfitCents: number;
+  openVouchers?: number;
+  goldenHands?: number;
 }): AdminUserRow {
   return {
     id: u.id,
@@ -47,6 +54,8 @@ function toAdminUser(u: {
     balanceCents: u.balanceCents,
     handsPlayed: u.handsPlayed,
     netProfitCents: u.netProfitCents,
+    openVouchers: u.openVouchers,
+    goldenHands: u.goldenHands,
   };
 }
 
@@ -238,10 +247,23 @@ export async function adminRoutes(app: FastifyInstance) {
           balanceCents: true,
           handsPlayed: true,
           netProfitCents: true,
+          goldenHands: true,
+          spinVouchers: {
+            where: { status: "open" },
+            select: { id: true },
+          },
         },
       });
 
-      return { users: users.map(toAdminUser) };
+      return {
+        users: users.map((u) =>
+          toAdminUser({
+            ...u,
+            openVouchers: u.spinVouchers.length,
+            goldenHands: u.goldenHands,
+          })
+        ),
+      };
     }
   );
 
@@ -269,7 +291,7 @@ export async function adminRoutes(app: FastifyInstance) {
         return reply.status(404).send({ error: "User not found" });
       }
 
-      const [total, rows, openVouchers] = await Promise.all([
+      const [total, rows, openVouchers, goldenHands] = await Promise.all([
         prisma.handOutcome.count({ where: { userId } }),
         prisma.handOutcome.findMany({
           where: { userId },
@@ -289,6 +311,7 @@ export async function adminRoutes(app: FastifyInstance) {
           },
         }),
         countOpenVouchers(userId),
+        getGoldenHandsInventory(userId),
       ]);
 
       // Reconstruct only works cleanly from offset 0 (current wallet as tip).
@@ -301,6 +324,7 @@ export async function adminRoutes(app: FastifyInstance) {
         userId,
         balanceCents: user.balanceCents,
         openVouchers,
+        goldenHands,
         total,
         hands: withBalances(rows, seedBalance),
       };
@@ -341,6 +365,38 @@ export async function adminRoutes(app: FastifyInstance) {
       }
 
       return { userId, granted, openVouchers };
+    }
+  );
+
+  app.post(
+    "/admin/users/:userId/grant-golden-hands",
+    { preHandler: [app.authenticate] },
+    async (request, reply) => {
+      if (!(await requireAdmin(request, reply))) return;
+
+      const parsed = AdminGrantGoldenHandsBodySchema.safeParse(
+        request.body ?? {}
+      );
+      if (!parsed.success) {
+        return reply.status(400).send({ error: parsed.error.flatten() });
+      }
+
+      const { userId } = request.params as { userId: string };
+      const existing = await prisma.user.findUnique({ where: { id: userId } });
+      if (!existing) {
+        return reply.status(404).send({ error: "User not found" });
+      }
+
+      const granted = parsed.data.count;
+      const goldenHands = await grantGoldenHands(userId, granted);
+
+      try {
+        await getPool().refreshUserGoldenHands(userId);
+      } catch {
+        // Socket pool not up yet — HTTP response still ok.
+      }
+
+      return { userId, granted, goldenHands };
     }
   );
 

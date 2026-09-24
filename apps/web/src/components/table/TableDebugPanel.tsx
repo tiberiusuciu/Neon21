@@ -33,6 +33,7 @@ export function TableDebugPanel() {
     debugSetBotsHold,
     debugSetTimerPaused,
     debugGrantVoucher,
+    debugGrantGoldenHands,
     debugSetSpinBias,
     tableState,
   } = useGameSocket();
@@ -220,6 +221,28 @@ export function TableDebugPanel() {
             onClick={() => {
               debugGrantVoucher(5);
               flash("+5 vouchers");
+            }}
+          >
+            +5
+          </button>
+        </div>
+        <div className="table-debug-row" style={{ marginTop: "0.35rem" }}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => {
+              debugGrantGoldenHands(1);
+              flash("Golden Hand +1");
+            }}
+          >
+            +1 Golden Hand
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            onClick={() => {
+              debugGrantGoldenHands(5);
+              flash("Golden Hand +5");
             }}
           >
             +5
