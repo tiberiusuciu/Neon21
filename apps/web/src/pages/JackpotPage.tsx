@@ -238,8 +238,7 @@ export function JackpotPage() {
     >
       <h1 className="page-title">Jackpot</h1>
       <p className="page-sub">
-        House jackpot — 5% of player losses. Spin with 5 blackjacks in 24
-        hours.
+        Earn a spin with 5 blackjacks in 24 hours. Tickets stack.
       </p>
 
       {loading ? (
@@ -330,7 +329,7 @@ export function JackpotPage() {
               <p className="jackpot-hero-hint">
                 {inHole
                   ? "The vault is empty"
-                  : "Fills with 5% of losses · shrinks only when someone spins"}
+                  : "Grows with play · shrinks when someone spins"}
               </p>
             </div>
           </div>
