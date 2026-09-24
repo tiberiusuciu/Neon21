@@ -577,6 +577,7 @@ export function TablePage() {
     seated &&
     phase === "insurance" &&
     dealerHasAce &&
+    (mySeat?.hands.length ?? 0) > 0 &&
     !mySeat?.insuranceResolved;
 
   const statusLine = useMemo(() => {
