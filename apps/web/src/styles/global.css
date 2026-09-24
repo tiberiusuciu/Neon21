@@ -2926,6 +2926,57 @@ h3 {
   text-shadow: 0 0 12px color-mix(in srgb, #c9a227 45%, transparent);
 }
 
+.seat-golden-hand-banner {
+  margin: 0.1rem 0 0.3rem;
+  padding: 0.28rem 0.45rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #e8c76a 60%, transparent);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #ffe9a8 22%, transparent),
+    color-mix(in srgb, #c9a227 14%, transparent)
+  );
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  color: #ffe9a8;
+  text-align: center;
+  animation: seat-golden-hand-pulse 1.6s ease-in-out infinite;
+}
+
+.seat-golden-hand {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, #e8c76a 55%, transparent),
+    0 0 28px color-mix(in srgb, #c9a227 28%, transparent);
+  border-radius: 12px;
+}
+
+.seat-golden-hand .seat-bet-aura {
+  filter: saturate(1.2) brightness(1.08);
+}
+
+.btn-golden-hand,
+.btn-golden-hand.is-armed {
+  border-color: color-mix(in srgb, #c9a227 65%, var(--line));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, #ffe9a8 28%, var(--bg-elevated)),
+    color-mix(in srgb, #c9a227 18%, var(--bg-elevated))
+  );
+  color: #1a1408;
+  font-weight: 800;
+}
+
+@keyframes seat-golden-hand-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 8px color-mix(in srgb, #c9a227 25%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 18px color-mix(in srgb, #e8c76a 45%, transparent);
+  }
+}
+
 .seat-charlie-dots {
   display: flex;
   gap: 0.28rem;

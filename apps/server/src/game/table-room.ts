@@ -1,5 +1,6 @@
 import {
   CHIP_DENOMINATIONS_CENTS,
+  GOLDEN_HAND_MAX_BET_CENTS,
   JACKPOT_CELEBRATE_MS,
   MIN_BET_CENTS,
   SEAT_CAPACITY,
@@ -50,6 +51,14 @@ import { recordHandOutcomes, recordHandOutcomesSafe, type HandOutcomeInput } fro
 import { env } from "../env.js";
 import { prisma } from "../lib/prisma.js";
 import {
+  getGoldenHandsInventory,
+  recordGoldenHourHandsPlayed,
+  reserveGoldenHand,
+  returnGoldenHand,
+} from "../lib/golden-hands.js";
+import {
+  goldenHandLossPayout,
+  goldenHandWinPayout,
   goldenLossPayout,
   goldenWinPayout,
   getGoldenHourWindowStartedAt,
@@ -70,7 +79,7 @@ import {
   maybeGrantSpinVouchers,
 } from "../lib/jackpot.js";
 
-function emptyHand(betCents: number): HandState {
+function emptyHand(betCents: number, goldenHand = false): HandState {
   return {
     cards: [],
     betCents,
@@ -80,6 +89,7 @@ function emptyHand(betCents: number): HandState {
     resultCents: null,
     suitedPairSuit: null,
     tripleBonusPaid: false,
+    goldenHand,
   };
 }
 
@@ -228,6 +238,9 @@ export class TableRoom {
       bjTowardSpin: seat.bjTowardSpin,
       spinVouchers: seat.spinVouchers,
       charlieFxUntil: seat.charlieFxUntil,
+      goldenHandActive:
+        seat.goldenHandArmed || seat.hands.some((h) => h.goldenHand),
+      goldenHands: seat.goldenHands,
     };
   }
 
@@ -436,8 +449,11 @@ export class TableRoom {
       bjTowardSpin: 0,
       spinVouchers: 0,
       charlieFxUntil: null,
+      goldenHandArmed: false,
+      goldenHands: 0,
     };
     await this.refreshSeatSpinProgress(userId);
+    await this.refreshSeatGoldenHands(userId);
     this.broadcast();
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
@@ -452,6 +468,7 @@ export class TableRoom {
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";
     const seat = this.seats[seatIdx]!;
+    const returnArmed = seat.goldenHandArmed && !isDebugSeatUser(userId);
 
     if (this.spin?.userId === userId) {
       if (this.spin.phase === "result") return "Cannot leave during spin";
@@ -460,6 +477,9 @@ export class TableRoom {
       this.spin = null;
       this.seats[seatIdx] = null;
       this.spectators.set(userId, { userId, name: seat.name });
+      if (returnArmed) {
+        void returnGoldenHand(userId).catch(() => undefined);
+      }
       this.resumeBettingAfterSpin(remaining);
       this.cb.onSeatedChanged(this.id);
       this.cb.onLobbyChanged();
@@ -468,6 +488,9 @@ export class TableRoom {
 
     this.seats[seatIdx] = null;
     this.spectators.set(userId, { userId, name: seat.name });
+    if (returnArmed) {
+      void returnGoldenHand(userId).catch(() => undefined);
+    }
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
     if (this.phase === "betting" && !this.spin) {
@@ -551,6 +574,13 @@ export class TableRoom {
 
     if (seat.pendingBetCents === 0 && add < MIN_BET_CENTS) {
       return `Minimum bet is $${(MIN_BET_CENTS / 100).toFixed(0)}`;
+    }
+
+    if (
+      seat.goldenHandArmed &&
+      seat.pendingBetCents + add > GOLDEN_HAND_MAX_BET_CENTS
+    ) {
+      return `Golden Hand max bet is $${(GOLDEN_HAND_MAX_BET_CENTS / 100).toFixed(0)}`;
     }
 
     seat.pendingBetCents += add;
@@ -708,7 +738,10 @@ export class TableRoom {
       if (seat.pendingBetCents >= MIN_BET_CENTS) {
         if (isDebugSeatUser(seat.userId)) {
           seat.lastBetCents = seat.pendingBetCents;
-          seat.hands = [emptyHand(seat.pendingBetCents)];
+          seat.hands = [
+            emptyHand(seat.pendingBetCents, seat.goldenHandArmed),
+          ];
+          seat.goldenHandArmed = false;
           seat.missedRounds = 0;
           seat.pendingBetCents = 0;
           continue;
@@ -718,7 +751,10 @@ export class TableRoom {
           if (!this.alive(gen)) return;
           this.cb.onWalletUpdate(seat.userId, bal);
           seat.lastBetCents = seat.pendingBetCents;
-          seat.hands = [emptyHand(seat.pendingBetCents)];
+          seat.hands = [
+            emptyHand(seat.pendingBetCents, seat.goldenHandArmed),
+          ];
+          seat.goldenHandArmed = false;
           seat.missedRounds = 0;
           seat.pendingBetCents = 0;
         } catch (err) {
@@ -956,7 +992,7 @@ export class TableRoom {
             this.cb.onWalletUpdate(seat.userId, bal);
             hand.resultCents = 0;
           } else {
-            const loss = goldenLossPayout(hand.betCents);
+            const loss = this.lossPayout(hand);
             hand.resultCents = loss.resultCents;
             if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
               const bal = await creditCents(seat.userId, loss.refundCents);
@@ -1174,6 +1210,7 @@ export class TableRoom {
         resultCents: null,
         suitedPairSuit: null,
         tripleBonusPaid: false,
+        goldenHand: ctx.hand.goldenHand,
       };
       const right: HandState = {
         cards: [card2],
@@ -1184,6 +1221,7 @@ export class TableRoom {
         resultCents: null,
         suitedPairSuit: null,
         tripleBonusPaid: false,
+        goldenHand: ctx.hand.goldenHand,
       };
       ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
       this.activeHandIndex = ctx.handIndex;
@@ -1235,10 +1273,19 @@ export class TableRoom {
   }
 
   private winPayout(hand: HandState, baseProfit: number) {
-    const profit = isGoldenHourActive()
-      ? applySuitedPairProfit(baseProfit, hand.suitedPairSuit)
-      : baseProfit;
+    let profit = baseProfit;
+    if (isGoldenHourActive()) {
+      profit = applySuitedPairProfit(profit, hand.suitedPairSuit);
+    }
+    if (hand.goldenHand) {
+      return goldenHandWinPayout(hand.betCents, profit);
+    }
     return goldenWinPayout(hand.betCents, profit);
+  }
+
+  private lossPayout(hand: HandState) {
+    if (hand.goldenHand) return goldenHandLossPayout(hand.betCents);
+    return goldenLossPayout(hand.betCents);
   }
 
   private async maybePayTripleBonus(
@@ -1374,6 +1421,26 @@ export class TableRoom {
         ).catch((err) =>
           console.error("[golden-hour] rebate track failed", userId, err)
         );
+        const played = hands.filter((h) => !h.isInsurance).length;
+        if (played > 0) {
+          void recordGoldenHourHandsPlayed(userId, played)
+            .then(async ({ granted, goldenHands }) => {
+              const seat = this.seats.find((s) => s?.userId === userId);
+              if (seat) {
+                seat.goldenHands = goldenHands;
+                this.broadcast();
+              }
+              if (granted > 0) {
+                this.cb.onNotice(
+                  userId,
+                  `Earned ${granted} Golden Hand${granted > 1 ? "s" : ""}`
+                );
+              }
+            })
+            .catch((err) =>
+              console.error("[golden-hands] grant failed", userId, err)
+            );
+        }
       }
     }
 
@@ -1404,6 +1471,48 @@ export class TableRoom {
     if (!seat || seat.userId !== userId) return;
     seat.bjTowardSpin = prog.bjTowardSpin;
     seat.spinVouchers = prog.spinVouchers;
+  }
+
+  private async refreshSeatGoldenHands(userId: string) {
+    if (isDebugSeatUser(userId)) return;
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return;
+    const seat = this.seats[seatIdx];
+    if (!seat || seat.userId !== userId) return;
+    seat.goldenHands = await getGoldenHandsInventory(userId);
+  }
+
+  async toggleGoldenHand(userId: string): Promise<string | null> {
+    if (this.phase !== "betting") return "Only during betting";
+    if (!isGoldenHourActive()) return "Golden Hour only";
+    if (this.spin) return "Not now";
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return "Not seated";
+    const seat = this.seats[seatIdx]!;
+    if (isDebugSeatUser(userId)) return "Not available";
+
+    if (seat.goldenHandArmed) {
+      seat.goldenHandArmed = false;
+      seat.goldenHands = await returnGoldenHand(userId);
+      this.broadcast();
+      return null;
+    }
+
+    if (seat.pendingBetCents > GOLDEN_HAND_MAX_BET_CENTS) {
+      return `Golden Hand max bet is $${(GOLDEN_HAND_MAX_BET_CENTS / 100).toFixed(0)}`;
+    }
+
+    const ok = await reserveGoldenHand(userId);
+    if (!ok) return "No Golden Hands left";
+    seat.goldenHandArmed = true;
+    seat.goldenHands = await getGoldenHandsInventory(userId);
+    this.broadcast();
+    return null;
+  }
+
+  async notifyGoldenHandsGranted(userId: string): Promise<void> {
+    await this.refreshSeatGoldenHands(userId);
+    if (this.findSeatIndex(userId) >= 0) this.broadcast();
   }
 
   /** Refresh seat voucher lights after an external grant (admin / HTTP). */
@@ -1674,7 +1783,7 @@ export class TableRoom {
         }
 
         if (playerVal.bust) {
-          const loss = goldenLossPayout(hand.betCents);
+          const loss = this.lossPayout(hand);
           hand.resultCents = loss.resultCents;
           if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
             const bal = await creditCents(seat.userId, loss.refundCents);
@@ -1707,7 +1816,7 @@ export class TableRoom {
             deferredPayouts.push({ userId: seat.userId, cents: win });
           }
         } else if (playerTotal < dealerTotal) {
-          const loss = goldenLossPayout(hand.betCents);
+          const loss = this.lossPayout(hand);
           hand.resultCents = loss.resultCents;
           if (loss.refundCents > 0 && !isDebugSeatUser(seat.userId)) {
             const bal = await creditCents(seat.userId, loss.refundCents);
@@ -1800,6 +1909,8 @@ export class TableRoom {
       bjTowardSpin: 0,
       spinVouchers: 0,
       charlieFxUntil: null,
+      goldenHandArmed: false,
+      goldenHands: 0,
     };
     this.onBettingActivity();
     this.cb.onSeatedChanged(this.id);

@@ -15,6 +15,10 @@ type Props = {
   onRemove: (cents: number) => void;
   onClear: () => void;
   onReuse: () => void;
+  goldenHourActive?: boolean;
+  goldenHands?: number;
+  goldenHandArmed?: boolean;
+  onToggleGoldenHand?: () => void;
 };
 
 const CHIP_KEYS = ["Q", "W", "E", "R", "T", "Y", "U", "I", "O"] as const;
@@ -27,6 +31,10 @@ export function ChipTray({
   onRemove,
   onClear,
   onReuse,
+  goldenHourActive = false,
+  goldenHands = 0,
+  goldenHandArmed = false,
+  onToggleGoldenHand,
 }: Props) {
   const [removing, setRemoving] = useState(false);
   const remaining = Math.max(0, balanceCents - pendingBetCents);
@@ -174,6 +182,27 @@ export function ChipTray({
         )}
       </div>
       <div className="chip-actions">
+        {goldenHourActive && onToggleGoldenHand && (
+          <motion.button
+            type="button"
+            className={`btn btn-sm${
+              goldenHandArmed ? " btn-golden-hand is-armed" : " btn-ghost"
+            }`}
+            whileTap={{ scale: 0.95 }}
+            aria-pressed={goldenHandArmed}
+            disabled={!goldenHandArmed && goldenHands <= 0}
+            title={
+              goldenHandArmed
+                ? "Cancel Golden Hand (max bet $5,000)"
+                : goldenHands > 0
+                  ? `Arm Golden Hand ×${goldenHands} (1.5× win / half loss, max $5,000)`
+                  : "No Golden Hands — earn 1 per 100 GH hands"
+            }
+            onClick={onToggleGoldenHand}
+          >
+            {goldenHandArmed ? "Golden ON" : `Golden ×${goldenHands}`}
+          </motion.button>
+        )}
         <motion.button
           type="button"
           className={`btn btn-sm${removing ? "" : " btn-ghost"}`}

@@ -26,6 +26,8 @@ export interface HandState {
   suitedPairSuit: Suit | null;
   /** GH triple-card bonus already paid for this hand. */
   tripleBonusPaid: boolean;
+  /** This hand uses Golden Hand 1.5× / half-loss rules. */
+  goldenHand: boolean;
 }
 
 export interface SeatState {
@@ -42,6 +44,10 @@ export interface SeatState {
   spinVouchers: number;
   /** Epoch ms; 5-card Charlie celebrate FX for late joiners. */
   charlieFxUntil: number | null;
+  /** Token reserved for next deal during betting. */
+  goldenHandArmed: boolean;
+  /** Cached inventory for seat UI. */
+  goldenHands: number;
 }
 
 export interface Spectator {

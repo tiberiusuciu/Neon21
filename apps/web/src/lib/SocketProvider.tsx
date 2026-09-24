@@ -55,6 +55,7 @@ type GameSocketApi = {
   goSpin: () => void;
   cancelSpin: () => void;
   spinDone: () => void;
+  toggleGoldenHand: () => void;
   sendChat: (text: string) => void;
   clearTableState: () => void;
   debugSetBet: (cents: number) => void;
@@ -358,6 +359,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     if (!socket) return;
     emitEvent(socket, "spin:done");
   }, [socket]);
+  const toggleGoldenHand = useCallback(() => {
+    if (!socket) return;
+    emitEvent(socket, "golden-hand:toggle");
+  }, [socket]);
   const sendChat = useCallback(
     (text: string) => {
       if (!socket) return;
@@ -458,6 +463,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       goSpin,
       cancelSpin,
       spinDone,
+      toggleGoldenHand,
       sendChat,
       clearTableState,
       debugSetBet,
@@ -500,6 +506,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       goSpin,
       cancelSpin,
       spinDone,
+      toggleGoldenHand,
       sendChat,
       clearTableState,
       debugSetBet,

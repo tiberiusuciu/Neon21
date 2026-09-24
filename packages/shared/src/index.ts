@@ -270,6 +270,10 @@ export function chipFaceLabel(cents: number): string {
 }
 
 export const MIN_BET_CENTS = 500;
+/** Max pending bet while a Golden Hand token is armed. */
+export const GOLDEN_HAND_MAX_BET_CENTS = 500_000;
+/** Hands played during GH per Golden Hand token earned. */
+export const GOLDEN_HANDS_PER_HANDS = 100;
 export const SEAT_CAPACITY = 7;
 
 export const SuitSchema = z.enum(["S", "H", "D", "C"]);
@@ -351,6 +355,10 @@ export const PublicSeatSchema = z.object({
   spinVouchers: z.number().int().nonnegative().optional(),
   /** Epoch ms while 5-card Charlie FX should show. */
   charlieFxUntil: z.number().int().nullable().optional(),
+  /** Golden Hand token armed for next hand (betting) or active this round. */
+  goldenHandActive: z.boolean().optional(),
+  /** Player inventory of Golden Hand tokens. */
+  goldenHands: z.number().int().nonnegative().optional(),
 });
 export type PublicSeat = z.infer<typeof PublicSeatSchema>;
 

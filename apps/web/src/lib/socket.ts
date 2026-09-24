@@ -40,6 +40,7 @@ export type ClientToServerEvents = {
   "spin:go": () => void;
   "spin:cancel": () => void;
   "spin:done": () => void;
+  "golden-hand:toggle": () => void;
   "table:chat": (payload: { text: string }) => void;
   "table:chat:read": (payload: { messageId: string }) => void;
   "debug:setBet": (payload: { cents: number }) => void;

@@ -83,6 +83,7 @@ export function TablePage() {
     goSpin,
     cancelSpin,
     spinDone,
+    toggleGoldenHand,
     chatMessages,
     sendChat,
     subscribeJackpot,
@@ -1209,6 +1210,10 @@ export function TablePage() {
               onRemove={removeBet}
               onClear={clearBet}
               onReuse={reuseBet}
+              goldenHourActive={goldenHour?.active === true}
+              goldenHands={mySeat.goldenHands ?? 0}
+              goldenHandArmed={mySeat.goldenHandActive === true}
+              onToggleGoldenHand={toggleGoldenHand}
             />
           ) : null
         }

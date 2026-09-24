@@ -119,6 +119,7 @@ export function SeatView({
         isYou ? "seat-you" : "",
         isActive ? "seat-active" : "",
         split ? "seat-split" : "",
+        seat.goldenHandActive ? "seat-golden-hand" : "",
         !seat.connected && seat.userId ? "seat-away" : "",
         auraTier > 0 ? `seat-aura-t${auraTier}` : "",
         spin ? "seat-has-spin" : "",
@@ -165,6 +166,11 @@ export function SeatView({
             {isYou && <span className="seat-you-tag">(You)</span>}
             {!seat.connected && <span className="seat-away-tag">away</span>}
           </div>
+          {seat.goldenHandActive && (
+            <div className="seat-golden-hand-banner" aria-live="polite">
+              GOLDEN HAND ACTIVATED
+            </div>
+          )}
           {charlieActive && (
             <div className="seat-charlie-banner" aria-live="polite">
               <span className="seat-charlie-dots" aria-hidden>

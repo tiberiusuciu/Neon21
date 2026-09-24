@@ -24,6 +24,10 @@ model User {
   biggestWinCents  Int            @default(0)
   biggestLossCents Int            @default(0)
   netProfitCents   Int            @default(0)
+  /** Hands completed while Golden Hour was active (lifetime). */
+  goldenHourHandsPlayed Int       @default(0)
+  /** Spendable Golden Hand tokens. */
+  goldenHands      Int            @default(0)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   handOutcomes     HandOutcome[]

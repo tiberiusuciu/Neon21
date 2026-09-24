@@ -417,6 +417,14 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       room.notifySpinDone(userId);
     });
 
+    socket.on("golden-hand:toggle", async () => {
+      const tableId = socket.data.tableId as string | undefined;
+      const room = tableId ? pool.get(tableId) : undefined;
+      if (!room) return;
+      const err = await room.toggleGoldenHand(userId);
+      if (err) socket.emit("game:error", { message: err });
+    });
+
     socket.on("table:chat", async (raw) => {
       const parsed = TableChatSendSchema.safeParse(raw);
       if (!parsed.success) {
