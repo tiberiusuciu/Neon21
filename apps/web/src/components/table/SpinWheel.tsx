@@ -475,7 +475,9 @@ export function SpinWheel({
     doneEmitted.current = false;
     setAnimDone(false);
     const target = spin.tileIndex;
-    const final = 360 * 8 + (270 - (target * SEG + SEG / 2));
+    // Wedges are drawn from 12 o'clock (−90°); rotate so tile mid sits under the top pointer.
+    const mid = target * SEG + SEG / 2;
+    const final = 360 * 8 - mid;
     requestAnimationFrame(() => setRot(final));
 
     const start = performance.now();
