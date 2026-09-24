@@ -2929,14 +2929,6 @@ h3 {
     padding 0.28s var(--ease);
 }
 
-.action-drawer:not(.is-peek) .action-drawer-peek {
-  max-height: 0;
-  opacity: 0;
-  padding-top: 0;
-  padding-bottom: 0;
-  pointer-events: none;
-}
-
 .action-drawer-peek-title {
   font-family: var(--font-display);
   font-weight: 750;
