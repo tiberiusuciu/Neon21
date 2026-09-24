@@ -1485,7 +1485,6 @@ export class TableRoom {
 
   async toggleGoldenHand(userId: string): Promise<string | null> {
     if (this.phase !== "betting") return "Only during betting";
-    if (!isGoldenHourActive()) return "Golden Hour only";
     if (this.spin) return "Not now";
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";

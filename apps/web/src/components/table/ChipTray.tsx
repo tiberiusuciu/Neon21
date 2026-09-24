@@ -15,7 +15,6 @@ type Props = {
   onRemove: (cents: number) => void;
   onClear: () => void;
   onReuse: () => void;
-  goldenHourActive?: boolean;
   goldenHands?: number;
   goldenHandArmed?: boolean;
   onToggleGoldenHand?: () => void;
@@ -31,7 +30,6 @@ export function ChipTray({
   onRemove,
   onClear,
   onReuse,
-  goldenHourActive = false,
   goldenHands = 0,
   goldenHandArmed = false,
   onToggleGoldenHand,
@@ -182,7 +180,7 @@ export function ChipTray({
         )}
       </div>
       <div className="chip-actions">
-        {goldenHourActive && onToggleGoldenHand && (
+        {(goldenHandArmed || goldenHands > 0) && onToggleGoldenHand && (
           <motion.button
             type="button"
             className={`btn btn-sm${
@@ -194,9 +192,7 @@ export function ChipTray({
             title={
               goldenHandArmed
                 ? "Cancel Golden Hand (max bet $5,000)"
-                : goldenHands > 0
-                  ? `Arm Golden Hand ×${goldenHands} (1.5× win / half loss, max $5,000)`
-                  : "No Golden Hands — earn 1 per 100 GH hands"
+                : `Arm Golden Hand ×${goldenHands} (1.5× win / half loss, max $5,000)`
             }
             onClick={onToggleGoldenHand}
           >

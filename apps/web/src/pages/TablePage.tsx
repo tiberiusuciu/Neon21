@@ -1210,7 +1210,6 @@ export function TablePage() {
               onRemove={removeBet}
               onClear={clearBet}
               onReuse={reuseBet}
-              goldenHourActive={goldenHour?.active === true}
               goldenHands={mySeat.goldenHands ?? 0}
               goldenHandArmed={mySeat.goldenHandActive === true}
               onToggleGoldenHand={toggleGoldenHand}
