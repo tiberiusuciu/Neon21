@@ -93,6 +93,10 @@ export function ActionBar({
   const peekPinnedRef = useRef(false);
   const collapseTimerRef = useRef<number | null>(null);
   const prevPhaseRef = useRef(phase);
+  /** After a queued hit/split fires, gently reopen if the turn continues. */
+  const reopenAfterHitOrSplitRef = useRef(false);
+  /** Suppress the initial "your turn" open while a queued move is consuming. */
+  const suppressQueuedOpenRef = useRef(false);
 
   const showPlayRow = showActions || showPreActions;
   const panelKey = showBet
@@ -134,13 +138,30 @@ export function ActionBar({
   useEffect(() => {
     if (panelKey === "none") {
       peekPinnedRef.current = false;
+      reopenAfterHitOrSplitRef.current = false;
+      suppressQueuedOpenRef.current = false;
       clearCollapseTimer();
       return;
     }
-    if (panelKey === "hold" || panelKey === "bust") return;
-    // Queued action auto-fires on turn — keep peek, don't flash "your turn" open.
+    if (panelKey === "hold" || panelKey === "bust") {
+      reopenAfterHitOrSplitRef.current = false;
+      suppressQueuedOpenRef.current = false;
+      return;
+    }
+    // Queued auto-fire: stay peeked; hit/split may reopen after.
     if (panelKey === "act" && queuedAction) {
       clearCollapseTimer();
+      peekPinnedRef.current = true;
+      suppressQueuedOpenRef.current = true;
+      reopenAfterHitOrSplitRef.current =
+        queuedAction === "hit" || queuedAction === "split";
+      setDrawer("peek");
+      return;
+    }
+    // Stand/double just consumed — keep peek until holding/bust takes over.
+    // Hit/split: stay peek; the reopen effect slides open if turn continues.
+    if (panelKey === "act" && suppressQueuedOpenRef.current) {
+      suppressQueuedOpenRef.current = false;
       peekPinnedRef.current = true;
       setDrawer("peek");
       return;
@@ -149,6 +170,32 @@ export function ActionBar({
     peekPinnedRef.current = false;
     setDrawer("open");
   }, [panelKey, queuedAction]);
+
+  // After queued hit/split, slide the drawer open again if you still need to act.
+  useEffect(() => {
+    if (!isMobile || !reopenAfterHitOrSplitRef.current) return;
+    if (queuedAction) return;
+    if (holding || handBusted || bustLinger) {
+      reopenAfterHitOrSplitRef.current = false;
+      return;
+    }
+    if (!showActions) return;
+    reopenAfterHitOrSplitRef.current = false;
+    clearCollapseTimer();
+    collapseTimerRef.current = window.setTimeout(() => {
+      collapseTimerRef.current = null;
+      peekPinnedRef.current = false;
+      setDrawer("open");
+    }, 340);
+    return () => clearCollapseTimer();
+  }, [
+    isMobile,
+    queuedAction,
+    showActions,
+    holding,
+    handBusted,
+    bustLinger,
+  ]);
 
   // Insurance decision peeks the drawer; when play resumes the panel may
   // still be "queue", so force-open if they can still pick a pre-action.
@@ -166,6 +213,9 @@ export function ActionBar({
     if (showActions) {
       if (queuedAction) {
         peekPinnedRef.current = true;
+        suppressQueuedOpenRef.current = true;
+        reopenAfterHitOrSplitRef.current =
+          queuedAction === "hit" || queuedAction === "split";
         setDrawer("peek");
         return;
       }

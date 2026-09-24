@@ -2446,6 +2446,21 @@ h3 {
   background: transparent;
   color: var(--fg);
   cursor: pointer;
+  max-height: 4rem;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height 0.28s var(--ease),
+    opacity 0.22s var(--ease),
+    padding 0.28s var(--ease);
+}
+
+.action-drawer:not(.is-peek) .action-drawer-peek {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  pointer-events: none;
 }
 
 .action-drawer-peek-title {
@@ -2470,6 +2485,13 @@ h3 {
   gap: 0.45rem;
   padding-bottom: 0.15rem;
   touch-action: manipulation;
+  max-height: 14rem;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height 0.34s var(--ease),
+    opacity 0.28s var(--ease),
+    padding 0.28s var(--ease);
 }
 
 .action-drawer-info {
@@ -2498,7 +2520,10 @@ h3 {
 }
 
 .action-drawer.is-peek .action-drawer-body {
-  display: none;
+  max-height: 0;
+  opacity: 0;
+  padding-bottom: 0;
+  pointer-events: none;
 }
 
 .action-drawer .action-row {
