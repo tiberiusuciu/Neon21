@@ -1,0 +1,244 @@
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+
+const PIP_COUNT = 5;
+const POP_MS = 720;
+const BETWEEN_FILLS_MS = 90;
+const CELEBRATE_MS = 980;
+const CLEAR_MS = 560;
+const VOUCHER_BUMP_MS = 520;
+
+type Props = {
+  bjTowardSpin: number;
+  spinVouchers: number;
+  /** Reset animation tracking when the seated player changes. */
+  seatKey: string;
+};
+
+type PipFx = "idle" | "pop" | "celebrate" | "clear";
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+  );
+}
+
+/**
+ * Visual BJ→voucher meter. Server snaps 4→0 on the 5th BJ; we stage fill →
+ * celebrate → clear locally so the last pip and ticket bump still play.
+ */
+export function SeatBjMeter({
+  bjTowardSpin,
+  spinVouchers,
+  seatKey,
+}: Props) {
+  const targetBj = Math.max(0, Math.min(PIP_COUNT - 1, Math.floor(bjTowardSpin)));
+  const targetVouchers = Math.max(0, Math.floor(spinVouchers));
+
+  const [lit, setLit] = useState(targetBj);
+  const [vouchers, setVouchers] = useState(targetVouchers);
+  const [pipFx, setPipFx] = useState<PipFx[]>(() =>
+    Array.from({ length: PIP_COUNT }, () => "idle" as PipFx)
+  );
+  const [burst, setBurst] = useState(false);
+  const [voucherBump, setVoucherBump] = useState(false);
+
+  const seatKeyRef = useRef(seatKey);
+  const litRef = useRef(lit);
+  const vouchersRef = useRef(vouchers);
+  const prevTargetBj = useRef(targetBj);
+  const prevTargetV = useRef(targetVouchers);
+  const ready = useRef(false);
+  const timers = useRef<number[]>([]);
+  const running = useRef(false);
+  const queue = useRef<Array<() => Promise<void>>>([]);
+
+  litRef.current = lit;
+  vouchersRef.current = vouchers;
+
+  function clearTimers() {
+    for (const t of timers.current) window.clearTimeout(t);
+    timers.current = [];
+  }
+
+  function wait(ms: number): Promise<void> {
+    return new Promise((resolve) => {
+      const t = window.setTimeout(resolve, ms);
+      timers.current.push(t);
+    });
+  }
+
+  function setPip(i: number, fx: PipFx) {
+    setPipFx((prev) => {
+      const next = prev.slice() as PipFx[];
+      next[i] = fx;
+      return next;
+    });
+  }
+
+  function setAllPip(fx: PipFx) {
+    setPipFx(Array.from({ length: PIP_COUNT }, () => fx));
+  }
+
+  function snap(bj: number, v: number) {
+    clearTimers();
+    queue.current = [];
+    running.current = false;
+    setLit(bj);
+    setVouchers(v);
+    litRef.current = bj;
+    vouchersRef.current = v;
+    setAllPip("idle");
+    setBurst(false);
+    setVoucherBump(false);
+  }
+
+  async function animFillTo(toLit: number) {
+    let cur = litRef.current;
+    while (cur < toLit) {
+      const i = cur;
+      setLit(i + 1);
+      litRef.current = i + 1;
+      setPip(i, "pop");
+      await wait(POP_MS);
+      setPip(i, "idle");
+      cur = i + 1;
+      if (cur < toLit) await wait(BETWEEN_FILLS_MS);
+    }
+  }
+
+  async function animComplete(finalBj: number, finalVouchers: number) {
+    await animFillTo(PIP_COUNT);
+    setBurst(true);
+    setAllPip("celebrate");
+    await wait(280);
+    setVouchers(finalVouchers);
+    vouchersRef.current = finalVouchers;
+    setVoucherBump(true);
+    await wait(CELEBRATE_MS - 280);
+    setBurst(false);
+    setAllPip("clear");
+    await wait(CLEAR_MS);
+    setLit(finalBj);
+    litRef.current = finalBj;
+    setAllPip("idle");
+    const t = window.setTimeout(() => setVoucherBump(false), VOUCHER_BUMP_MS);
+    timers.current.push(t);
+  }
+
+  async function drain() {
+    if (running.current) return;
+    running.current = true;
+    while (queue.current.length > 0) {
+      const job = queue.current.shift();
+      if (job) await job();
+    }
+    running.current = false;
+  }
+
+  function enqueue(job: () => Promise<void>) {
+    queue.current.push(job);
+    void drain();
+  }
+
+  useEffect(() => {
+    if (seatKeyRef.current !== seatKey) {
+      seatKeyRef.current = seatKey;
+      snap(targetBj, targetVouchers);
+      prevTargetBj.current = targetBj;
+      prevTargetV.current = targetVouchers;
+      ready.current = true;
+      return;
+    }
+
+    if (!ready.current) {
+      prevTargetBj.current = targetBj;
+      prevTargetV.current = targetVouchers;
+      ready.current = true;
+      return;
+    }
+
+    const prevBj = prevTargetBj.current;
+    const prevV = prevTargetV.current;
+    prevTargetBj.current = targetBj;
+    prevTargetV.current = targetVouchers;
+
+    if (targetBj === prevBj && targetVouchers === prevV) return;
+
+    if (prefersReducedMotion()) {
+      snap(targetBj, targetVouchers);
+      return;
+    }
+
+    const gained = Math.max(0, targetVouchers - prevV);
+
+    if (gained > 0) {
+      enqueue(() => animComplete(targetBj, targetVouchers));
+      return;
+    }
+
+    if (targetBj > prevBj) {
+      enqueue(async () => {
+        await animFillTo(targetBj);
+      });
+      return;
+    }
+
+    snap(targetBj, targetVouchers);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on server props only
+  }, [seatKey, targetBj, targetVouchers]);
+
+  useEffect(() => () => clearTimers(), []);
+
+  return (
+    <div
+      className={`seat-bj-meter${burst ? " is-burst" : ""}`}
+      title="Blackjacks toward next jackpot spin"
+      aria-label={`${targetBj} of 5 blackjacks toward next spin`}
+    >
+      {Array.from({ length: PIP_COUNT }, (_, i) => {
+        const on = i < lit;
+        const fx = pipFx[i] ?? "idle";
+        const cls = [
+          "seat-bj-pip",
+          on || fx === "clear" || fx === "celebrate" ? "is-lit" : "",
+          fx === "pop" ? "is-pop" : "",
+          fx === "celebrate" ? "is-celebrate" : "",
+          fx === "clear" ? "is-clear" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+        return <span key={i} className={cls} />;
+      })}
+      {vouchers > 0 && (
+        <span
+          className={`seat-bj-voucher${voucherBump ? " is-bump" : ""}`}
+        >
+          ×{vouchers}
+        </span>
+      )}
+      {burst && (
+        <span className="seat-bj-burst" aria-hidden>
+          {Array.from({ length: 12 }, (_, i) => (
+            <i
+              key={i}
+              style={
+                {
+                  ["--i"]: i,
+                  ["--a"]: `${(i / 12) * 360 + (i % 3) * 11}deg`,
+                  ["--d"]: `${8 + (i % 4) * 4}px`,
+                  ["--s"]: `${1.4 + (i % 3) * 0.5}px`,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </span>
+      )}
+    </div>
+  );
+}
