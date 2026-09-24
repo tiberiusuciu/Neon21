@@ -217,44 +217,43 @@ export async function listRecentTakeOutcomes(limit = 80) {
 export async function getAdminJackpotLedger(
   limit = 80
 ): Promise<AdminJackpotLedgerEntry[]> {
+  const claimCap = Math.min(40, limit);
+  const adjCap = Math.min(20, limit);
+  const takeCap = limit;
+
   const [claims, adjustments, outcomes] = await Promise.all([
-    listRecentClaims(limit),
-    listRecentAdjustments(limit),
-    listRecentTakeOutcomes(limit),
+    listRecentClaims(claimCap),
+    listRecentAdjustments(adjCap),
+    listRecentTakeOutcomes(takeCap),
   ]);
 
-  const entries: AdminJackpotLedgerEntry[] = [];
+  const claimEntries: AdminJackpotLedgerEntry[] = claims.map((c) => ({
+    id: `claim:${c.id}`,
+    kind: "claim",
+    deltaCents: -c.payoutCents,
+    createdAt: c.createdAt.toISOString(),
+    userName: c.userName,
+    label: formatClaimLabel(c.kind, c.pctBps, c.payoutCents),
+    pctBps: c.pctBps,
+    payoutCents: c.payoutCents,
+    potBeforeCents: c.potBeforeCents,
+    tableName: c.tableName,
+  }));
 
-  for (const c of claims) {
-    entries.push({
-      id: `claim:${c.id}`,
-      kind: "claim",
-      deltaCents: -c.payoutCents,
-      createdAt: c.createdAt.toISOString(),
-      userName: c.userName,
-      label: formatClaimLabel(c.kind, c.pctBps, c.payoutCents),
-      pctBps: c.pctBps,
-      payoutCents: c.payoutCents,
-      potBeforeCents: c.potBeforeCents,
-      tableName: c.tableName,
-    });
-  }
+  const adjEntries: AdminJackpotLedgerEntry[] = adjustments.map((a) => ({
+    id: `adj:${a.id}`,
+    kind: "adjustment",
+    deltaCents: a.deltaCents,
+    createdAt: a.createdAt.toISOString(),
+    note: a.note,
+  }));
 
-  for (const a of adjustments) {
-    entries.push({
-      id: `adj:${a.id}`,
-      kind: "adjustment",
-      deltaCents: a.deltaCents,
-      createdAt: a.createdAt.toISOString(),
-      note: a.note,
-    });
-  }
-
+  const takeEntries: AdminJackpotLedgerEntry[] = [];
   for (const o of outcomes) {
     const lossAbs = -o.resultCents;
     const take = jackpotTakeFromLosses(lossAbs);
     if (take <= 0) continue;
-    entries.push({
+    takeEntries.push({
       id: `take:${o.id}`,
       kind: "take",
       deltaCents: take,
@@ -262,11 +261,20 @@ export async function getAdminJackpotLedger(
       userName: o.user.name,
       lossCents: lossAbs,
     });
+    if (takeEntries.length >= takeCap) break;
   }
+
+  const reserved = claimEntries.length + adjEntries.length;
+  const takeSlots = Math.max(0, limit - reserved);
+  const entries = [
+    ...claimEntries,
+    ...adjEntries,
+    ...takeEntries.slice(0, takeSlots),
+  ];
 
   entries.sort(
     (a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
-  return entries.slice(0, limit);
+  return entries;
 }
