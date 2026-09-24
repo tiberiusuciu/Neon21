@@ -3,7 +3,9 @@ ALTER TABLE "HandOutcome" ADD COLUMN "jackpotTakeCents" INTEGER NOT NULL DEFAULT
 
 -- Backfill legacy loss rows at the historical 5% rate
 UPDATE "HandOutcome"
-SET "jackpotTakeCents" = FLOOR((ABS("resultCents") * 500) / 10000)
+SET "jackpotTakeCents" = (
+  (ABS("resultCents")::bigint * 500) / 10000
+)::integer
 WHERE "resultCents" < 0 AND "jackpotTakeCents" = 0;
 
 -- CreateIndex
