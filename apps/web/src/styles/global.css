@@ -5090,62 +5090,10 @@ h3 {
   overflow: hidden;
 }
 
-.jackpot-svg-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-}
-
-.jackpot-orb-liquid-aces {
-  position: absolute;
-  inset: -28%;
-  background-repeat: repeat;
-  background-size: 13px 18px;
-  pointer-events: none;
-  z-index: 0;
-  transform-origin: 50% 42%;
-  border-radius: 50%;
-  filter: url(#jackpot-sphere-warp);
-  -webkit-mask-image: radial-gradient(
-    circle at 50% 42%,
-    #000 0%,
-    #000 52%,
-    rgba(0, 0, 0, 0.75) 70%,
-    rgba(0, 0, 0, 0.35) 84%,
-    transparent 96%
-  );
-  mask-image: radial-gradient(
-    circle at 50% 42%,
-    #000 0%,
-    #000 52%,
-    rgba(0, 0, 0, 0.75) 70%,
-    rgba(0, 0, 0, 0.35) 84%,
-    transparent 96%
-  );
-}
-
-.jackpot-orb-liquid-aces-a {
-  opacity: 0.52;
-  animation: jackpot-aces-orbit-a 42s linear infinite;
-}
-
-.jackpot-orb-liquid-aces-b {
-  opacity: 0.28;
-  background-size: 17px 24px;
-  animation: jackpot-aces-orbit-b 64s linear infinite;
-}
-
 .jackpot-vault.is-hole .jackpot-orb-liquid-body {
   background: linear-gradient(180deg, #c5d0dc 0%, #5a6a7c 55%, #3d4754 100%);
   opacity: 0.4;
   animation: none;
-}
-
-.jackpot-vault.is-hole .jackpot-orb-liquid-aces {
-  opacity: 0.22;
-  animation: none;
-  filter: none;
 }
 
 .jackpot-orb-wave {
@@ -6289,28 +6237,6 @@ h3 {
   }
 }
 
-@keyframes jackpot-aces-orbit-a {
-  0% {
-    transform: rotate(0deg) scale(1.4);
-    background-position: 0 0;
-  }
-  100% {
-    transform: rotate(360deg) scale(1.4);
-    background-position: 26px 36px;
-  }
-}
-
-@keyframes jackpot-aces-orbit-b {
-  0% {
-    transform: rotate(0deg) scale(1.55);
-    background-position: 0 0;
-  }
-  100% {
-    transform: rotate(-360deg) scale(1.55);
-    background-position: -34px 48px;
-  }
-}
-
 @keyframes jackpot-wave-a {
   0%,
   100% {
@@ -6396,9 +6322,6 @@ h3 {
   }
 
   .jackpot-orb-liquid-body,
-  .jackpot-orb-liquid-aces,
-  .jackpot-orb-liquid-aces-a,
-  .jackpot-orb-liquid-aces-b,
   .jackpot-orb-wave,
   .jackpot-orb-surface,
   .jackpot-glow,

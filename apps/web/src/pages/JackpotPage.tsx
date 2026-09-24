@@ -17,36 +17,6 @@ import {
   jackpotTierReached,
   type JackpotTier,
 } from "../lib/jackpotTiers";
-import { WIRE_ACE_TILE_URL } from "../components/WireAceSvg";
-
-/** Radial RG displacement map — center neutral, edges push out (glass sphere). */
-const SPHERE_DISPLACE_MAP =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">` +
-      `<defs>` +
-      `<radialGradient id="bulge" cx="50%" cy="50%" r="50%">` +
-      `<stop offset="0%" stop-color="rgb(128,128,128)"/>` +
-      `<stop offset="55%" stop-color="rgb(128,128,128)"/>` +
-      `<stop offset="78%" stop-color="rgb(168,168,168)"/>` +
-      `<stop offset="100%" stop-color="rgb(220,220,220)"/>` +
-      `</radialGradient>` +
-      `<linearGradient id="dx" x1="0%" y1="0%" x2="100%" y2="0%">` +
-      `<stop offset="0%" stop-color="rgb(48,128,128)"/>` +
-      `<stop offset="50%" stop-color="rgb(128,128,128)"/>` +
-      `<stop offset="100%" stop-color="rgb(208,128,128)"/>` +
-      `</linearGradient>` +
-      `<linearGradient id="dy" x1="0%" y1="0%" x2="0%" y2="100%">` +
-      `<stop offset="0%" stop-color="rgb(128,48,128)"/>` +
-      `<stop offset="50%" stop-color="rgb(128,128,128)"/>` +
-      `<stop offset="100%" stop-color="rgb(128,208,128)"/>` +
-      `</linearGradient>` +
-      `</defs>` +
-      `<rect width="256" height="256" fill="url(#dx)"/>` +
-      `<rect width="256" height="256" fill="url(#dy)" style="mix-blend-mode:multiply"/>` +
-      `<rect width="256" height="256" fill="url(#bulge)" style="mix-blend-mode:soft-light"/>` +
-      `</svg>`
-  );
 
 const PREVIEW_PRESETS: { label: string; cents: number }[] = [
   { label: "Hole", cents: -5_000_000 },
@@ -306,45 +276,10 @@ export function JackpotPage() {
                 role="img"
                 aria-label="House jackpot vault"
               >
-                <svg className="jackpot-svg-defs" width="0" height="0" aria-hidden>
-                  <defs>
-                    <filter
-                      id="jackpot-sphere-warp"
-                      x="-35%"
-                      y="-35%"
-                      width="170%"
-                      height="170%"
-                      colorInterpolationFilters="sRGB"
-                    >
-                      <feImage
-                        result="map"
-                        preserveAspectRatio="none"
-                        href={SPHERE_DISPLACE_MAP}
-                        width="100%"
-                        height="100%"
-                      />
-                      <feDisplacementMap
-                        in="SourceGraphic"
-                        in2="map"
-                        scale="36"
-                        xChannelSelector="R"
-                        yChannelSelector="G"
-                      />
-                    </filter>
-                  </defs>
-                </svg>
                 <JackpotParticles tier={tier} color={glow} />
                 <div className="jackpot-orb-fill" aria-hidden>
                   <div className="jackpot-orb-liquid">
                     <div className="jackpot-orb-liquid-body">
-                      <div
-                        className="jackpot-orb-liquid-aces jackpot-orb-liquid-aces-a"
-                        style={{ backgroundImage: WIRE_ACE_TILE_URL }}
-                      />
-                      <div
-                        className="jackpot-orb-liquid-aces jackpot-orb-liquid-aces-b"
-                        style={{ backgroundImage: WIRE_ACE_TILE_URL }}
-                      />
                       <div className="jackpot-orb-wave jackpot-orb-wave-a" />
                       <div className="jackpot-orb-wave jackpot-orb-wave-b" />
                       <div className="jackpot-orb-surface" />
