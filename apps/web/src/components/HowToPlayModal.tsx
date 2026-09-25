@@ -71,16 +71,12 @@ function CardRow({
   badge?: string;
 }) {
   return (
-    <div className="howto-card-row">
-      <div
-        className="howto-card-fan"
-        style={{ ["--n" as string]: cards.length }}
-      >
+    <div className="howto-hand">
+      <div className="howto-hand-cards">
         {cards.map((c, i) => (
           <div
             key={"faceDown" in c ? `back-${i}` : `${c.rank}${c.suit}${i}`}
-            className="howto-card-slot"
-            style={{ ["--i" as string]: i }}
+            className="howto-hand-card"
           >
             {"faceDown" in c ? (
               <GuideCard faceDown />

@@ -8924,55 +8924,80 @@ html[data-resolved="light"] .btn-double.is-ready {
 
 .howto-combo-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem 0.5rem;
-}
-
-.howto-card-row {
-  display: flex;
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
-  flex-wrap: wrap;
 }
 
-.howto-card-fan {
+.howto-combo-grid > .howto-hand,
+.howto-visual-block > .howto-hand {
+  padding: 0.55rem 0.5rem 0.5rem;
+  border-radius: 10px;
+  background: color-mix(in srgb, #0a1210 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.howto-hand {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  min-height: 3.1rem;
+  gap: 0.45rem;
+  min-width: 0;
 }
 
-.howto-card-slot {
-  position: relative;
-  margin-left: calc(var(--i, 0) * -0.78rem);
-  z-index: calc(var(--i, 0) + 1);
-  transform: none;
+.howto-hand-cards {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.28rem;
 }
 
-.howto-card-slot:first-child {
-  margin-left: 0;
+.howto-hand-card {
+  flex: 0 0 auto;
 }
 
 .guide-card {
-  width: 2.15rem;
-  height: 3rem;
-  font-size: 0.72rem;
+  width: 2rem;
+  height: 2.8rem;
+  font-size: 0.68rem;
   box-shadow:
     0 2px 8px color-mix(in srgb, #000 40%, transparent),
     0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
 }
 
+.howto-hand-cards:has(.howto-hand-card:nth-child(5)) .guide-card {
+  width: 1.75rem;
+  height: 2.45rem;
+  font-size: 0.6rem;
+}
+
 .howto-combo-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.5rem;
+  justify-content: center;
+  max-width: 100%;
+  padding: 0.18rem 0.45rem;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.02em;
   white-space: nowrap;
   color: #1a1408;
   background: linear-gradient(135deg, #f0d78c, #c9a227);
   box-shadow: 0 1px 4px color-mix(in srgb, #c9a227 35%, transparent);
+}
+
+.howto-ins-setup .howto-hand,
+.howto-ins-outcome .howto-hand {
+  align-items: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+}
+
+.howto-ins-setup .howto-hand-cards,
+.howto-ins-outcome .howto-hand-cards {
+  justify-content: flex-start;
 }
 
 .howto-pip-row {
