@@ -10,6 +10,7 @@ import { useAnimatedCents } from "../lib/useAnimatedCents";
 import { useGameSocket } from "../lib/SocketProvider";
 import { BrandMark } from "./BrandMark";
 import { AdminOpsSheet } from "./AdminOpsSheet";
+import { HowToPlayModal, type HowToPlayTab } from "./HowToPlayModal";
 
 export function AppHeader() {
   const { user, wallet, claim, refresh } = useAuth();
@@ -19,6 +20,8 @@ export function AppHeader() {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [opsOpen, setOpsOpen] = useState(false);
+  const [howtoOpen, setHowtoOpen] = useState(false);
+  const [howtoTab, setHowtoTab] = useState<HowToPlayTab>("basics");
   const [claiming, setClaiming] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
@@ -77,6 +80,17 @@ export function AppHeader() {
       <NavLink to="/leaderboard" onClick={() => setOpen(false)}>
         Leaderboard
       </NavLink>
+      <button
+        type="button"
+        className="nav-howto-btn"
+        onClick={() => {
+          setOpen(false);
+          setHowtoTab("basics");
+          setHowtoOpen(true);
+        }}
+      >
+        How to play
+      </button>
       {user?.isAdmin && (
         <>
           <button
@@ -196,6 +210,11 @@ export function AppHeader() {
       {user?.isAdmin && (
         <AdminOpsSheet open={opsOpen} onClose={() => setOpsOpen(false)} />
       )}
+      <HowToPlayModal
+        open={howtoOpen}
+        initialTab={howtoTab}
+        onClose={() => setHowtoOpen(false)}
+      />
     </>
   );
 }

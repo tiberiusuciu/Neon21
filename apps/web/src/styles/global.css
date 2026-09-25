@@ -357,7 +357,9 @@ h3 {
 .nav-desktop a,
 .nav-drawer a,
 .nav-desktop .nav-ops-btn,
-.nav-drawer .nav-ops-btn {
+.nav-drawer .nav-ops-btn,
+.nav-desktop .nav-howto-btn,
+.nav-drawer .nav-howto-btn {
   padding: 0.4rem 0.65rem;
   border-radius: 8px;
   color: var(--muted);
@@ -366,7 +368,9 @@ h3 {
 }
 
 .nav-desktop .nav-ops-btn,
-.nav-drawer .nav-ops-btn {
+.nav-drawer .nav-ops-btn,
+.nav-desktop .nav-howto-btn,
+.nav-drawer .nav-howto-btn {
   border: none;
   background: transparent;
   cursor: pointer;
@@ -1681,8 +1685,11 @@ h3 {
     color-mix(in srgb, #c9a227 18%, transparent),
     color-mix(in srgb, #8a6a20 10%, transparent)
   );
+  font: inherit;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  color: inherit;
+  cursor: pointer;
 }
 
 .table-golden-hour-label {
@@ -8572,5 +8579,268 @@ html[data-resolved="light"] .seat-aura-t5 {
 html[data-resolved="light"] .btn-double.is-ready {
   background: linear-gradient(135deg, #0f8f5c, #0a3d28);
   border-color: color-mix(in srgb, #0a3d28 35%, transparent);
+}
+
+.table-howto-btn {
+  min-width: 2rem;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.howto-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  pointer-events: none;
+}
+
+.howto-modal-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: color-mix(in srgb, #000 55%, transparent);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.howto-modal {
+  position: relative;
+  z-index: 1;
+  width: min(28rem, 100%);
+  max-height: min(88vh, 40rem);
+  display: flex;
+  flex-direction: column;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--line));
+  background:
+    radial-gradient(
+      ellipse 90% 60% at 50% -10%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 55%
+    ),
+    var(--bg-elevated);
+  box-shadow: 0 22px 56px color-mix(in srgb, #000 48%, transparent);
+  pointer-events: auto;
+  overflow: hidden;
+}
+
+.howto-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.howto-modal-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.howto-modal-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--fg);
+}
+
+.howto-modal-close {
+  flex-shrink: 0;
+}
+
+.howto-tabs {
+  margin-bottom: 0.9rem;
+  flex-shrink: 0;
+  display: flex;
+  width: 100%;
+}
+
+.howto-tabs button {
+  flex: 1;
+  padding: 0.4rem 0.35rem;
+  font-size: 0.78rem;
+}
+
+.howto-modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 0.15rem;
+  margin-right: -0.15rem;
+}
+
+.howto-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--fg);
+}
+
+.howto-list {
+  margin: 0 0 1rem;
+  padding-left: 1.15rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.howto-list li + li {
+  margin-top: 0.4rem;
+}
+
+.howto-list strong {
+  color: var(--fg);
+  font-weight: 700;
+}
+
+.howto-visual-block {
+  margin: 0 0 1rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+}
+
+.howto-visual-block:last-child {
+  margin-bottom: 0.15rem;
+}
+
+.howto-visual-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+
+.howto-visual-sub {
+  margin: 0 0 0.7rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.howto-combo-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.65rem 0.5rem;
+}
+
+.howto-card-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.howto-card-fan {
+  display: flex;
+  align-items: flex-end;
+  min-height: 3.4rem;
+}
+
+.howto-card-slot {
+  margin-left: calc(var(--i, 0) * -0.55rem);
+  transform: rotate(calc((var(--i, 0) - 1) * 3deg));
+  transition: transform 0.2s ease;
+}
+
+.howto-card-slot:first-child {
+  margin-left: 0;
+}
+
+.guide-card {
+  width: 2.15rem;
+  height: 3rem;
+  font-size: 0.72rem;
+  box-shadow:
+    0 2px 8px color-mix(in srgb, #000 40%, transparent),
+    0 0 0 1px color-mix(in srgb, #fff 8%, transparent);
+}
+
+.howto-combo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  color: #1a1408;
+  background: linear-gradient(135deg, #f0d78c, #c9a227);
+  box-shadow: 0 1px 4px color-mix(in srgb, #c9a227 35%, transparent);
+}
+
+.howto-pip-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+.howto-pip-row .seat-bj-pip {
+  width: 10px;
+  height: 10px;
+}
+
+.howto-pip-caption {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+
+.howto-golden-callout {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  border-color: color-mix(in srgb, #c9a227 40%, var(--line));
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, #c9a227 14%, var(--surface)),
+    var(--surface)
+  );
+}
+
+.howto-golden-callout p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.howto-golden-pill {
+  display: inline-flex;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #1a1408;
+  background: linear-gradient(120deg, #f0d78c, #c9a227);
+}
+
+@media (max-width: 420px) {
+  .howto-combo-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .howto-modal {
+    padding: 1rem 0.95rem 1.1rem;
+    max-height: 92vh;
+  }
 }
 

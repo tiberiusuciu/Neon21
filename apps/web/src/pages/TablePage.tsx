@@ -28,6 +28,10 @@ import {
 import { loadRoundHistory, saveRoundHistory } from "../lib/roundHistory";
 import { useToast } from "../lib/toast";
 import { scheduleScrollSeatIntoClearView } from "../lib/scrollSeatIntoClearView";
+import {
+  HowToPlayModal,
+  type HowToPlayTab,
+} from "../components/HowToPlayModal";
 import { JackpotWinFx } from "../components/table/JackpotWinFx";
 
 const HISTORY_MAX = 24;
@@ -105,6 +109,8 @@ export function TablePage() {
 
   const [now, setNow] = useState(() => Date.now());
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [howtoOpen, setHowtoOpen] = useState(false);
+  const [howtoTab, setHowtoTab] = useState<HowToPlayTab>("basics");
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>(() =>
     tableId ? loadRoundHistory(tableId) : []
   );
@@ -949,9 +955,14 @@ export function TablePage() {
           <h1 className="page-title table-title">{tableState?.name ?? "Table"}</h1>
           <div className="table-toolbar-actions">
             {goldenHour?.active && goldenHour.activeUntil != null && (
-              <span
+              <button
+                type="button"
                 className="table-golden-hour"
                 title="Golden Hour — jackpot grows faster, rebates & hand bonuses live"
+                onClick={() => {
+                  setHowtoTab("heist");
+                  setHowtoOpen(true);
+                }}
               >
                 <span className="table-golden-hour-label">Golden</span>
                 <span className="table-golden-hour-time">
@@ -959,15 +970,20 @@ export function TablePage() {
                     Math.max(0, goldenHour.activeUntil - now)
                   )}
                 </span>
-              </span>
+              </button>
             )}
             {goldenHour &&
               !goldenHour.disabled &&
               !goldenHour.active &&
               goldenHour.nextStartsAt != null && (
-                <span
+                <button
+                  type="button"
                   className="table-golden-hour table-golden-hour-next"
-                  title="Next Golden Hour heist"
+                  title="Next Golden Hour heist — how it works"
+                  onClick={() => {
+                    setHowtoTab("heist");
+                    setHowtoOpen(true);
+                  }}
                 >
                   <span className="table-golden-hour-label">Heist</span>
                   <span className="table-golden-hour-time">
@@ -975,7 +991,7 @@ export function TablePage() {
                       Math.max(0, goldenHour.nextStartsAt - now)
                     )}
                   </span>
-                </span>
+                </button>
               )}
             {goldenHour?.active && (
               <span
@@ -1037,6 +1053,18 @@ export function TablePage() {
                 </span>
               </span>
             )}
+            <button
+              type="button"
+              className="btn btn-sm btn-ghost table-howto-btn"
+              onClick={() => {
+                setHowtoTab("basics");
+                setHowtoOpen(true);
+              }}
+              title="How to play"
+              aria-label="How to play"
+            >
+              ?
+            </button>
             <button
               type="button"
               className={`btn btn-sm btn-ghost${historyOpen ? " is-active" : ""}`}
@@ -1302,6 +1330,12 @@ export function TablePage() {
         open={historyOpen}
         entries={roundHistory}
         onClose={() => setHistoryOpen(false)}
+      />
+
+      <HowToPlayModal
+        open={howtoOpen}
+        initialTab={howtoTab}
+        onClose={() => setHowtoOpen(false)}
       />
     </motion.div>
   );
