@@ -3155,12 +3155,10 @@ h3 {
 
 .action-drawer.is-bet {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--line));
-  max-height: min(52vh, 22rem);
 }
 
 .action-drawer.is-insurance {
   border-color: color-mix(in srgb, #f0c674 55%, var(--line));
-  max-height: min(48vh, 18rem);
 }
 
 .action-drawer.is-holding {
@@ -3190,9 +3188,11 @@ h3 {
   right: 0;
   bottom: 0;
   z-index: 40;
-  max-height: min(70vh, 26rem);
-  overflow: hidden;
-  padding: 0 0.7rem calc(0.55rem + env(safe-area-inset-bottom, 0px));
+  max-height: min(85vh, 34rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 0.7rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
   border-radius: 16px 16px 0 0;
   border: 1px solid var(--line);
   border-bottom: none;
@@ -3208,7 +3208,7 @@ h3 {
 }
 
 .action-drawer.is-bet {
-  max-height: min(75vh, 30rem);
+  max-height: min(88vh, 36rem);
 }
 
 .action-drawer.is-live {
@@ -3233,6 +3233,7 @@ h3 {
   background: transparent;
   cursor: pointer;
   touch-action: none;
+  flex-shrink: 0;
 }
 
 .action-drawer-grip {
@@ -3282,6 +3283,7 @@ h3 {
   max-height: 4rem;
   opacity: 1;
   overflow: hidden;
+  flex-shrink: 0;
   transition:
     max-height 0.28s var(--ease),
     opacity 0.22s var(--ease),
@@ -3308,11 +3310,12 @@ h3 {
   flex-direction: column;
   align-items: center;
   gap: 0.45rem;
-  padding-bottom: 0.15rem;
+  padding: 0.35rem 0.2rem 0.55rem;
   touch-action: manipulation;
-  max-height: 14rem;
+  flex: 0 0 auto;
+  max-height: min(55vh, 22rem);
   opacity: 1;
-  overflow: hidden;
+  overflow: visible;
   transition:
     max-height 0.34s var(--ease),
     opacity 0.28s var(--ease),
@@ -3347,13 +3350,17 @@ h3 {
 .action-drawer.is-peek .action-drawer-body {
   max-height: 0;
   opacity: 0;
+  padding-top: 0;
   padding-bottom: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
 .action-drawer .action-row {
   width: 100%;
-  gap: 0.35rem;
+  gap: 0.45rem;
+  padding: 0.1rem 0;
+  overflow: visible;
 }
 
 .action-drawer .action-row .btn {
