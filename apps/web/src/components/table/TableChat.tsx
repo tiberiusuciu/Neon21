@@ -37,7 +37,11 @@ function countUnread(
   if (lastReadId == null) return 0;
   const idx = messages.findIndex((m) => m.id === lastReadId);
   const after = idx >= 0 ? messages.slice(idx + 1) : messages;
-  return after.filter((m) => !selfUserId || m.userId !== selfUserId).length;
+  return after.filter(
+    (m) =>
+      m.kind !== "system" &&
+      (!selfUserId || m.userId !== selfUserId)
+  ).length;
 }
 
 function withoutOwnPresence(
@@ -174,7 +178,9 @@ export function TableChat({ messages, selfUserId, onSend }: Props) {
     const prevId = lastPeekId.current;
     const prevIdx =
       prevId == null ? -1 : feed.findIndex((m) => m.id === prevId);
-    const fresh = prevIdx >= 0 ? feed.slice(prevIdx + 1) : [latest];
+    const fresh = (prevIdx >= 0 ? feed.slice(prevIdx + 1) : [latest]).filter(
+      (m) => m.kind !== "system"
+    );
     lastPeekId.current = latest.id;
     if (!fresh.length) return;
     enqueuePeeks(fresh);
