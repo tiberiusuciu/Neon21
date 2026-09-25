@@ -1,12 +1,17 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
-const SEG_MS = 200;
-const LINGER_MS = 1_500;
-const FADE_MS = 400;
+/** Per segment between consecutive straight cards (slow, readable). */
+const SEG_MS = 520;
+const LINGER_MS = 2_400;
+const FADE_MS = 500;
+/** Wait for the newly dealt card to mount before measuring. */
+const MEASURE_RETRY_MS = 900;
 
 type Props = {
   cardIndices: number[];
   until: number;
+  /** Current hand card count — wait until indices are in the DOM. */
+  cardCount: number;
 };
 
 type Pt = { x: number; y: number };
@@ -17,6 +22,8 @@ function measurePoints(
 ): { points: Pt[]; width: number; height: number } | null {
   const cards = row.querySelectorAll<HTMLElement>(":scope > .card");
   if (cards.length === 0) return null;
+  const need = Math.max(...cardIndices) + 1;
+  if (cards.length < need) return null;
   const rowRect = row.getBoundingClientRect();
   if (rowRect.width <= 0 || rowRect.height <= 0) return null;
   const points: Pt[] = [];
@@ -24,6 +31,7 @@ function measurePoints(
     const el = cards[ci];
     if (!el) return null;
     const r = el.getBoundingClientRect();
+    if (r.width <= 0 || r.height <= 0) return null;
     points.push({
       x: r.left - rowRect.left + r.width / 2,
       y: r.top - rowRect.top + r.height / 2,
@@ -32,7 +40,11 @@ function measurePoints(
   return { points, width: rowRect.width, height: rowRect.height };
 }
 
-export function StraightNeonTrace({ cardIndices, until }: Props) {
+export function StraightNeonTrace({
+  cardIndices,
+  until,
+  cardCount,
+}: Props) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [layout, setLayout] = useState<{
     points: Pt[];
@@ -44,22 +56,48 @@ export function StraightNeonTrace({ cardIndices, until }: Props) {
   const indexKey = cardIndices.join(",");
   const n = cardIndices.length;
   const drawMs = Math.max(1, n - 1) * SEG_MS;
+  const needCards = n > 0 ? Math.max(...cardIndices) + 1 : 0;
 
   useLayoutEffect(() => {
     const svg = svgRef.current;
     const row = svg?.parentElement;
     if (!row || n < 2) return;
 
+    let cancelled = false;
+    let raf = 0;
+    const deadline = performance.now() + MEASURE_RETRY_MS;
+
     const sync = () => {
+      if (cancelled) return;
+      if (cardCount < needCards) {
+        if (performance.now() < deadline) {
+          raf = requestAnimationFrame(sync);
+        }
+        return;
+      }
       const next = measurePoints(row, cardIndices);
-      if (next) setLayout(next);
+      if (next) {
+        setLayout(next);
+        return;
+      }
+      if (performance.now() < deadline) {
+        raf = requestAnimationFrame(sync);
+      }
     };
     sync();
 
-    const ro = new ResizeObserver(sync);
+    const ro = new ResizeObserver(() => {
+      const next = measurePoints(row, cardIndices);
+      if (next) setLayout(next);
+    });
     ro.observe(row);
-    return () => ro.disconnect();
-  }, [indexKey, n, cardIndices]);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf);
+      ro.disconnect();
+    };
+  }, [indexKey, n, cardIndices, cardCount, needCards]);
 
   useEffect(() => {
     if (n < 2 || !layout) return;
@@ -95,12 +133,14 @@ export function StraightNeonTrace({ cardIndices, until }: Props) {
       cancelAnimationFrame(raf);
       window.clearTimeout(fadeTimer);
     };
-  }, [indexKey, n, until, drawMs, !!layout]);
+  }, [indexKey, n, until, drawMs, layout]);
 
   const pathD = useMemo(() => {
     if (!layout || layout.points.length < 2) return "";
     return layout.points
-      .map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+      .map(
+        (p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)} ${p.y.toFixed(1)}`
+      )
       .join(" ");
   }, [layout]);
 
@@ -123,6 +163,15 @@ export function StraightNeonTrace({ cardIndices, until }: Props) {
     >
       {pathD && (
         <>
+          <path
+            className="seat-straight-neon-bloom"
+            d={pathD}
+            pathLength={1}
+            style={{
+              strokeDasharray: 1,
+              strokeDashoffset: 1 - progress,
+            }}
+          />
           <path
             className="seat-straight-neon-glow"
             d={pathD}
@@ -148,7 +197,7 @@ export function StraightNeonTrace({ cardIndices, until }: Props) {
                 className="seat-straight-neon-node"
                 cx={p.x}
                 cy={p.y}
-                r={4.5}
+                r={6}
               />
             ) : null
           )}

@@ -1447,10 +1447,11 @@ export class TableRoom {
     });
     const bal = await creditCents(seat.userId, bonus);
     this.cb.onWalletUpdate(seat.userId, bal);
-    const until = Date.now() + 2_400;
+    const until = Date.now() + 5_500;
     seat.straightBonusCents = bonus;
     seat.straightBonusLength = detected.length;
     seat.straightBonusFxUntil = until;
+    this.broadcast();
     this.cb.onStraightBonus({
       tableId: this.id,
       seatIndex,
@@ -1460,7 +1461,6 @@ export class TableRoom {
       cardIndices: detected.cardIndices,
       until,
     });
-    this.broadcast();
   }
 
   /** 5-card Charlie: instant 1:1 win + spin voucher (heist or Golden Hand). */

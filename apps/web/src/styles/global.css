@@ -3063,36 +3063,47 @@ h3 {
   height: 100%;
   z-index: 4;
   overflow: visible;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.5s ease;
 }
 
 .seat-straight-neon.is-fade {
   opacity: 0;
 }
 
-.seat-straight-neon-glow {
+.seat-straight-neon-bloom {
   fill: none;
-  stroke: #5ee1ff;
-  stroke-width: 10;
+  stroke: #39f6ff;
+  stroke-width: 18;
   stroke-linecap: round;
   stroke-linejoin: round;
-  filter: blur(3px);
-  opacity: 0.85;
+  filter: blur(7px);
+  opacity: 0.55;
+}
+
+.seat-straight-neon-glow {
+  fill: none;
+  stroke: #7af0ff;
+  stroke-width: 12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: blur(3.5px);
+  opacity: 0.95;
 }
 
 .seat-straight-neon-core {
   fill: none;
-  stroke: #e8ffff;
-  stroke-width: 2.5;
+  stroke: #ffffff;
+  stroke-width: 3.25;
   stroke-linecap: round;
   stroke-linejoin: round;
+  filter: drop-shadow(0 0 4px #5ee1ff);
 }
 
 .seat-straight-neon-node {
   fill: #fff;
-  stroke: #5ee1ff;
-  stroke-width: 1.5;
-  filter: drop-shadow(0 0 4px #5ee1ff);
+  stroke: #7af0ff;
+  stroke-width: 2;
+  filter: drop-shadow(0 0 8px #39f6ff);
 }
 
 @media (prefers-reduced-motion: reduce) {

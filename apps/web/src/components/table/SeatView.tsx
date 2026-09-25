@@ -450,6 +450,7 @@ export function SeatView({
                         <StraightNeonTrace
                           cardIndices={straightFx.cardIndices}
                           until={straightFx.until}
+                          cardCount={hand.cards.length}
                         />
                       )}
                   </div>
