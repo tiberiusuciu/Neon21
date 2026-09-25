@@ -550,10 +550,29 @@ export function TablePage() {
   useEffect(() => {
     const goldenActive =
       goldenHour?.active === true && goldenHour.activeUntil != null;
-    if (endsAt == null && pauseEndsAt == null && !goldenActive) return;
+    const goldenNext =
+      goldenHour != null &&
+      !goldenHour.disabled &&
+      !goldenHour.active &&
+      goldenHour.nextStartsAt != null;
+    if (
+      endsAt == null &&
+      pauseEndsAt == null &&
+      !goldenActive &&
+      !goldenNext
+    ) {
+      return;
+    }
     const id = window.setInterval(() => setNow(Date.now()), 250);
     return () => window.clearInterval(id);
-  }, [endsAt, pauseEndsAt, goldenHour?.active, goldenHour?.activeUntil]);
+  }, [
+    endsAt,
+    pauseEndsAt,
+    goldenHour?.active,
+    goldenHour?.activeUntil,
+    goldenHour?.disabled,
+    goldenHour?.nextStartsAt,
+  ]);
 
   const [turnBudgetMs, setTurnBudgetMs] = useState(25_000);
   const [betBudgetMs, setBetBudgetMs] = useState(40_000);
@@ -942,6 +961,22 @@ export function TablePage() {
                 </span>
               </span>
             )}
+            {goldenHour &&
+              !goldenHour.disabled &&
+              !goldenHour.active &&
+              goldenHour.nextStartsAt != null && (
+                <span
+                  className="table-golden-hour table-golden-hour-next"
+                  title="Next Golden Hour heist"
+                >
+                  <span className="table-golden-hour-label">Heist</span>
+                  <span className="table-golden-hour-time">
+                    {formatCountdown(
+                      Math.max(0, goldenHour.nextStartsAt - now)
+                    )}
+                  </span>
+                </span>
+              )}
             {goldenHour?.active && (
               <span
                 className={`table-golden-rebate${

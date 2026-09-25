@@ -1700,6 +1700,22 @@ h3 {
   color: #e8c76a;
 }
 
+.table-golden-hour-next {
+  border-color: color-mix(in srgb, #c9a227 22%, var(--line));
+  background: color-mix(in srgb, #c9a227 6%, var(--surface));
+  opacity: 0.9;
+}
+
+.table-golden-hour-next .table-golden-hour-label {
+  color: var(--muted);
+  font-weight: 650;
+}
+
+.table-golden-hour-next .table-golden-hour-time {
+  font-weight: 600;
+  color: color-mix(in srgb, #c9a227 50%, var(--muted));
+}
+
 .table-golden-rebate {
   display: inline-flex;
   align-items: baseline;
@@ -1828,6 +1844,10 @@ h3 {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.05em;
+  }
+
+  .table-golden-hour-next .table-golden-hour-label::before {
+    content: "Next";
   }
 
   .table-golden-rebate-label {
