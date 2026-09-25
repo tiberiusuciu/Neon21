@@ -266,6 +266,14 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       socket.data.tableId = undefined;
     });
 
+    socket.on("table:away", () => {
+      const tableId = socket.data.tableId as string | undefined;
+      if (!tableId) return;
+      socket.leave(`table:${tableId}`);
+      pool.get(tableId)?.away(userId);
+      socket.data.tableId = undefined;
+    });
+
     socket.on("seat:take", async (raw) => {
       const parsed = SeatTakeSchema.safeParse(raw);
       if (!parsed.success) {
@@ -663,8 +671,8 @@ export function setupSocket(app: FastifyInstance, httpServer: import("node:http"
       if (!tableId) return;
       const room = pool.get(tableId);
       if (!room) return;
-      // Keep seat + spectator membership across blips / HMR / reloads.
-      // Explicit table:leave clears presence.
+      // Keep seat across blips / reloads / tab switches — round plays out.
+      // Explicit table:leave clears presence only when no live hand.
       if (room.findSeatIndex(userId) >= 0) {
         room.setConnected(userId, false);
       }

@@ -408,12 +408,19 @@ export class TableRoom {
     return !already;
   }
 
-  /** Returns display name if they were present and left. */
+  /** Returns display name if they fully left (for presence chat). Live hands soft-away instead. */
   leave(userId: string): string | null {
     const name = this.displayName(userId);
     const seatIdx = this.findSeatIndex(userId);
     const wasSpec = this.spectators.has(userId);
     if (seatIdx < 0 && !wasSpec) return null;
+
+    if (seatIdx >= 0 && this.seatHasLiveHand(this.seats[seatIdx]!)) {
+      this.seats[seatIdx]!.connected = false;
+      this.broadcast();
+      return null;
+    }
+
     if (seatIdx >= 0) {
       this.clearSeat(seatIdx);
     }
@@ -422,6 +429,20 @@ export class TableRoom {
     this.cb.onSeatedChanged(this.id);
     this.cb.onLobbyChanged();
     return name;
+  }
+
+  /** Mark seated player away without clearing the seat (tab hide / navigate / disconnect). */
+  away(userId: string) {
+    const seatIdx = this.findSeatIndex(userId);
+    if (seatIdx < 0) return;
+    if (this.seats[seatIdx]!.connected) {
+      this.seats[seatIdx]!.connected = false;
+      this.broadcast();
+    }
+  }
+
+  private seatHasLiveHand(seat: SeatState): boolean {
+    return seat.hands.length > 0;
   }
 
   setConnected(userId: string, connected: boolean) {
@@ -481,6 +502,9 @@ export class TableRoom {
     const seatIdx = this.findSeatIndex(userId);
     if (seatIdx < 0) return "Not seated";
     const seat = this.seats[seatIdx]!;
+    if (this.seatHasLiveHand(seat)) {
+      return "Finish the current hand first";
+    }
     const returnArmed = seat.goldenHandArmed && !isDebugSeatUser(userId);
 
     if (this.spin?.userId === userId) {

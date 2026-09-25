@@ -24,6 +24,7 @@ export type ClientToServerEvents = {
   "jackpot:unsubscribe": () => void;
   "table:join": (payload: { tableId: string }) => void;
   "table:leave": () => void;
+  "table:away": () => void;
   "seat:take": (payload: { seatIndex: number }) => void;
   "seat:leave": () => void;
   "bet:add": (payload: { cents: number }) => void;

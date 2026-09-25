@@ -126,7 +126,7 @@ export function TablePage() {
     if (!tableId) return;
     joinTable(tableId);
     return () => {
-      leaveTable();
+      leaveTable({ hard: false });
     };
   }, [tableId, joinTable, leaveTable]);
 
@@ -208,19 +208,24 @@ export function TablePage() {
     saveRoundHistory(tableId, roundHistory);
   }, [tableId, roundHistory]);
 
-  function goLobby() {
-    leaveTable();
-    navigate("/lobby");
-  }
-
-  const endsAt = tableState?.phaseEndsAt ?? null;
-
-  const phase: TablePhase = tableState?.phase ?? "betting";
-
   const mySeat = useMemo(() => {
     if (!tableState || !user) return null;
     return tableState.seats.find((s) => s.userId === user.id) ?? null;
   }, [tableState, user]);
+
+  function goLobby() {
+    const liveHand = (mySeat?.hands.length ?? 0) > 0;
+    if (liveHand) {
+      leaveTable({ hard: false });
+      toast.info("Hand in progress — seat held until the round ends");
+    } else {
+      leaveTable({ hard: true });
+    }
+    navigate("/lobby");
+  }
+
+  const endsAt = tableState?.phaseEndsAt ?? null;
+  const phase: TablePhase = tableState?.phase ?? "betting";
 
   useEffect(() => {
     if (phase !== "settle") {

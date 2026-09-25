@@ -38,7 +38,8 @@ type GameSocketApi = {
   goldenHourRebate: GoldenHourRebateProgress | null;
   subscribeLobby: () => void;
   joinTable: (tableId: string) => void;
-  leaveTable: () => void;
+  /** Soft by default keeps seat + activeTableId; pass hard to fully leave when allowed. */
+  leaveTable: (opts?: { hard?: boolean }) => void;
   takeSeat: (seatIndex: number) => void;
   leaveSeat: () => void;
   addBet: (cents: number) => void;
@@ -278,9 +279,17 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     },
     [socket]
   );
-  const leaveTable = useCallback(() => {
+  const leaveTable = useCallback((opts?: { hard?: boolean }) => {
     if (leaveTimerRef.current != null) {
       window.clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    const hard = opts?.hard === true;
+    if (!hard) {
+      setTableState(null);
+      setChatMessages([]);
+      if (socket) emitEvent(socket, "table:away");
+      return;
     }
     leaveTimerRef.current = window.setTimeout(() => {
       leaveTimerRef.current = null;
