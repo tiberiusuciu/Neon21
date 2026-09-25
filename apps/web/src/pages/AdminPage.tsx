@@ -303,8 +303,11 @@ export function AdminPage() {
     }
   }
 
-  async function onGoldenSchedule(e: FormEvent) {
-    e.preventDefault();
+  async function saveGoldenSettings(opts: {
+    rescheduleNext: boolean;
+    success: string;
+    successReroll?: string;
+  }) {
     if (!token || goldenBusy) return;
     const min = Number(ghCooldownMin);
     const max = Number(ghCooldownMax);
@@ -336,7 +339,7 @@ export function AdminPage() {
         cooldownMaxHours: max,
         goldenHandsPerHands: handsPer,
         spinBjPerVoucher: bjPer,
-        rescheduleNext: ghRescheduleNext,
+        rescheduleNext: opts.rescheduleNext,
       });
       setGoldenHour(gh);
       setGhCooldownMin(String(gh.cooldownMinHours ?? min));
@@ -344,17 +347,37 @@ export function AdminPage() {
       setGhHandsPerGolden(String(gh.goldenHandsPerHands ?? handsPer));
       setGhBjPerVoucher(String(gh.spinBjPerVoucher ?? bjPer));
       toast.success(
-        ghRescheduleNext && !gh.active && !gh.disabled
-          ? "Schedule saved — next Golden Hour re-rolled"
-          : "Schedule saved"
+        opts.rescheduleNext &&
+          opts.successReroll &&
+          !gh.active &&
+          !gh.disabled
+          ? opts.successReroll
+          : opts.success
       );
     } catch (err) {
       toast.error(
-        err instanceof ApiError ? err.message : "Failed to save schedule"
+        err instanceof ApiError ? err.message : "Failed to save settings"
       );
     } finally {
       setGoldenBusy(false);
     }
+  }
+
+  async function onGoldenSchedule(e: FormEvent) {
+    e.preventDefault();
+    await saveGoldenSettings({
+      rescheduleNext: ghRescheduleNext,
+      success: "Schedule saved",
+      successReroll: "Schedule saved — next Golden Hour re-rolled",
+    });
+  }
+
+  async function onGoldenConsumables(e: FormEvent) {
+    e.preventDefault();
+    await saveGoldenSettings({
+      rescheduleNext: false,
+      success: "Consumable rates saved",
+    });
   }
 
   async function onTopUp(e: FormEvent) {
@@ -619,11 +642,16 @@ export function AdminPage() {
                 {goldenHour.disabled ? "Enable" : "Disable"}
               </button>
             </div>
+            <p
+              className="muted"
+              style={{ margin: "0.85rem 0 0.35rem", fontSize: "0.78rem" }}
+            >
+              Auto-start gap
+            </p>
             <form
               className="admin-golden-schedule"
               onSubmit={(e) => void onGoldenSchedule(e)}
               style={{
-                marginTop: "0.85rem",
                 display: "flex",
                 flexWrap: "wrap",
                 gap: "0.65rem",
@@ -658,6 +686,52 @@ export function AdminPage() {
                   onChange={(e) => setGhCooldownMax(e.target.value)}
                 />
               </label>
+              <label
+                className="muted"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.35rem",
+                  fontSize: "0.8rem",
+                  margin: "0 0 0.35rem",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={ghRescheduleNext}
+                  disabled={
+                    goldenBusy || goldenHour.active || goldenHour.disabled
+                  }
+                  onChange={(e) => setGhRescheduleNext(e.target.checked)}
+                />
+                Re-roll next start
+              </label>
+              <button
+                type="submit"
+                className="btn btn-sm"
+                disabled={goldenBusy}
+                style={{ marginBottom: "0.15rem" }}
+              >
+                Save schedule
+              </button>
+            </form>
+
+            <p
+              className="muted"
+              style={{ margin: "1rem 0 0.35rem", fontSize: "0.78rem" }}
+            >
+              Consumable rates
+            </p>
+            <form
+              className="admin-golden-consumables"
+              onSubmit={(e) => void onGoldenConsumables(e)}
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "0.65rem",
+                alignItems: "flex-end",
+              }}
+            >
               <label className="field" style={{ margin: 0, minWidth: "7rem" }}>
                 <span className="muted" style={{ fontSize: "0.75rem" }}>
                   Hands / Golden
@@ -687,33 +761,13 @@ export function AdminPage() {
                   title="Changing this reshapes remaining BJ progress (count % N)"
                 />
               </label>
-              <label
-                className="muted"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.35rem",
-                  fontSize: "0.8rem",
-                  margin: "0 0 0.35rem",
-                }}
-              >
-                <input
-                  type="checkbox"
-                  checked={ghRescheduleNext}
-                  disabled={
-                    goldenBusy || goldenHour.active || goldenHour.disabled
-                  }
-                  onChange={(e) => setGhRescheduleNext(e.target.checked)}
-                />
-                Re-roll next start
-              </label>
               <button
                 type="submit"
                 className="btn btn-sm"
                 disabled={goldenBusy}
                 style={{ marginBottom: "0.15rem" }}
               >
-                Save schedule
+                Save rates
               </button>
             </form>
           </>
