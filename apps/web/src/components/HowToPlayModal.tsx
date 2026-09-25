@@ -5,6 +5,7 @@ import {
   GOLDEN_HOUR_REBATE_CAP_CENTS,
   GOLDEN_HAND_MAX_BET_CENTS,
   MIN_BET_CENTS,
+  SPIN_BJ_PER_VOUCHER,
   type Rank,
   type Suit,
 } from "@neon21/shared";
@@ -91,16 +92,20 @@ function CardRow({
   );
 }
 
-function PipDemo({ lit }: { lit: number }) {
+function PipDemo({ lit, total }: { lit: number; total: number }) {
+  const n = Math.max(1, total);
+  const on = Math.max(0, Math.min(n, lit));
   return (
     <div className="howto-pip-row" aria-hidden>
-      {Array.from({ length: 5 }, (_, i) => (
+      {Array.from({ length: n }, (_, i) => (
         <span
           key={i}
-          className={`seat-bj-pip${i < lit ? " is-lit" : ""}`}
+          className={`seat-bj-pip${i < on ? " is-lit" : ""}`}
         />
       ))}
-      <span className="howto-pip-caption">{lit} / 5</span>
+      <span className="howto-pip-caption">
+        {on} / {n}
+      </span>
     </div>
   );
 }
@@ -136,6 +141,7 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
   const [potCents, setPotCents] = useState<number | null>(null);
   const handsPer =
     goldenHour?.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS;
+  const bjPer = goldenHour?.spinBjPerVoucher ?? SPIN_BJ_PER_VOUCHER;
 
   useEffect(() => {
     if (open) setTab(initialTab);
@@ -457,8 +463,8 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
         </p>
         <ul className="howto-list">
           <li>
-            <strong>5 blackjacks in 24 hours</strong> → 1 spin voucher
-            (tickets stack)
+            <strong>{bjPer} blackjacks</strong> → 1 spin voucher (no time
+            limit; tickets stack)
           </li>
           <li>
             During betting with no bet down, spend a voucher to spin —
@@ -483,9 +489,11 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
 
         <div className="howto-visual-block">
           <p className="howto-visual-label">Blackjack dots</p>
-          <PipDemo lit={3} />
+          <PipDemo lit={Math.max(0, bjPer - 1)} total={bjPer} />
           <p className="howto-visual-sub">
-            Three lit means two more naturals unlock a voucher.
+            {bjPer - 1 > 0
+              ? `${bjPer - 1} lit means one more natural unlocks a voucher.`
+              : "The next natural unlocks a voucher."}
           </p>
         </div>
         <div className="howto-visual-block">
@@ -500,7 +508,7 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
         </div>
       </>
     );
-  }, [tab, handsPer, potCents]);
+  }, [tab, handsPer, bjPer, potCents]);
 
   return (
     <AnimatePresence>

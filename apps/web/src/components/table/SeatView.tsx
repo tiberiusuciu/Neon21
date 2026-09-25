@@ -35,6 +35,7 @@ type Props = {
   onSpinReveal?: (spin: TableSpinState) => void;
   showGoldenHourProgress?: boolean;
   goldenHandsPerHands?: number;
+  bjPerVoucher?: number;
 };
 
 export function SeatView({
@@ -58,6 +59,7 @@ export function SeatView({
   onSpinReveal,
   showGoldenHourProgress = false,
   goldenHandsPerHands = GOLDEN_HANDS_PER_HANDS,
+  bjPerVoucher,
 }: Props) {
   const empty = !seat.userId;
   const split = seat.hands.length > 1;
@@ -249,6 +251,7 @@ export function SeatView({
               seatKey={seat.userId ?? `seat-${seat.index}`}
               bjTowardSpin={seat.bjTowardSpin ?? 0}
               spinVouchers={seat.spinVouchers ?? 0}
+              bjPerVoucher={bjPerVoucher}
             />
           )}
           {showGoldenHourProgress && seat.goldenHourHandsToward != null && (

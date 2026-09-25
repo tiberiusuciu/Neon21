@@ -195,6 +195,8 @@ export const GoldenHourPublicSchema = z.object({
   cooldownMaxHours: z.number().int().positive().optional(),
   /** GH hands needed to earn one Golden Hand token (admin-tunable). */
   goldenHandsPerHands: z.number().int().min(1).max(500).optional(),
+  /** Naturals needed per spin voucher (admin-tunable; no time decay). */
+  spinBjPerVoucher: z.number().int().min(1).max(50).optional(),
 });
 export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
 
@@ -224,6 +226,8 @@ export const AdminGoldenHourScheduleBodySchema = z.object({
   cooldownMaxHours: z.number().int().min(1).max(168),
   /** GH hands per Golden Hand token. */
   goldenHandsPerHands: z.number().int().min(1).max(500),
+  /** Naturals per spin voucher. */
+  spinBjPerVoucher: z.number().int().min(1).max(50),
   /** When idle, re-roll nextStartsAt from the new range. Default true. */
   rescheduleNext: z.boolean().optional(),
 });
@@ -312,6 +316,8 @@ export const MIN_BET_CENTS = 500;
 export const GOLDEN_HAND_MAX_BET_CENTS = 500_000;
 /** Default GH hands per Golden Hand token (admin can override). */
 export const GOLDEN_HANDS_PER_HANDS = 15;
+/** Default naturals per spin voucher (admin can override). */
+export const SPIN_BJ_PER_VOUCHER = 3;
 export const SEAT_CAPACITY = 7;
 
 export const SuitSchema = z.enum(["S", "H", "D", "C"]);
@@ -404,8 +410,8 @@ export const PublicSeatSchema = z.object({
   insuranceCents: z.number().int(),
   insuranceResolved: z.boolean(),
   connected: z.boolean(),
-  /** Blackjacks in last 24h toward next spin voucher (0–4). */
-  bjTowardSpin: z.number().int().min(0).max(4).optional(),
+  /** Blackjacks toward next spin voucher (0 … threshold-1). */
+  bjTowardSpin: z.number().int().min(0).max(49).optional(),
   /** Open spin vouchers stacked. */
   spinVouchers: z.number().int().nonnegative().optional(),
   /** Epoch ms while suited-pair bonus FX should show. */

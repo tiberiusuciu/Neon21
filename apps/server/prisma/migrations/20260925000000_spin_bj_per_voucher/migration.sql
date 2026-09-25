@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "GoldenHourState" ADD COLUMN IF NOT EXISTS "spinBjPerVoucher" INTEGER NOT NULL DEFAULT 3;

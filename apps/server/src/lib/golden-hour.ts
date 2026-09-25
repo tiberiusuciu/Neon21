@@ -1,5 +1,5 @@
 import type { GoldenHourPublic } from "@neon21/shared";
-import { GOLDEN_HANDS_PER_HANDS } from "@neon21/shared";
+import { GOLDEN_HANDS_PER_HANDS, SPIN_BJ_PER_VOUCHER } from "@neon21/shared";
 import { prisma } from "./prisma.js";
 import { payGoldenHourRebates } from "./golden-hour-rebate.js";
 
@@ -20,6 +20,7 @@ type Row = {
   cooldownMinHours: number;
   cooldownMaxHours: number;
   goldenHandsPerHands: number;
+  spinBjPerVoucher: number;
 };
 
 type Transition = "started" | "ended" | null;
@@ -39,6 +40,11 @@ function clampHours(n: number, fallback: number): number {
 function clampGoldenHandsPerHands(n: number): number {
   if (!Number.isFinite(n)) return GOLDEN_HANDS_PER_HANDS;
   return Math.min(500, Math.max(1, Math.floor(n)));
+}
+
+function clampSpinBjPerVoucher(n: number): number {
+  if (!Number.isFinite(n)) return SPIN_BJ_PER_VOUCHER;
+  return Math.min(50, Math.max(1, Math.floor(n)));
 }
 
 function normalizeCooldown(minHours: number, maxHours: number): {
@@ -85,6 +91,9 @@ function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
     goldenHandsPerHands: clampGoldenHandsPerHands(
       row.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS
     ),
+    spinBjPerVoucher: clampSpinBjPerVoucher(
+      row.spinBjPerVoucher ?? SPIN_BJ_PER_VOUCHER
+    ),
   };
 }
 
@@ -125,6 +134,7 @@ async function persist(data: {
   cooldownMinHours?: number;
   cooldownMaxHours?: number;
   goldenHandsPerHands?: number;
+  spinBjPerVoucher?: number;
 }): Promise<Row> {
   const row = await prisma.goldenHourState.upsert({
     where: { id: ROW_ID },
@@ -140,6 +150,7 @@ async function persist(data: {
         data.cooldownMaxHours ?? GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
       goldenHandsPerHands:
         data.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS,
+      spinBjPerVoucher: data.spinBjPerVoucher ?? SPIN_BJ_PER_VOUCHER,
     },
     update: {
       ...(data.disabled !== undefined ? { disabled: data.disabled } : {}),
@@ -160,6 +171,9 @@ async function persist(data: {
         : {}),
       ...(data.goldenHandsPerHands !== undefined
         ? { goldenHandsPerHands: data.goldenHandsPerHands }
+        : {}),
+      ...(data.spinBjPerVoucher !== undefined
+        ? { spinBjPerVoucher: data.spinBjPerVoucher }
         : {}),
     },
   });
@@ -265,6 +279,7 @@ export function getGoldenHourPublic(): GoldenHourPublic {
       cooldownMinHours: GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
       cooldownMaxHours: GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
       goldenHandsPerHands: GOLDEN_HANDS_PER_HANDS,
+      spinBjPerVoucher: SPIN_BJ_PER_VOUCHER,
     };
   }
   return toPublic(cache);
@@ -283,6 +298,13 @@ export function getGoldenHourWindowStartedAt(): Date | null {
 export function getGoldenHandsPerHands(): number {
   return clampGoldenHandsPerHands(
     cache?.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS
+  );
+}
+
+/** Live admin-tunable naturals needed per spin voucher. */
+export function getSpinBjPerVoucher(): number {
+  return clampSpinBjPerVoucher(
+    cache?.spinBjPerVoucher ?? SPIN_BJ_PER_VOUCHER
   );
 }
 
@@ -380,11 +402,12 @@ export async function adminSetGoldenHourDisabled(
   return getGoldenHourPublic();
 }
 
-/** Update auto-start gap range and Golden Hand earn rate; optionally re-roll nextStartsAt when idle. */
+/** Update auto-start gap range and earn rates; optionally re-roll nextStartsAt when idle. */
 export async function adminSetGoldenHourSchedule(opts: {
   cooldownMinHours: number;
   cooldownMaxHours: number;
   goldenHandsPerHands: number;
+  spinBjPerVoucher: number;
   rescheduleNext?: boolean;
 }): Promise<GoldenHourPublic> {
   const { min, max } = normalizeCooldown(
@@ -392,6 +415,7 @@ export async function adminSetGoldenHourSchedule(opts: {
     opts.cooldownMaxHours
   );
   const handsPer = clampGoldenHandsPerHands(opts.goldenHandsPerHands);
+  const bjPer = clampSpinBjPerVoucher(opts.spinBjPerVoucher);
   const reschedule = opts.rescheduleNext !== false;
   const row = cache ?? (await loadRow());
   const now = Date.now();
@@ -404,11 +428,13 @@ export async function adminSetGoldenHourSchedule(opts: {
     cooldownMinHours: number;
     cooldownMaxHours: number;
     goldenHandsPerHands: number;
+    spinBjPerVoucher: number;
     nextStartsAt?: Date | null;
   } = {
     cooldownMinHours: min,
     cooldownMaxHours: max,
     goldenHandsPerHands: handsPer,
+    spinBjPerVoucher: bjPer,
   };
 
   if (reschedule && !row.disabled && !active) {

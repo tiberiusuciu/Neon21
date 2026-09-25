@@ -90,6 +90,7 @@ export function AdminPage() {
   const [ghCooldownMin, setGhCooldownMin] = useState("4");
   const [ghCooldownMax, setGhCooldownMax] = useState("12");
   const [ghHandsPerGolden, setGhHandsPerGolden] = useState("15");
+  const [ghBjPerVoucher, setGhBjPerVoucher] = useState("3");
   const [ghRescheduleNext, setGhRescheduleNext] = useState(true);
   const [ghNow, setGhNow] = useState(() => Date.now());
   const [granting, setGranting] = useState(false);
@@ -143,6 +144,7 @@ export function AdminPage() {
       setGhCooldownMin(String(gh.cooldownMinHours ?? 4));
       setGhCooldownMax(String(gh.cooldownMaxHours ?? 12));
       setGhHandsPerGolden(String(gh.goldenHandsPerHands ?? 15));
+      setGhBjPerVoucher(String(gh.spinBjPerVoucher ?? 3));
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to load Golden Hour"
@@ -307,6 +309,7 @@ export function AdminPage() {
     const min = Number(ghCooldownMin);
     const max = Number(ghCooldownMax);
     const handsPer = Number(ghHandsPerGolden);
+    const bjPer = Number(ghBjPerVoucher);
     if (
       !Number.isInteger(min) ||
       !Number.isInteger(max) ||
@@ -322,18 +325,24 @@ export function AdminPage() {
       toast.error("Hands per Golden Hand must be an integer from 1 to 500");
       return;
     }
+    if (!Number.isInteger(bjPer) || bjPer < 1 || bjPer > 50) {
+      toast.error("Blackjacks per voucher must be an integer from 1 to 50");
+      return;
+    }
     setGoldenBusy(true);
     try {
       const gh = await api.adminGoldenHourSchedule(token, {
         cooldownMinHours: min,
         cooldownMaxHours: max,
         goldenHandsPerHands: handsPer,
+        spinBjPerVoucher: bjPer,
         rescheduleNext: ghRescheduleNext,
       });
       setGoldenHour(gh);
       setGhCooldownMin(String(gh.cooldownMinHours ?? min));
       setGhCooldownMax(String(gh.cooldownMaxHours ?? max));
       setGhHandsPerGolden(String(gh.goldenHandsPerHands ?? handsPer));
+      setGhBjPerVoucher(String(gh.spinBjPerVoucher ?? bjPer));
       toast.success(
         ghRescheduleNext && !gh.active && !gh.disabled
           ? "Schedule saved — next Golden Hour re-rolled"
@@ -661,6 +670,21 @@ export function AdminPage() {
                   value={ghHandsPerGolden}
                   disabled={goldenBusy}
                   onChange={(e) => setGhHandsPerGolden(e.target.value)}
+                />
+              </label>
+              <label className="field" style={{ margin: 0, minWidth: "7.5rem" }}>
+                <span className="muted" style={{ fontSize: "0.75rem" }}>
+                  BJs / voucher
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  step={1}
+                  value={ghBjPerVoucher}
+                  disabled={goldenBusy}
+                  onChange={(e) => setGhBjPerVoucher(e.target.value)}
+                  title="Changing this reshapes remaining BJ progress (count % N)"
                 />
               </label>
               <label

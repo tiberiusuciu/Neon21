@@ -2,6 +2,7 @@ import type { AdminJackpotLedgerEntry } from "@neon21/shared";
 import { formatClaimLabel } from "@neon21/shared";
 import { prisma } from "./prisma.js";
 import { env } from "../env.js";
+import { getSpinBjPerVoucher } from "./golden-hour.js";
 
 /** Default epoch — prior HandOutcomes do not count toward jackpot. */
 export const JACKPOT_EPOCH = new Date("2026-09-23T20:40:00.000Z");
@@ -98,21 +99,14 @@ export async function setAvailablePotCents(
   };
 }
 
-export const SPIN_BJ_WINDOW_MS = 24 * 60 * 60 * 1000;
-export const SPIN_BJ_PER_VOUCHER = 5;
-
-export function windowStart(now = Date.now()): Date {
-  return new Date(now - SPIN_BJ_WINDOW_MS);
-}
+export const SPIN_BJ_PER_VOUCHER_DEFAULT = 3;
 
 /** BJ progress only counts hands after jackpot/voucher feature start (no retroactive backlog). */
-export function spinBjCountStartsAt(now = Date.now()): Date {
-  const window = windowStart(now);
-  const epoch = jackpotStartsAt();
-  return epoch > window ? epoch : window;
+export function spinBjCountStartsAt(): Date {
+  return jackpotStartsAt();
 }
 
-export async function countBlackjacks24h(userId: string): Promise<number> {
+export async function countBlackjacksTowardSpin(userId: string): Promise<number> {
   return prisma.handOutcome.count({
     where: {
       userId,
@@ -122,11 +116,8 @@ export async function countBlackjacks24h(userId: string): Promise<number> {
   });
 }
 
-export async function countVouchersInWindow(userId: string): Promise<number> {
-  return prisma.spinVoucher.count({
-    where: { userId, createdAt: { gte: spinBjCountStartsAt() } },
-  });
-}
+/** @deprecated Use countBlackjacksTowardSpin — name kept for call-site clarity. */
+export const countBlackjacks24h = countBlackjacksTowardSpin;
 
 export async function countOpenVouchers(userId: string): Promise<number> {
   return prisma.spinVoucher.count({
@@ -134,17 +125,18 @@ export async function countOpenVouchers(userId: string): Promise<number> {
   });
 }
 
-/** Seat progress toward next voucher (0–4) + open voucher count. */
+/** Seat progress toward next voucher + open voucher count. */
 export async function getSpinSeatProgress(userId: string): Promise<{
   bjTowardSpin: number;
   spinVouchers: number;
 }> {
+  const per = getSpinBjPerVoucher();
   const [bj, open] = await Promise.all([
-    countBlackjacks24h(userId),
+    countBlackjacksTowardSpin(userId),
     countOpenVouchers(userId),
   ]);
   return {
-    bjTowardSpin: bj % SPIN_BJ_PER_VOUCHER,
+    bjTowardSpin: bj % per,
     spinVouchers: open,
   };
 }
@@ -152,8 +144,6 @@ export async function getSpinSeatProgress(userId: string): Promise<{
 /**
  * Grant vouchers only for thresholds crossed by *this* settle's new BJs.
  * Never catch up on historical backlog (that caused multi-voucher spikes).
- * Do not cap against all vouchers-in-window — admin/debug grants would
- * permanently eat natural 5th-BJ tickets.
  */
 export async function maybeGrantSpinVouchers(
   userId: string,
@@ -162,11 +152,10 @@ export async function maybeGrantSpinVouchers(
   const fresh = Math.max(0, Math.floor(newBlackjacks));
   if (fresh <= 0) return 0;
 
-  const bj = await countBlackjacks24h(userId);
+  const per = getSpinBjPerVoucher();
+  const bj = await countBlackjacksTowardSpin(userId);
   const prev = Math.max(0, bj - fresh);
-  const toGrant =
-    Math.floor(bj / SPIN_BJ_PER_VOUCHER) -
-    Math.floor(prev / SPIN_BJ_PER_VOUCHER);
+  const toGrant = Math.floor(bj / per) - Math.floor(prev / per);
   if (toGrant <= 0) return 0;
   await prisma.spinVoucher.createMany({
     data: Array.from({ length: toGrant }, () => ({

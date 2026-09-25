@@ -4,8 +4,8 @@ import {
   useState,
   type CSSProperties,
 } from "react";
+import { SPIN_BJ_PER_VOUCHER } from "@neon21/shared";
 
-const PIP_COUNT = 5;
 const POP_MS = 720;
 const BETWEEN_FILLS_MS = 90;
 const WAVE_MS = 520;
@@ -16,6 +16,8 @@ const VOUCHER_BUMP_MS = 520;
 type Props = {
   bjTowardSpin: number;
   spinVouchers: number;
+  /** Naturals needed for a voucher (admin-tunable). */
+  bjPerVoucher?: number;
   /** Reset animation tracking when the seated player changes. */
   seatKey: string;
 };
@@ -29,28 +31,40 @@ function prefersReducedMotion(): boolean {
   );
 }
 
+function clampPipCount(n: number | undefined): number {
+  const v = Math.floor(n ?? SPIN_BJ_PER_VOUCHER);
+  if (!Number.isFinite(v)) return SPIN_BJ_PER_VOUCHER;
+  return Math.min(50, Math.max(1, v));
+}
+
 /**
- * Visual BJ→voucher meter. Server snaps 4→0 on the 5th BJ; we stage fill →
- * celebrate → clear locally so the last pip and ticket bump still play.
- * Join/hydration voucher jumps snap silently (no celebrate).
+ * Visual BJ→voucher meter. Server snaps (N-1)→0 on the completing BJ; we
+ * stage fill → celebrate → clear locally so the last pip and ticket bump
+ * still play. Join/hydration voucher jumps snap silently (no celebrate).
  */
 export function SeatBjMeter({
   bjTowardSpin,
   spinVouchers,
+  bjPerVoucher,
   seatKey,
 }: Props) {
-  const targetBj = Math.max(0, Math.min(PIP_COUNT - 1, Math.floor(bjTowardSpin)));
+  const pipCount = clampPipCount(bjPerVoucher);
+  const targetBj = Math.max(
+    0,
+    Math.min(pipCount - 1, Math.floor(bjTowardSpin) % pipCount)
+  );
   const targetVouchers = Math.max(0, Math.floor(spinVouchers));
 
   const [lit, setLit] = useState(targetBj);
   const [vouchers, setVouchers] = useState(targetVouchers);
   const [pipFx, setPipFx] = useState<PipFx[]>(() =>
-    Array.from({ length: PIP_COUNT }, () => "idle" as PipFx)
+    Array.from({ length: pipCount }, () => "idle" as PipFx)
   );
   const [burst, setBurst] = useState(false);
   const [voucherBump, setVoucherBump] = useState(false);
 
   const seatKeyRef = useRef(seatKey);
+  const pipCountRef = useRef(pipCount);
   const litRef = useRef(lit);
   const vouchersRef = useRef(vouchers);
   const prevTargetBj = useRef(targetBj);
@@ -83,11 +97,11 @@ export function SeatBjMeter({
     });
   }
 
-  function setAllPip(fx: PipFx) {
-    setPipFx(Array.from({ length: PIP_COUNT }, () => fx));
+  function setAllPip(fx: PipFx, count = pipCountRef.current) {
+    setPipFx(Array.from({ length: count }, () => fx));
   }
 
-  function snap(bj: number, v: number) {
+  function snap(bj: number, v: number, count = pipCountRef.current) {
     clearTimers();
     queue.current = [];
     running.current = false;
@@ -95,16 +109,17 @@ export function SeatBjMeter({
     setVouchers(v);
     litRef.current = bj;
     vouchersRef.current = v;
-    setAllPip("idle");
+    setAllPip("idle", count);
     setBurst(false);
     setVoucherBump(false);
   }
 
   async function playWave(through: number) {
     const n = Math.max(0, through);
+    const count = pipCountRef.current;
     setPipFx((prev) => {
       const next = prev.slice() as PipFx[];
-      for (let i = 0; i < PIP_COUNT; i++) {
+      for (let i = 0; i < count; i++) {
         next[i] = i < n ? "wave" : "idle";
       }
       return next;
@@ -112,7 +127,7 @@ export function SeatBjMeter({
     await wait(WAVE_MS);
     setPipFx((prev) => {
       const next = prev.slice() as PipFx[];
-      for (let i = 0; i < PIP_COUNT; i++) {
+      for (let i = 0; i < count; i++) {
         if (next[i] === "wave") next[i] = "idle";
       }
       return next;
@@ -135,20 +150,21 @@ export function SeatBjMeter({
   }
 
   async function animComplete(finalBj: number, finalVouchers: number) {
-    await animFillTo(PIP_COUNT);
+    const count = pipCountRef.current;
+    await animFillTo(count);
     setBurst(true);
-    setAllPip("celebrate");
+    setAllPip("celebrate", count);
     await wait(280);
     setVouchers(finalVouchers);
     vouchersRef.current = finalVouchers;
     setVoucherBump(true);
     await wait(CELEBRATE_MS - 280);
     setBurst(false);
-    setAllPip("clear");
+    setAllPip("clear", count);
     await wait(CLEAR_MS);
     setLit(finalBj);
     litRef.current = finalBj;
-    setAllPip("idle");
+    setAllPip("idle", count);
     const t = window.setTimeout(() => setVoucherBump(false), VOUCHER_BUMP_MS);
     timers.current.push(t);
   }
@@ -169,6 +185,15 @@ export function SeatBjMeter({
   }
 
   useEffect(() => {
+    if (pipCountRef.current !== pipCount) {
+      pipCountRef.current = pipCount;
+      snap(targetBj, targetVouchers, pipCount);
+      prevTargetBj.current = targetBj;
+      prevTargetV.current = targetVouchers;
+      ready.current = true;
+      return;
+    }
+
     if (seatKeyRef.current !== seatKey) {
       seatKeyRef.current = seatKey;
       snap(targetBj, targetVouchers);
@@ -199,7 +224,7 @@ export function SeatBjMeter({
     }
 
     const gained = Math.max(0, targetVouchers - prevV);
-    // Cycle complete: progress wrapped (4→0). Skip celebrate on join/admin hydrate.
+    // Cycle complete: progress wrapped ((N-1)→0). Skip celebrate on join/admin hydrate.
     const completedCycle = gained > 0 && targetBj < prevBj;
 
     if (completedCycle) {
@@ -221,20 +246,20 @@ export function SeatBjMeter({
 
     snap(targetBj, targetVouchers);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync on server props only
-  }, [seatKey, targetBj, targetVouchers]);
+  }, [seatKey, targetBj, targetVouchers, pipCount]);
 
   useEffect(() => () => clearTimers(), []);
 
-  const heat = Math.min(PIP_COUNT, Math.max(0, lit));
+  const heat = Math.min(pipCount, Math.max(0, lit));
 
   return (
     <div
       className={`seat-bj-meter${burst ? " is-burst" : ""}`}
       data-heat={heat}
       title="Blackjacks toward next jackpot spin"
-      aria-label={`${targetBj} of 5 blackjacks toward next spin`}
+      aria-label={`${targetBj} of ${pipCount} blackjacks toward next spin`}
     >
-      {Array.from({ length: PIP_COUNT }, (_, i) => {
+      {Array.from({ length: pipCount }, (_, i) => {
         const on = i < lit;
         const fx = pipFx[i] ?? "idle";
         const celebrating = fx === "celebrate" || burst;

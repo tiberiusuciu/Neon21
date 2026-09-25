@@ -114,6 +114,8 @@ model GoldenHourState {
   cooldownMaxHours Int      @default(12)
   /** GH hands needed to earn one Golden Hand (admin-tunable). */
   goldenHandsPerHands Int    @default(15)
+  /** Naturals needed per spin voucher (admin-tunable; no time decay). */
+  spinBjPerVoucher    Int    @default(3)
   updatedAt       DateTime  @updatedAt
 }
 
