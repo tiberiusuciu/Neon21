@@ -148,6 +148,13 @@ export function ActionBar({
       suppressQueuedOpenRef.current = false;
       return;
     }
+    // Pre-action queue picked — stay peeked until your turn.
+    if (panelKey === "queue" && queuedAction) {
+      clearCollapseTimer();
+      peekPinnedRef.current = true;
+      setDrawer("peek");
+      return;
+    }
     // Queued auto-fire: stay peeked; hit/split may reopen after.
     if (panelKey === "act" && queuedAction) {
       clearCollapseTimer();
