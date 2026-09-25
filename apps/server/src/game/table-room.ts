@@ -64,6 +64,7 @@ import {
   goldenLossPayout,
   goldenWinPayout,
   getGoldenHourWindowStartedAt,
+  getSpinBjPerVoucher,
   isGoldenHourActive,
 } from "../lib/golden-hour.js";
 import {
@@ -208,6 +209,7 @@ export class TableRoom {
           }
         : null,
       jackpotCelebrateUntil: this.jackpotCelebrateUntil,
+      spinBjPerVoucher: getSpinBjPerVoucher(),
     };
     if (env.tableDebugEnabled) {
       snap.debugStack = this.shoe.injectPreview(24).map(

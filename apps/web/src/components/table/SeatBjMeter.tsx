@@ -40,7 +40,8 @@ function clampPipCount(n: number | undefined): number {
 /**
  * Visual BJ→voucher meter. Server snaps (N-1)→0 on the completing BJ; we
  * stage fill → celebrate → clear locally so the last pip and ticket bump
- * still play. Join/hydration voucher jumps snap silently (no celebrate).
+ * still play. Join/hydration voucher jumps snap silently (no celebrate),
+ * except N=1 where every natural wraps at 0 and must still celebrate.
  */
 export function SeatBjMeter({
   bjTowardSpin,
@@ -49,9 +50,10 @@ export function SeatBjMeter({
   seatKey,
 }: Props) {
   const pipCount = clampPipCount(bjPerVoucher);
+  // Server already sends bj % N; keep a safe clamp for mid-flight N changes.
   const targetBj = Math.max(
     0,
-    Math.min(pipCount - 1, Math.floor(bjTowardSpin) % pipCount)
+    Math.min(pipCount - 1, Math.floor(bjTowardSpin))
   );
   const targetVouchers = Math.max(0, Math.floor(spinVouchers));
 
@@ -224,8 +226,10 @@ export function SeatBjMeter({
     }
 
     const gained = Math.max(0, targetVouchers - prevV);
-    // Cycle complete: progress wrapped ((N-1)→0). Skip celebrate on join/admin hydrate.
-    const completedCycle = gained > 0 && targetBj < prevBj;
+    // Classic wrap: (N-1)→0 with a new voucher. N=1 never leaves 0, so any
+    // voucher gain from play must still run the final-pip celebration.
+    const completedCycle =
+      gained > 0 && (targetBj < prevBj || (pipCount === 1 && targetBj === 0));
 
     if (completedCycle) {
       enqueue(() => animComplete(targetBj, targetVouchers));
@@ -233,6 +237,7 @@ export function SeatBjMeter({
     }
 
     if (gained > 0) {
+      // Admin/debug voucher grant — snap quietly.
       snap(targetBj, targetVouchers);
       return;
     }

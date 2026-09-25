@@ -1289,7 +1289,11 @@ export function TablePage() {
                     goldenHandsPerHands={
                       goldenHour?.goldenHandsPerHands ?? undefined
                     }
-                    bjPerVoucher={goldenHour?.spinBjPerVoucher ?? undefined}
+                    bjPerVoucher={
+                      tableState?.spinBjPerVoucher ??
+                      goldenHour?.spinBjPerVoucher ??
+                      undefined
+                    }
                     onSit={() => {
                       if (balanceCents <= 0) {
                         toast.error("Need chips to sit — claim from the lobby");

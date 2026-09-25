@@ -501,6 +501,8 @@ export const TableStateSnapshotSchema = z.object({
   spin: TableSpinStateSchema.nullable().optional(),
   /** Epoch ms until table-wide 100% celebration ends (survives spin clear). */
   jackpotCelebrateUntil: z.number().int().nullable().optional(),
+  /** Naturals needed per spin voucher (kept in sync with admin setting). */
+  spinBjPerVoucher: z.number().int().min(1).max(50).optional(),
 });
 export type TableStateSnapshot = z.infer<typeof TableStateSnapshotSchema>;
 
