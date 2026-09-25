@@ -364,6 +364,19 @@ export function handValueLabel(value: {
   return `${value.hard}`;
 }
 
+export const HandAwardSchema = z.object({
+  kind: z.enum(["suitedPair", "triple", "straight", "charlie"]),
+  /** Side-bonus wallet credit; 0 for Charlie (main win is in resultCents). */
+  cents: z.number().int().nonnegative(),
+  /** True when cents were credited outside resultCents. */
+  sideBonus: z.boolean(),
+  suit: SuitSchema.optional(),
+  straightLength: z
+    .union([z.literal(3), z.literal(4), z.literal(5)])
+    .optional(),
+});
+export type HandAward = z.infer<typeof HandAwardSchema>;
+
 export const PublicHandSchema = z.object({
   cards: z.array(PublicCardSchema),
   value: HandValueSchema,
@@ -374,6 +387,10 @@ export const PublicHandSchema = z.object({
   resultCents: z.number().int().nullable(),
   /** Active GH suited-pair multiplier suit, if still eligible. */
   suitedPairSuit: SuitSchema.nullable().optional(),
+  /** Golden Hand rules on this hand. */
+  goldenHand: z.boolean().optional(),
+  /** Combo awards paid (or tagged) this hand. */
+  awards: z.array(HandAwardSchema).optional(),
 });
 export type PublicHand = z.infer<typeof PublicHandSchema>;
 

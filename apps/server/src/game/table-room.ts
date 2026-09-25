@@ -96,6 +96,7 @@ function emptyHand(betCents: number, goldenHand = false): HandState {
     tripleBonusPaid: false,
     straightPaidLength: 0,
     goldenHand,
+    awards: [],
   };
 }
 
@@ -285,6 +286,8 @@ export class TableRoom {
       doubled: h.doubled,
       resultCents: h.resultCents,
       suitedPairSuit: h.suitedPairSuit,
+      goldenHand: h.goldenHand || undefined,
+      awards: h.awards.length > 0 ? h.awards : undefined,
     };
   }
 
@@ -1297,6 +1300,7 @@ export class TableRoom {
         tripleBonusPaid: false,
         straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
+        awards: [],
       };
       const right: HandState = {
         cards: [card2],
@@ -1310,6 +1314,7 @@ export class TableRoom {
         tripleBonusPaid: false,
         straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
+        awards: [],
       };
       ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
       this.activeHandIndex = ctx.handIndex;
@@ -1387,6 +1392,12 @@ export class TableRoom {
     const bonus = suitedPairBonusCents(hand.betCents, hand.suitedPairSuit);
     if (bonus <= 0) return;
     hand.suitedPairPaid = true;
+    hand.awards.push({
+      kind: "suitedPair",
+      cents: bonus,
+      sideBonus: true,
+      suit: hand.suitedPairSuit ?? undefined,
+    });
     const bal = await creditCents(seat.userId, bonus);
     this.cb.onWalletUpdate(seat.userId, bal);
     seat.suitedPairBonusCents = bonus;
@@ -1402,6 +1413,11 @@ export class TableRoom {
     const bonus = tripleCardBonusCents(hand.cards, hand.fromSplit);
     if (bonus <= 0) return;
     hand.tripleBonusPaid = true;
+    hand.awards.push({
+      kind: "triple",
+      cents: bonus,
+      sideBonus: true,
+    });
     const bal = await creditCents(seat.userId, bonus);
     this.cb.onWalletUpdate(seat.userId, bal);
     seat.tripleBonusCents = bonus;
@@ -1423,6 +1439,12 @@ export class TableRoom {
     const bonus = straightBonusCents(hand.betCents, detected.length);
     if (bonus <= 0) return;
     hand.straightPaidLength = detected.length;
+    hand.awards.push({
+      kind: "straight",
+      cents: bonus,
+      sideBonus: true,
+      straightLength: detected.length as 3 | 4 | 5,
+    });
     const bal = await creditCents(seat.userId, bonus);
     this.cb.onWalletUpdate(seat.userId, bal);
     const until = Date.now() + 2_400;
@@ -1458,6 +1480,11 @@ export class TableRoom {
     hand.resultCents = resultCents;
     hand.stood = true;
     hand.suitedPairSuit = null;
+    hand.awards.push({
+      kind: "charlie",
+      cents: 0,
+      sideBonus: false,
+    });
 
     if (!isDebugSeatUser(seat.userId)) {
       const bal = await creditCents(seat.userId, win);

@@ -22,6 +22,7 @@ import { TableDebugPanel } from "../components/table/TableDebugPanel";
 import { getPhaseBannerCopy } from "../components/table/phaseCopy";
 import {
   RoundHistoryDrawer,
+  sideBonusCents,
   toHistoryCards,
   type RoundHistoryEntry,
 } from "../components/table/RoundHistoryDrawer";
@@ -273,6 +274,8 @@ export function TablePage() {
         bust: h.value.bust,
         valueLabel: h.value.label || handValueLabel(h.value),
         cards: toHistoryCards(h.cards),
+        goldenHand: h.goldenHand || undefined,
+        awards: h.awards?.length ? h.awards : undefined,
       }));
       const dealer = tableState?.dealer;
       const dealerCards = toHistoryCards(dealer?.cards ?? []);
@@ -284,13 +287,18 @@ export function TablePage() {
       const insuranceNetCents =
         insuranceCents > 0 ? (dealerBj ? insuranceCents * 2 : -insuranceCents) : 0;
       const handNet = hands.reduce((s, h) => s + h.resultCents, 0);
+      const bonusCents = hands.reduce(
+        (s, h) => s + sideBonusCents(h.awards),
+        0
+      );
       const entry: RoundHistoryEntry = {
         id: `${Date.now()}-${hands.map((h) => h.resultCents).join(",")}`,
         at: Date.now(),
-        netCents: handNet + insuranceNetCents,
+        netCents: handNet + insuranceNetCents + bonusCents,
         betCents: hands.reduce((s, h) => s + h.betCents, 0),
         insuranceCents: insuranceCents > 0 ? insuranceCents : undefined,
         insuranceNetCents: insuranceCents > 0 ? insuranceNetCents : undefined,
+        bonusCents: bonusCents > 0 ? bonusCents : undefined,
         hands,
         dealerCards,
         dealerValueLabel: dealer?.value
@@ -309,9 +317,14 @@ export function TablePage() {
     const insuranceCents = mySeat.insuranceCents;
     const insuranceNetCents =
       insuranceCents > 0 ? (dealerBj ? insuranceCents * 2 : -insuranceCents) : 0;
+    const bonusCents = mySeat.hands.reduce(
+      (s, h) => s + sideBonusCents(h.awards),
+      0
+    );
     const net =
       mySeat.hands.reduce((sum, h) => sum + (h.resultCents ?? 0), 0) +
-      insuranceNetCents;
+      insuranceNetCents +
+      bonusCents;
     if (net < 0) return;
 
     celebratedSettle.current = true;

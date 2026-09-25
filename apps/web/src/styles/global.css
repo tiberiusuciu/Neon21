@@ -3817,11 +3817,86 @@ h3 {
 }
 
 .history-hand-tag {
-  padding: 0.1rem 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.35rem;
   border-radius: 999px;
-  border: 1px solid var(--line);
-  background: color-mix(in srgb, var(--fg) 4%, transparent);
-  font-weight: 600;
+  font-size: 0.65rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  color: var(--fg);
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+}
+
+.history-golden-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.08rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #1a1408;
+  background: linear-gradient(135deg, #f0d78c, #c9a227);
+}
+
+.history-awards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.history-award-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #e8f8ff;
+  border: 1px solid color-mix(in srgb, #5ee1ff 35%, transparent);
+  background: color-mix(in srgb, #1a3a48 55%, transparent);
+}
+
+.history-award-chip.kind-suitedPair {
+  border-color: color-mix(in srgb, #f0c14a 45%, transparent);
+  background: color-mix(in srgb, #5a4210 50%, transparent);
+  color: #fff4d4;
+}
+
+.history-award-chip.kind-triple {
+  border-color: color-mix(in srgb, #7dd3c0 45%, transparent);
+  background: color-mix(in srgb, #1a5c54 45%, transparent);
+  color: #c8fff4;
+}
+
+.history-award-chip.kind-straight {
+  border-color: color-mix(in srgb, #7ae8ff 45%, transparent);
+  background: color-mix(in srgb, #2a4a78 50%, transparent);
+  color: #e8f8ff;
+}
+
+.history-award-chip.kind-charlie {
+  border-color: color-mix(in srgb, #c9a227 50%, transparent);
+  background: color-mix(in srgb, #c9a227 22%, transparent);
+  color: #ffe9a8;
+}
+
+.history-award-amt {
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  opacity: 0.95;
+}
+
+.history-row-meta .is-pos {
+  color: var(--accent);
+}
+
+.history-row-meta .is-neg {
+  color: var(--danger);
 }
 
 .history-cards {

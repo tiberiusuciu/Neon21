@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import type { PublicCard, Rank, Suit } from "@neon21/shared";
+import type { HandAward, PublicCard, Rank, Suit } from "@neon21/shared";
 import { formatCents } from "../../lib/format";
 
 const SUIT_GLYPH: Record<string, string> = {
@@ -22,6 +22,8 @@ export type RoundHandSummary = {
   bust: boolean;
   valueLabel: string;
   cards: HistoryCard[];
+  goldenHand?: boolean;
+  awards?: HandAward[];
 };
 
 export type RoundHistoryEntry = {
@@ -31,6 +33,7 @@ export type RoundHistoryEntry = {
   betCents: number;
   insuranceCents?: number;
   insuranceNetCents?: number;
+  bonusCents?: number;
   hands: RoundHandSummary[];
   dealerCards: HistoryCard[];
   dealerValueLabel: string;
@@ -50,7 +53,13 @@ export function toHistoryCards(cards: PublicCard[]): HistoryCard[] {
   });
 }
 
+export function sideBonusCents(awards: HandAward[] | undefined): number {
+  if (!awards?.length) return 0;
+  return awards.reduce((s, a) => s + (a.sideBonus ? a.cents : 0), 0);
+}
+
 function handLabel(h: RoundHandSummary): string {
+  if (h.awards?.some((a) => a.kind === "charlie")) return "Charlie";
   if (h.isBlackjack) return "Blackjack";
   if (h.bust) return "Bust";
   if (h.resultCents === 0) return "Push";
@@ -58,6 +67,21 @@ function handLabel(h: RoundHandSummary): string {
   if (h.doubled && h.resultCents < 0) return "Double loss";
   if (h.resultCents > 0) return "Win";
   return "Loss";
+}
+
+function awardLabel(a: HandAward): string {
+  switch (a.kind) {
+    case "suitedPair": {
+      const g = a.suit ? SUIT_GLYPH[a.suit] ?? a.suit : "♠";
+      return `Suited ${g}`;
+    }
+    case "triple":
+      return "Triple";
+    case "straight":
+      return `${a.straightLength ?? "?"}-straight`;
+    case "charlie":
+      return "Charlie · voucher";
+  }
 }
 
 function formatTime(at: number): string {
@@ -83,6 +107,27 @@ function MiniCards({ cards }: { cards: HistoryCard[] }) {
           </span>
         );
       })}
+    </div>
+  );
+}
+
+function AwardChips({ awards }: { awards: HandAward[] }) {
+  if (awards.length === 0) return null;
+  return (
+    <div className="history-awards">
+      {awards.map((a, i) => (
+        <span
+          key={`${a.kind}-${i}`}
+          className={`history-award-chip kind-${a.kind}`}
+        >
+          {awardLabel(a)}
+          {a.sideBonus && a.cents > 0 ? (
+            <span className="history-award-amt">
+              +{formatCents(a.cents)}
+            </span>
+          ) : null}
+        </span>
+      ))}
     </div>
   );
 }
@@ -152,10 +197,14 @@ export function RoundHistoryDrawer({ open, entries, onClose }: Props) {
                           <div className="history-hand-label">
                             You
                             {row.hands.length > 1 ? ` · hand ${hi + 1}` : ""}
+                            {h.goldenHand ? (
+                              <span className="history-golden-tag">Golden</span>
+                            ) : null}
                             <span className="history-hand-tag">{handLabel(h)}</span>
                             <span className="history-hand-value">{h.valueLabel}</span>
                           </div>
                           <MiniCards cards={h.cards} />
+                          <AwardChips awards={h.awards ?? []} />
                         </div>
                       ))}
                       <div className="history-hand-block">
@@ -191,6 +240,15 @@ export function RoundHistoryDrawer({ open, entries, onClose }: Props) {
                               {formatCents(row.insuranceNetCents)})
                             </span>
                           ) : null}
+                        </>
+                      ) : null}
+                      {row.bonusCents != null && row.bonusCents > 0 ? (
+                        <>
+                          {" · "}
+                          Combos{" "}
+                          <span className="is-pos">
+                            +{formatCents(row.bonusCents)}
+                          </span>
                         </>
                       ) : null}
                     </div>

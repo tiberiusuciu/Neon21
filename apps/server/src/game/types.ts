@@ -6,9 +6,10 @@ import type {
   Suit,
   TablePhase,
   TableStateSnapshot,
+  HandAward,
 } from "@neon21/shared";
 
-export type { HandValue, LobbyTable, PublicCard, Rank, Suit, TablePhase, TableStateSnapshot };
+export type { HandValue, LobbyTable, PublicCard, Rank, Suit, TablePhase, TableStateSnapshot, HandAward };
 
 export interface Card {
   suit: Suit;
@@ -32,6 +33,8 @@ export interface HandState {
   straightPaidLength: number;
   /** This hand uses Golden Hand 1.5× / half-loss rules. */
   goldenHand: boolean;
+  /** Combo awards credited or tagged this hand (history / UI). */
+  awards: HandAward[];
 }
 
 export interface SeatState {
