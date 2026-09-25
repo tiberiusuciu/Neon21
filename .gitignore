@@ -10,3 +10,4 @@ coverage
 .prisma
 apps/server/prisma/*.db
 apps/server/prisma/*.db-journal
+tmp-*
