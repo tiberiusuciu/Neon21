@@ -8,8 +8,11 @@ import {
   type Rank,
   type Suit,
 } from "@neon21/shared";
+import { useAuth } from "../lib/auth";
+import { api } from "../lib/api";
 import { useGameSocket } from "../lib/SocketProvider";
 import { formatCents } from "../lib/format";
+import { WheelFace } from "./table/SpinWheel";
 
 export type HowToPlayTab = "basics" | "heist" | "golden" | "jackpot";
 
@@ -33,13 +36,21 @@ const SUIT_GLYPH: Record<Suit, string> = {
   C: "♣",
 };
 
+const DEMO_BET = 10_000;
+const DEMO_INS = DEMO_BET / 2;
+
 function GuideCard({
   rank,
   suit,
+  faceDown,
 }: {
-  rank: Rank;
-  suit: Suit;
+  rank?: Rank;
+  suit?: Suit;
+  faceDown?: boolean;
 }) {
+  if (faceDown) {
+    return <div className="card card-back guide-card" aria-hidden />;
+  }
   const red = suit === "H" || suit === "D";
   return (
     <div
@@ -47,7 +58,7 @@ function GuideCard({
       aria-hidden
     >
       <span className="card-rank">{rank}</span>
-      <span className="card-suit">{SUIT_GLYPH[suit]}</span>
+      <span className="card-suit">{SUIT_GLYPH[suit!]}</span>
     </div>
   );
 }
@@ -56,19 +67,26 @@ function CardRow({
   cards,
   badge,
 }: {
-  cards: { rank: Rank; suit: Suit }[];
+  cards: ({ rank: Rank; suit: Suit } | { faceDown: true })[];
   badge?: string;
 }) {
   return (
     <div className="howto-card-row">
-      <div className="howto-card-fan">
+      <div
+        className="howto-card-fan"
+        style={{ ["--n" as string]: cards.length }}
+      >
         {cards.map((c, i) => (
           <div
-            key={`${c.rank}${c.suit}${i}`}
+            key={"faceDown" in c ? `back-${i}` : `${c.rank}${c.suit}${i}`}
             className="howto-card-slot"
             style={{ ["--i" as string]: i }}
           >
-            <GuideCard rank={c.rank} suit={c.suit} />
+            {"faceDown" in c ? (
+              <GuideCard faceDown />
+            ) : (
+              <GuideCard rank={c.rank} suit={c.suit} />
+            )}
           </div>
         ))}
       </div>
@@ -91,9 +109,35 @@ function PipDemo({ lit }: { lit: number }) {
   );
 }
 
+function MiniWheelDemo({ potCents }: { potCents: number | null }) {
+  return (
+    <div className="howto-wheel-demo" aria-hidden>
+      <div className="howto-pot-pill">
+        <span className="howto-pot-label">Pot</span>
+        <span className="howto-pot-value">
+          {potCents != null ? formatCents(potCents) : "—"}
+        </span>
+      </div>
+      <div className="howto-wheel-mini">
+        <div className="howto-wheel-pointer" />
+        <div className="howto-wheel-disc">
+          <WheelFace prefix="howto-wheel" />
+          <div className="seat-spin-disc-sheen" />
+        </div>
+        <div className="howto-wheel-hub" />
+      </div>
+      <p className="howto-visual-sub howto-wheel-caption">
+        Slow demo · real spins land on a tile for a % or flat slice of this pot
+      </p>
+    </div>
+  );
+}
+
 export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) {
+  const { token } = useAuth();
   const { goldenHour } = useGameSocket();
   const [tab, setTab] = useState<HowToPlayTab>(initialTab);
+  const [potCents, setPotCents] = useState<number | null>(null);
   const handsPer =
     goldenHour?.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS;
 
@@ -109,6 +153,22 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !token) return;
+    let cancelled = false;
+    api
+      .jackpot(token)
+      .then((res) => {
+        if (!cancelled) setPotCents(res.takeCents);
+      })
+      .catch(() => {
+        if (!cancelled) setPotCents(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, token]);
 
   const content = useMemo(() => {
     if (tab === "basics") {
@@ -127,10 +187,6 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
               Hit, hold, double, or split from the action bar — or queue a
               move before your turn
             </li>
-            <li>
-              Insurance is offered when the dealer shows an Ace (half your
-              bet, pays 2:1)
-            </li>
           </ul>
           <div className="howto-visual-block">
             <p className="howto-visual-label">Natural blackjack</p>
@@ -141,6 +197,86 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
               ]}
               badge="3:2"
             />
+          </div>
+
+          <div className="howto-visual-block">
+            <p className="howto-visual-label">Insurance</p>
+            <p className="howto-visual-sub">
+              Offered only when the dealer&apos;s upcard is an Ace. It is a{" "}
+              <strong>side bet</strong> — separate from your main hand.
+            </p>
+            <div className="howto-ins-setup">
+              <div>
+                <p className="howto-ins-role">Dealer</p>
+                <CardRow
+                  cards={[{ rank: "A", suit: "H" }, { faceDown: true }]}
+                />
+              </div>
+              <div className="howto-ins-stakes">
+                <div className="howto-ins-chip">
+                  <span>Main bet</span>
+                  <strong>{formatCents(DEMO_BET)}</strong>
+                </div>
+                <div className="howto-ins-chip is-ins">
+                  <span>Insurance</span>
+                  <strong>{formatCents(DEMO_INS)}</strong>
+                </div>
+              </div>
+            </div>
+            <p className="howto-visual-sub">
+              Cost is always <strong>half</strong> your main bet. Pays{" "}
+              <strong>2:1</strong> only if the hole card makes dealer
+              blackjack.
+            </p>
+
+            <div className="howto-ins-outcomes">
+              <div className="howto-ins-outcome is-win">
+                <p className="howto-ins-outcome-title">Dealer has blackjack</p>
+                <CardRow
+                  cards={[
+                    { rank: "A", suit: "H" },
+                    { rank: "K", suit: "S" },
+                  ]}
+                  badge="BJ"
+                />
+                <ul className="howto-ins-math">
+                  <li>
+                    Insurance pays{" "}
+                    <strong>{formatCents(DEMO_INS * 3)}</strong> back
+                    (stake + 2:1)
+                  </li>
+                  <li>
+                    Main bet loses{" "}
+                    <strong>{formatCents(DEMO_BET)}</strong>
+                  </li>
+                  <li className="howto-ins-net">
+                    Net ≈ <strong>even</strong> — insurance offsets the main
+                    loss
+                  </li>
+                </ul>
+              </div>
+              <div className="howto-ins-outcome is-lose">
+                <p className="howto-ins-outcome-title">No dealer blackjack</p>
+                <CardRow
+                  cards={[
+                    { rank: "A", suit: "H" },
+                    { rank: "9", suit: "C" },
+                  ]}
+                  badge="No BJ"
+                />
+                <ul className="howto-ins-math">
+                  <li>
+                    Insurance lost —{" "}
+                    <strong>−{formatCents(DEMO_INS)}</strong>
+                  </li>
+                  <li>Main hand continues as normal</li>
+                  <li className="howto-ins-net">
+                    Insurance does <strong>not</strong> pay on a strong
+                    player hand — only on dealer BJ
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
         </>
       );
@@ -267,9 +403,7 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
               even outside the heist. Losses still send{" "}
               <strong>10%</strong> to the pot
             </li>
-            <li>
-              Stacks with suited-pair multipliers on wins
-            </li>
+            <li>Stacks with suited-pair multipliers on wins</li>
           </ul>
           <div className="howto-visual-block howto-golden-callout">
             <span className="howto-golden-pill">Golden ON</span>
@@ -301,6 +435,16 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
             pot
           </li>
         </ul>
+
+        <div className="howto-visual-block">
+          <p className="howto-visual-label">House pot &amp; wheel</p>
+          <p className="howto-visual-sub">
+            A share of every loss feeds the pot. Spin vouchers claim a tile
+            from that pool.
+          </p>
+          <MiniWheelDemo potCents={potCents} />
+        </div>
+
         <div className="howto-visual-block">
           <p className="howto-visual-label">Blackjack dots</p>
           <PipDemo lit={3} />
@@ -320,7 +464,7 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
         </div>
       </>
     );
-  }, [tab, handsPer]);
+  }, [tab, handsPer, potCents]);
 
   return (
     <AnimatePresence>

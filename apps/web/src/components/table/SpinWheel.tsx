@@ -192,7 +192,7 @@ function pickLabelRadius(
   return null;
 }
 
-function WheelFace({
+export function WheelFace({
   prefix,
   showLabels = false,
 }: {
