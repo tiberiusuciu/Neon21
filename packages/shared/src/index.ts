@@ -193,6 +193,8 @@ export const GoldenHourPublicSchema = z.object({
   cooldownMinHours: z.number().int().positive().optional(),
   /** Inclusive max hours until next auto-start (idle). */
   cooldownMaxHours: z.number().int().positive().optional(),
+  /** GH hands needed to earn one Golden Hand token (admin-tunable). */
+  goldenHandsPerHands: z.number().int().min(1).max(500).optional(),
 });
 export type GoldenHourPublic = z.infer<typeof GoldenHourPublicSchema>;
 
@@ -220,6 +222,8 @@ export type AdminGoldenHourDisableBody = z.infer<
 export const AdminGoldenHourScheduleBodySchema = z.object({
   cooldownMinHours: z.number().int().min(1).max(168),
   cooldownMaxHours: z.number().int().min(1).max(168),
+  /** GH hands per Golden Hand token. */
+  goldenHandsPerHands: z.number().int().min(1).max(500),
   /** When idle, re-roll nextStartsAt from the new range. Default true. */
   rescheduleNext: z.boolean().optional(),
 });
@@ -306,8 +310,8 @@ export function chipFaceLabel(cents: number): string {
 export const MIN_BET_CENTS = 500;
 /** Max pending bet while a Golden Hand token is armed. */
 export const GOLDEN_HAND_MAX_BET_CENTS = 500_000;
-/** Hands played during GH per Golden Hand token earned. */
-export const GOLDEN_HANDS_PER_HANDS = 25;
+/** Default GH hands per Golden Hand token (admin can override). */
+export const GOLDEN_HANDS_PER_HANDS = 15;
 export const SEAT_CAPACITY = 7;
 
 export const SuitSchema = z.enum(["S", "H", "D", "C"]);
@@ -397,13 +401,8 @@ export const PublicSeatSchema = z.object({
   goldenHandActive: z.boolean().optional(),
   /** Player inventory of Golden Hand tokens. */
   goldenHands: z.number().int().nonnegative().optional(),
-  /** Hands toward next Golden Hand (0 … GOLDEN_HANDS_PER_HANDS-1). */
-  goldenHourHandsToward: z
-    .number()
-    .int()
-    .min(0)
-    .max(GOLDEN_HANDS_PER_HANDS - 1)
-    .optional(),
+  /** Hands toward next Golden Hand (0 … threshold-1). */
+  goldenHourHandsToward: z.number().int().min(0).max(499).optional(),
 });
 export type PublicSeat = z.infer<typeof PublicSeatSchema>;
 

@@ -1,4 +1,5 @@
 import type { GoldenHourPublic } from "@neon21/shared";
+import { GOLDEN_HANDS_PER_HANDS } from "@neon21/shared";
 import { prisma } from "./prisma.js";
 import { payGoldenHourRebates } from "./golden-hour-rebate.js";
 
@@ -18,6 +19,7 @@ type Row = {
   windowStartedAt: Date | null;
   cooldownMinHours: number;
   cooldownMaxHours: number;
+  goldenHandsPerHands: number;
 };
 
 type Transition = "started" | "ended" | null;
@@ -32,6 +34,11 @@ let ticking = false;
 function clampHours(n: number, fallback: number): number {
   if (!Number.isFinite(n)) return fallback;
   return Math.min(168, Math.max(1, Math.floor(n)));
+}
+
+function clampGoldenHandsPerHands(n: number): number {
+  if (!Number.isFinite(n)) return GOLDEN_HANDS_PER_HANDS;
+  return Math.min(500, Math.max(1, Math.floor(n)));
 }
 
 function normalizeCooldown(minHours: number, maxHours: number): {
@@ -75,6 +82,9 @@ function toPublic(row: Row, now = Date.now()): GoldenHourPublic {
       : null,
     cooldownMinHours: min,
     cooldownMaxHours: max,
+    goldenHandsPerHands: clampGoldenHandsPerHands(
+      row.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS
+    ),
   };
 }
 
@@ -114,6 +124,7 @@ async function persist(data: {
   windowStartedAt?: Date | null;
   cooldownMinHours?: number;
   cooldownMaxHours?: number;
+  goldenHandsPerHands?: number;
 }): Promise<Row> {
   const row = await prisma.goldenHourState.upsert({
     where: { id: ROW_ID },
@@ -127,6 +138,8 @@ async function persist(data: {
         data.cooldownMinHours ?? GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
       cooldownMaxHours:
         data.cooldownMaxHours ?? GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
+      goldenHandsPerHands:
+        data.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS,
     },
     update: {
       ...(data.disabled !== undefined ? { disabled: data.disabled } : {}),
@@ -144,6 +157,9 @@ async function persist(data: {
         : {}),
       ...(data.cooldownMaxHours !== undefined
         ? { cooldownMaxHours: data.cooldownMaxHours }
+        : {}),
+      ...(data.goldenHandsPerHands !== undefined
+        ? { goldenHandsPerHands: data.goldenHandsPerHands }
         : {}),
     },
   });
@@ -248,6 +264,7 @@ export function getGoldenHourPublic(): GoldenHourPublic {
       windowStartedAt: null,
       cooldownMinHours: GOLDEN_HOUR_COOLDOWN_MIN_HOURS,
       cooldownMaxHours: GOLDEN_HOUR_COOLDOWN_MAX_HOURS,
+      goldenHandsPerHands: GOLDEN_HANDS_PER_HANDS,
     };
   }
   return toPublic(cache);
@@ -260,6 +277,13 @@ export function isGoldenHourActive(): boolean {
 export function getGoldenHourWindowStartedAt(): Date | null {
   if (!cache?.windowStartedAt || !isGoldenHourActive()) return null;
   return cache.windowStartedAt;
+}
+
+/** Live admin-tunable GH hands needed per Golden Hand token. */
+export function getGoldenHandsPerHands(): number {
+  return clampGoldenHandsPerHands(
+    cache?.goldenHandsPerHands ?? GOLDEN_HANDS_PER_HANDS
+  );
 }
 
 /** Standard win payout (no global Golden Hour multiplier). */
@@ -356,16 +380,18 @@ export async function adminSetGoldenHourDisabled(
   return getGoldenHourPublic();
 }
 
-/** Update auto-start gap range; optionally re-roll nextStartsAt when idle. */
+/** Update auto-start gap range and Golden Hand earn rate; optionally re-roll nextStartsAt when idle. */
 export async function adminSetGoldenHourSchedule(opts: {
   cooldownMinHours: number;
   cooldownMaxHours: number;
+  goldenHandsPerHands: number;
   rescheduleNext?: boolean;
 }): Promise<GoldenHourPublic> {
   const { min, max } = normalizeCooldown(
     opts.cooldownMinHours,
     opts.cooldownMaxHours
   );
+  const handsPer = clampGoldenHandsPerHands(opts.goldenHandsPerHands);
   const reschedule = opts.rescheduleNext !== false;
   const row = cache ?? (await loadRow());
   const now = Date.now();
@@ -377,15 +403,22 @@ export async function adminSetGoldenHourSchedule(opts: {
   const patch: {
     cooldownMinHours: number;
     cooldownMaxHours: number;
+    goldenHandsPerHands: number;
     nextStartsAt?: Date | null;
   } = {
     cooldownMinHours: min,
     cooldownMaxHours: max,
+    goldenHandsPerHands: handsPer,
   };
 
   if (reschedule && !row.disabled && !active) {
     patch.nextStartsAt = new Date(
-      now + randomCooldownMs({ ...row, cooldownMinHours: min, cooldownMaxHours: max })
+      now +
+        randomCooldownMs({
+          ...row,
+          cooldownMinHours: min,
+          cooldownMaxHours: max,
+        })
     );
   }
 

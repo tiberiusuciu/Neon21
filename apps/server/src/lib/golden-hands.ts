@@ -1,5 +1,5 @@
-import { GOLDEN_HANDS_PER_HANDS } from "@neon21/shared";
 import { prisma } from "./prisma.js";
+import { getGoldenHandsPerHands } from "./golden-hour.js";
 
 export type GoldenHandsProgress = {
   granted: number;
@@ -8,7 +8,8 @@ export type GoldenHandsProgress = {
 };
 
 function towardNext(played: number): number {
-  return Math.max(0, played) % GOLDEN_HANDS_PER_HANDS;
+  const per = getGoldenHandsPerHands();
+  return Math.max(0, played) % per;
 }
 
 /** Increment GH hands played and grant Golden Hands on threshold crossings. */
@@ -22,6 +23,7 @@ export async function recordGoldenHourHandsPlayed(
     return { granted: 0, ...cur };
   }
 
+  const per = getGoldenHandsPerHands();
   const user = await prisma.user.update({
     where: { id: userId },
     data: { goldenHourHandsPlayed: { increment: fresh } },
@@ -29,8 +31,7 @@ export async function recordGoldenHourHandsPlayed(
   });
   const prev = Math.max(0, user.goldenHourHandsPlayed - fresh);
   const toGrant =
-    Math.floor(user.goldenHourHandsPlayed / GOLDEN_HANDS_PER_HANDS) -
-    Math.floor(prev / GOLDEN_HANDS_PER_HANDS);
+    Math.floor(user.goldenHourHandsPlayed / per) - Math.floor(prev / per);
   if (toGrant <= 0) {
     return {
       granted: 0,

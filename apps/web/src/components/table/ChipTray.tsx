@@ -19,6 +19,7 @@ type Props = {
   goldenHands?: number;
   goldenHandArmed?: boolean;
   goldenHourHandsToward?: number;
+  goldenHandsPerHands?: number;
   /** GH X/N earn tracker — only during Golden Hour. */
   showGoldenHourProgress?: boolean;
   onToggleGoldenHand?: () => void;
@@ -37,6 +38,7 @@ export function ChipTray({
   goldenHands = 0,
   goldenHandArmed = false,
   goldenHourHandsToward = 0,
+  goldenHandsPerHands = GOLDEN_HANDS_PER_HANDS,
   showGoldenHourProgress = false,
   onToggleGoldenHand,
 }: Props) {
@@ -99,13 +101,13 @@ export function ChipTray({
             className="chip-golden-progress"
             role="status"
             aria-live="polite"
-            aria-label={`${goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
+            aria-label={`${goldenHourHandsToward} of ${goldenHandsPerHands} Golden Hour hands toward next Golden Hand`}
           >
             <span className="chip-golden-progress-label" aria-hidden>
               GH
             </span>
             <span className="chip-golden-progress-value">
-              {goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+              {goldenHourHandsToward}/{goldenHandsPerHands}
             </span>
           </span>
         )}

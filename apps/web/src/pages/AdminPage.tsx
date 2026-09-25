@@ -89,6 +89,7 @@ export function AdminPage() {
   const [goldenBusy, setGoldenBusy] = useState(false);
   const [ghCooldownMin, setGhCooldownMin] = useState("4");
   const [ghCooldownMax, setGhCooldownMax] = useState("12");
+  const [ghHandsPerGolden, setGhHandsPerGolden] = useState("15");
   const [ghRescheduleNext, setGhRescheduleNext] = useState(true);
   const [ghNow, setGhNow] = useState(() => Date.now());
   const [granting, setGranting] = useState(false);
@@ -141,6 +142,7 @@ export function AdminPage() {
       setGoldenHour(gh);
       setGhCooldownMin(String(gh.cooldownMinHours ?? 4));
       setGhCooldownMax(String(gh.cooldownMaxHours ?? 12));
+      setGhHandsPerGolden(String(gh.goldenHandsPerHands ?? 15));
     } catch (err) {
       toast.error(
         err instanceof ApiError ? err.message : "Failed to load Golden Hour"
@@ -304,6 +306,7 @@ export function AdminPage() {
     if (!token || goldenBusy) return;
     const min = Number(ghCooldownMin);
     const max = Number(ghCooldownMax);
+    const handsPer = Number(ghHandsPerGolden);
     if (
       !Number.isInteger(min) ||
       !Number.isInteger(max) ||
@@ -315,16 +318,22 @@ export function AdminPage() {
       toast.error("Cooldown hours must be integers from 1 to 168");
       return;
     }
+    if (!Number.isInteger(handsPer) || handsPer < 1 || handsPer > 500) {
+      toast.error("Hands per Golden Hand must be an integer from 1 to 500");
+      return;
+    }
     setGoldenBusy(true);
     try {
       const gh = await api.adminGoldenHourSchedule(token, {
         cooldownMinHours: min,
         cooldownMaxHours: max,
+        goldenHandsPerHands: handsPer,
         rescheduleNext: ghRescheduleNext,
       });
       setGoldenHour(gh);
       setGhCooldownMin(String(gh.cooldownMinHours ?? min));
       setGhCooldownMax(String(gh.cooldownMaxHours ?? max));
+      setGhHandsPerGolden(String(gh.goldenHandsPerHands ?? handsPer));
       toast.success(
         ghRescheduleNext && !gh.active && !gh.disabled
           ? "Schedule saved — next Golden Hour re-rolled"
@@ -572,7 +581,8 @@ export function AdminPage() {
               Wins ×1.5 / half-loss only via Golden Hands · vault take 10% · 1h
               windows · random{" "}
               {goldenHour.cooldownMinHours ?? 4}–
-              {goldenHour.cooldownMaxHours ?? 12}h gap
+              {goldenHour.cooldownMaxHours ?? 12}h gap · earn 1 Golden Hand /
+              {goldenHour.goldenHandsPerHands ?? 15} GH hands
             </p>
             <div className="admin-golden-actions">
               <button
@@ -637,6 +647,20 @@ export function AdminPage() {
                   value={ghCooldownMax}
                   disabled={goldenBusy}
                   onChange={(e) => setGhCooldownMax(e.target.value)}
+                />
+              </label>
+              <label className="field" style={{ margin: 0, minWidth: "7rem" }}>
+                <span className="muted" style={{ fontSize: "0.75rem" }}>
+                  Hands / Golden
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  step={1}
+                  value={ghHandsPerGolden}
+                  disabled={goldenBusy}
+                  onChange={(e) => setGhHandsPerGolden(e.target.value)}
                 />
               </label>
               <label

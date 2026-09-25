@@ -1182,6 +1182,9 @@ export function TablePage() {
                     onSpinDone={spinDone}
                     onSpinReveal={onSpinReveal}
                     showGoldenHourProgress={goldenHour?.active === true}
+                    goldenHandsPerHands={
+                      goldenHour?.goldenHandsPerHands ?? undefined
+                    }
                     onSit={() => {
                       if (balanceCents <= 0) {
                         toast.error("Need chips to sit — claim from the lobby");
@@ -1236,6 +1239,9 @@ export function TablePage() {
               goldenHands={mySeat.goldenHands ?? 0}
               goldenHandArmed={mySeat.goldenHandActive === true}
               goldenHourHandsToward={mySeat.goldenHourHandsToward ?? 0}
+              goldenHandsPerHands={
+                goldenHour?.goldenHandsPerHands ?? undefined
+              }
               showGoldenHourProgress={goldenHour?.active === true}
               onToggleGoldenHand={toggleGoldenHand}
             />

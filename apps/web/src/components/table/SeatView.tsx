@@ -32,6 +32,7 @@ type Props = {
   onSpinDone?: () => void;
   onSpinReveal?: (spin: TableSpinState) => void;
   showGoldenHourProgress?: boolean;
+  goldenHandsPerHands?: number;
 };
 
 export function SeatView({
@@ -53,6 +54,7 @@ export function SeatView({
   onSpinDone,
   onSpinReveal,
   showGoldenHourProgress = false,
+  goldenHandsPerHands = GOLDEN_HANDS_PER_HANDS,
 }: Props) {
   const empty = !seat.userId;
   const split = seat.hands.length > 1;
@@ -211,11 +213,11 @@ export function SeatView({
           {showGoldenHourProgress && seat.goldenHourHandsToward != null && (
             <div
               className="seat-golden-hands-meter"
-              title={`${seat.goldenHourHandsToward} of ${GOLDEN_HANDS_PER_HANDS} Golden Hour hands toward next Golden Hand`}
+              title={`${seat.goldenHourHandsToward} of ${goldenHandsPerHands} Golden Hour hands toward next Golden Hand`}
             >
               <span className="seat-golden-hands-meter-label">GH</span>
               <span className="seat-golden-hands-meter-value">
-                {seat.goldenHourHandsToward}/{GOLDEN_HANDS_PER_HANDS}
+                {seat.goldenHourHandsToward}/{goldenHandsPerHands}
               </span>
               {(seat.goldenHands ?? 0) > 0 && (
                 <span className="seat-golden-hands-meter-inv">

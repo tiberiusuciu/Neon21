@@ -110,6 +110,8 @@ model GoldenHourState {
   cooldownMinHours Int      @default(4)
   /** Inclusive max hours between windows (admin-tunable). */
   cooldownMaxHours Int      @default(12)
+  /** GH hands needed to earn one Golden Hand (admin-tunable). */
+  goldenHandsPerHands Int    @default(15)
   updatedAt       DateTime  @updatedAt
 }
 
