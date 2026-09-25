@@ -836,12 +836,15 @@ export class TableRoom {
       this.broadcast();
     }
 
-    if (isGoldenHourActive()) {
-      for (const i of order) {
-        const hand = this.seats[i]?.hands[0];
-        if (!hand) continue;
+    const heistLive = isGoldenHourActive();
+    for (const i of order) {
+      const hand = this.seats[i]?.hands[0];
+      if (!hand) continue;
+      if (heistLive || hand.goldenHand) {
         hand.suitedPairSuit = detectSuitedPairSuit(hand.cards);
       }
+    }
+    if (heistLive || order.some((i) => this.seats[i]?.hands[0]?.goldenHand)) {
       this.broadcast();
     }
 
@@ -1289,9 +1292,14 @@ export class TableRoom {
     await this.runSettle(gen);
   }
 
+  /** Heist combos — table-wide in Golden Hour, or per-hand with Golden Hand. */
+  private heistCombosFor(hand: HandState): boolean {
+    return isGoldenHourActive() || hand.goldenHand;
+  }
+
   private winPayout(hand: HandState, baseProfit: number) {
     let profit = baseProfit;
-    if (isGoldenHourActive()) {
+    if (this.heistCombosFor(hand)) {
       profit = applySuitedPairProfit(profit, hand.suitedPairSuit);
     }
     if (hand.goldenHand) {
@@ -1309,7 +1317,7 @@ export class TableRoom {
     seat: SeatState,
     hand: HandState
   ): Promise<void> {
-    if (!isGoldenHourActive() || hand.tripleBonusPaid) return;
+    if (!this.heistCombosFor(hand) || hand.tripleBonusPaid) return;
     if (isDebugSeatUser(seat.userId)) return;
     const bonus = tripleCardBonusCents(hand.cards, hand.fromSplit);
     if (bonus <= 0) return;
@@ -1321,12 +1329,12 @@ export class TableRoom {
     this.broadcast();
   }
 
-  /** GH 5-card Charlie: instant 1:1 win + spin voucher. Returns true if settled. */
+  /** 5-card Charlie: instant 1:1 win + spin voucher (heist or Golden Hand). */
   private async maybeSettleCharlie(
     seat: SeatState,
     hand: HandState
   ): Promise<boolean> {
-    if (!isGoldenHourActive()) return false;
+    if (!this.heistCombosFor(hand)) return false;
     if (hand.resultCents != null) return false;
     if (hand.cards.length !== 5) return false;
     if (evaluateHand(hand.cards).bust) return false;
@@ -1356,7 +1364,7 @@ export class TableRoom {
   private async recordRoundStats(): Promise<void> {
     const byUser = new Map<string, HandOutcomeInput[]>();
     let deltaCents = 0;
-    const takeBps = this.roundGhWindow
+    const heistTakeBps = this.roundGhWindow
       ? JACKPOT_LOSS_TAKE_BPS_GOLDEN
       : JACKPOT_LOSS_TAKE_BPS;
     const dealerBj = isBlackjack(this.dealer.cards);
@@ -1365,6 +1373,10 @@ export class TableRoom {
       const batch: HandOutcomeInput[] = [];
       for (const hand of seat.hands) {
         if (hand.resultCents == null) continue;
+        const takeBps =
+          this.roundGhWindow || hand.goldenHand
+            ? JACKPOT_LOSS_TAKE_BPS_GOLDEN
+            : JACKPOT_LOSS_TAKE_BPS;
         const take =
           !isDebugSeatUser(seat.userId) && hand.resultCents < 0
             ? jackpotTakeFromLosses(-hand.resultCents, takeBps)
@@ -1386,7 +1398,7 @@ export class TableRoom {
           : goldenLossPayout(seat.insuranceCents).resultCents;
         const take =
           !isDebugSeatUser(seat.userId) && insResult < 0
-            ? jackpotTakeFromLosses(-insResult, takeBps)
+            ? jackpotTakeFromLosses(-insResult, heistTakeBps)
             : 0;
         batch.push({
           resultCents: insResult,

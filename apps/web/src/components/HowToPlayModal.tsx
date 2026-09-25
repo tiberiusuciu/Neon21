@@ -150,7 +150,8 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
         <>
           <p className="howto-lead">
             Golden Hour is the heist — a live one-hour window when the
-            vault is vulnerable and special hand bonuses turn on.
+            vault is vulnerable and special hand bonuses turn on for
+            everyone. Armed Golden Hands unlock the same combos anytime.
           </p>
           <ul className="howto-list">
             <li>
@@ -247,7 +248,8 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
         <>
           <p className="howto-lead">
             Golden Hands are spendable tokens — earned during the heist,
-            usable any time you&apos;re betting.
+            usable any time you&apos;re betting. Outside the heist they
+            unlock the same special combos as Golden Hour.
           </p>
           <ul className="howto-list">
             <li>
@@ -261,7 +263,12 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
               <strong>{formatCents(GOLDEN_HAND_MAX_BET_CENTS)}</strong>
             </li>
             <li>
-              Stacks with heist suited-pair multipliers on wins
+              Suited-pair, triple-card, and 5-Card Charlie bonuses apply —
+              even outside the heist. Losses still send{" "}
+              <strong>10%</strong> to the pot
+            </li>
+            <li>
+              Stacks with suited-pair multipliers on wins
             </li>
           </ul>
           <div className="howto-visual-block howto-golden-callout">
