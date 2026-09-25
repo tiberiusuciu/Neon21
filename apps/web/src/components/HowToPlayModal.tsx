@@ -127,7 +127,7 @@ function MiniWheelDemo({ potCents }: { potCents: number | null }) {
         <div className="howto-wheel-hub" />
       </div>
       <p className="howto-visual-sub howto-wheel-caption">
-        Slow demo · real spins land on a tile for a % or flat slice of this pot
+        Spins land on a tile for a % or flat slice of this pot
       </p>
     </div>
   );
