@@ -68,7 +68,9 @@ import {
 } from "../lib/golden-hour.js";
 import {
   applySuitedPairProfit,
+  detectLongestStraight,
   detectSuitedPairSuit,
+  straightBonusCents,
   tripleCardBonusCents,
 } from "../lib/golden-hour-bonuses.js";
 import { recordGoldenHourResults } from "../lib/golden-hour-rebate.js";
@@ -91,6 +93,7 @@ function emptyHand(betCents: number, goldenHand = false): HandState {
     resultCents: null,
     suitedPairSuit: null,
     tripleBonusPaid: false,
+    straightPaidLength: 0,
     goldenHand,
   };
 }
@@ -246,6 +249,18 @@ export class TableRoom {
       tripleBonusCents:
         seat.tripleBonusFxUntil != null && seat.tripleBonusFxUntil > Date.now()
           ? seat.tripleBonusCents
+          : undefined,
+      straightBonusFxUntil: seat.straightBonusFxUntil,
+      straightBonusCents:
+        seat.straightBonusFxUntil != null &&
+        seat.straightBonusFxUntil > Date.now()
+          ? seat.straightBonusCents
+          : undefined,
+      straightBonusLength:
+        seat.straightBonusFxUntil != null &&
+        seat.straightBonusFxUntil > Date.now() &&
+        seat.straightBonusLength >= 3
+          ? (seat.straightBonusLength as 3 | 4 | 5)
           : undefined,
       goldenHandActive:
         seat.goldenHandArmed || seat.hands.some((h) => h.goldenHand),
@@ -482,6 +497,9 @@ export class TableRoom {
       charlieFxUntil: null,
       tripleBonusFxUntil: null,
       tripleBonusCents: 0,
+      straightBonusFxUntil: null,
+      straightBonusCents: 0,
+      straightBonusLength: 0,
       goldenHandArmed: false,
       goldenHands: 0,
       goldenHourHandsToward: 0,
@@ -1184,6 +1202,12 @@ export class TableRoom {
     ctx.hand.suitedPairSuit = null;
     ctx.hand.cards.push(this.shoe.draw());
     await this.maybePayTripleBonus(ctx.seat, ctx.hand);
+    await this.maybePayStraightBonus(
+      ctx.seat,
+      ctx.hand,
+      ctx.seatIndex,
+      ctx.handIndex
+    );
     const v = evaluateHand(ctx.hand.cards);
     if (!v.bust && (await this.maybeSettleCharlie(ctx.seat, ctx.hand))) {
       this.completeTurnAction();
@@ -1226,6 +1250,12 @@ export class TableRoom {
       ctx.hand.cards.push(this.shoe.draw());
       ctx.hand.stood = true;
       await this.maybePayTripleBonus(ctx.seat, ctx.hand);
+      await this.maybePayStraightBonus(
+        ctx.seat,
+        ctx.hand,
+        ctx.seatIndex,
+        ctx.handIndex
+      );
       this.completeTurnAction();
       return null;
     } catch (err) {
@@ -1254,6 +1284,7 @@ export class TableRoom {
         resultCents: null,
         suitedPairSuit: null,
         tripleBonusPaid: false,
+        straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
       };
       const right: HandState = {
@@ -1265,6 +1296,7 @@ export class TableRoom {
         resultCents: null,
         suitedPairSuit: null,
         tripleBonusPaid: false,
+        straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
       };
       ctx.seat.hands.splice(ctx.handIndex, 1, left, right);
@@ -1350,6 +1382,38 @@ export class TableRoom {
     this.cb.onWalletUpdate(seat.userId, bal);
     seat.tripleBonusCents = bonus;
     seat.tripleBonusFxUntil = Date.now() + 2_400;
+    this.broadcast();
+  }
+
+  private async maybePayStraightBonus(
+    seat: SeatState,
+    hand: HandState,
+    seatIndex: number,
+    handIndex: number
+  ): Promise<void> {
+    if (!this.heistCombosFor(hand) || hand.fromSplit) return;
+    if (isDebugSeatUser(seat.userId)) return;
+    const detected = detectLongestStraight(hand.cards);
+    if (!detected || detected.length < 3) return;
+    if (detected.length <= hand.straightPaidLength) return;
+    const bonus = straightBonusCents(hand.betCents, detected.length);
+    if (bonus <= 0) return;
+    hand.straightPaidLength = detected.length;
+    const bal = await creditCents(seat.userId, bonus);
+    this.cb.onWalletUpdate(seat.userId, bal);
+    const until = Date.now() + 2_400;
+    seat.straightBonusCents = bonus;
+    seat.straightBonusLength = detected.length;
+    seat.straightBonusFxUntil = until;
+    this.cb.onStraightBonus({
+      tableId: this.id,
+      seatIndex,
+      handIndex,
+      length: detected.length as 3 | 4 | 5,
+      bonusCents: bonus,
+      cardIndices: detected.cardIndices,
+      until,
+    });
     this.broadcast();
   }
 
@@ -1991,6 +2055,9 @@ export class TableRoom {
       charlieFxUntil: null,
       tripleBonusFxUntil: null,
       tripleBonusCents: 0,
+      straightBonusFxUntil: null,
+      straightBonusCents: 0,
+      straightBonusLength: 0,
       goldenHandArmed: false,
       goldenHands: 0,
       goldenHourHandsToward: 0,

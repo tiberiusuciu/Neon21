@@ -26,6 +26,8 @@ export interface HandState {
   suitedPairSuit: Suit | null;
   /** GH triple-card bonus already paid for this hand. */
   tripleBonusPaid: boolean;
+  /** Highest straight length already paid this hand (0 / 3 / 4 / 5). */
+  straightPaidLength: number;
   /** This hand uses Golden Hand 1.5× / half-loss rules. */
   goldenHand: boolean;
 }
@@ -48,6 +50,12 @@ export interface SeatState {
   tripleBonusFxUntil: number | null;
   /** Amount shown on triple bonus banner while FX is live. */
   tripleBonusCents: number;
+  /** Epoch ms; running straight bonus celebrate FX. */
+  straightBonusFxUntil: number | null;
+  /** Cents of the straight bonus shown during FX. */
+  straightBonusCents: number;
+  /** Straight length (3–5) shown during FX. */
+  straightBonusLength: number;
   /** Token reserved for next deal during betting. */
   goldenHandArmed: boolean;
   /** Cached inventory for seat UI. */
@@ -97,6 +105,9 @@ export type RoomCallbacks = {
   onGoldenHourRebate: (
     userId: string,
     progress: import("@neon21/shared").GoldenHourRebateProgress
+  ) => void;
+  onStraightBonus: (
+    event: import("@neon21/shared").TableStraightBonusEvent
   ) => void;
 };
 

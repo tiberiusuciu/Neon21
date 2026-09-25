@@ -360,6 +360,43 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
           </div>
 
           <div className="howto-visual-block">
+            <p className="howto-visual-label">Running straight</p>
+            <p className="howto-visual-sub">
+              Longest consecutive ranks (order doesn&apos;t matter; Ace = 1).
+              Highest tier on that draw only — split clears eligibility.
+            </p>
+            <div className="howto-combo-grid">
+              <CardRow
+                cards={[
+                  { rank: "2", suit: "C" },
+                  { rank: "3", suit: "H" },
+                  { rank: "4", suit: "S" },
+                ]}
+                badge="3 → 1× bet"
+              />
+              <CardRow
+                cards={[
+                  { rank: "5", suit: "D" },
+                  { rank: "6", suit: "C" },
+                  { rank: "7", suit: "H" },
+                  { rank: "8", suit: "S" },
+                ]}
+                badge="4 → 2.5×"
+              />
+            </div>
+            <CardRow
+              cards={[
+                { rank: "A", suit: "S" },
+                { rank: "2", suit: "H" },
+                { rank: "3", suit: "C" },
+                { rank: "4", suit: "D" },
+                { rank: "5", suit: "S" },
+              ]}
+              badge="5 → 5× + Charlie"
+            />
+          </div>
+
+          <div className="howto-visual-block">
             <p className="howto-visual-label">5-Card Charlie</p>
             <p className="howto-visual-sub">
               Five cards without busting auto-wins 1:1 and awards a spin

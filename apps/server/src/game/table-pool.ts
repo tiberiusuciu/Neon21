@@ -96,6 +96,9 @@ export class TablePool {
       onGoldenHourRebate: (userId, progress) => {
         this.io.to(`user:${userId}`).emit("golden-hour:rebate", progress);
       },
+      onStraightBonus: (event) => {
+        this.io.to(`table:${id}`).emit("table:straight_bonus", event);
+      },
     });
     this.tables.set(id, room);
     this.broadcastLobby();

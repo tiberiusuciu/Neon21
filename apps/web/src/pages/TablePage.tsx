@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
-import type { PublicSeat, TablePhase, TableSpinState } from "@neon21/shared";
+import type { PublicSeat, TablePhase, TableSpinState, TableStraightBonusEvent } from "@neon21/shared";
 import { JACKPOT_CELEBRATE_MS, MIN_BET_CENTS, SEAT_CAPACITY, handValueLabel } from "@neon21/shared";
 import { useAuth } from "../lib/auth";
 import { useGameSocket } from "../lib/SocketProvider";
@@ -111,6 +111,9 @@ export function TablePage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [howtoOpen, setHowtoOpen] = useState(false);
   const [howtoTab, setHowtoTab] = useState<HowToPlayTab>("basics");
+  const [straightFxBySeat, setStraightFxBySeat] = useState<
+    Record<number, TableStraightBonusEvent>
+  >({});
   const [roundHistory, setRoundHistory] = useState<RoundHistoryEntry[]>(() =>
     tableId ? loadRoundHistory(tableId) : []
   );
@@ -152,6 +155,25 @@ export function TablePage() {
     subscribeJackpot();
     return () => unsubscribeJackpot();
   }, [subscribeJackpot, unsubscribeJackpot]);
+
+  useEffect(() => {
+    if (!socket) return;
+    const off = onEvent(socket, "table:straight_bonus", (ev) => {
+      if (tableId && ev.tableId !== tableId) return;
+      setStraightFxBySeat((prev) => ({ ...prev, [ev.seatIndex]: ev }));
+      const ms = Math.max(0, ev.until - Date.now()) + 50;
+      window.setTimeout(() => {
+        setStraightFxBySeat((prev) => {
+          const cur = prev[ev.seatIndex];
+          if (!cur || cur.until !== ev.until) return prev;
+          const next = { ...prev };
+          delete next[ev.seatIndex];
+          return next;
+        });
+      }, ms);
+    });
+    return off;
+  }, [socket, tableId]);
 
   useEffect(() => {
     if (!socket) return;
@@ -1244,6 +1266,7 @@ export function TablePage() {
                     spin={
                       spin && spin.seatIndex === seat.index ? spin : null
                     }
+                    straightFx={straightFxBySeat[seat.index] ?? null}
                     onClaimSpin={claimSpin}
                     onSpinGo={goSpin}
                     onSpinCancel={cancelSpin}

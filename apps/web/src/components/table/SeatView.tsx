@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import type { PublicSeat, TableSpinState } from "@neon21/shared";
+import type { PublicSeat, TableSpinState, TableStraightBonusEvent } from "@neon21/shared";
 import { GOLDEN_HANDS_PER_HANDS } from "@neon21/shared";
 import { formatCents } from "../../lib/format";
 import { PlayingCard } from "./PlayingCard";
@@ -12,6 +12,7 @@ import {
 } from "./SeatBetAura";
 import { SpinWheel } from "./SpinWheel";
 import { SeatBjMeter } from "./SeatBjMeter";
+import { StraightNeonTrace } from "./StraightNeonTrace";
 
 type Props = {
   seat: PublicSeat;
@@ -25,6 +26,7 @@ type Props = {
   showSpinCta?: boolean;
   spinCtaDisabled?: boolean;
   spin?: TableSpinState | null;
+  straightFx?: TableStraightBonusEvent | null;
   onSit: () => void;
   onClaimSpin?: () => void;
   onSpinGo?: () => void;
@@ -47,6 +49,7 @@ export function SeatView({
   showSpinCta = false,
   spinCtaDisabled = false,
   spin = null,
+  straightFx = null,
   onSit,
   onClaimSpin,
   onSpinGo,
@@ -63,11 +66,20 @@ export function SeatView({
     seat.charlieFxUntil != null && seat.charlieFxUntil > nowTick;
   const tripleActive =
     seat.tripleBonusFxUntil != null && seat.tripleBonusFxUntil > nowTick;
+  const straightActive =
+    (straightFx != null && straightFx.until > nowTick) ||
+    (seat.straightBonusFxUntil != null && seat.straightBonusFxUntil > nowTick);
+  const straightLen =
+    straightFx?.length ?? seat.straightBonusLength ?? null;
+  const straightAmt =
+    straightFx?.bonusCents ?? seat.straightBonusCents ?? 0;
 
   useEffect(() => {
     const until = Math.max(
       seat.charlieFxUntil ?? 0,
-      seat.tripleBonusFxUntil ?? 0
+      seat.tripleBonusFxUntil ?? 0,
+      seat.straightBonusFxUntil ?? 0,
+      straightFx?.until ?? 0
     );
     if (until <= 0) return;
     const remaining = until - Date.now();
@@ -77,7 +89,12 @@ export function SeatView({
     }
     const t = window.setTimeout(() => setNowTick(Date.now()), remaining + 30);
     return () => window.clearTimeout(t);
-  }, [seat.charlieFxUntil, seat.tripleBonusFxUntil]);
+  }, [
+    seat.charlieFxUntil,
+    seat.tripleBonusFxUntil,
+    seat.straightBonusFxUntil,
+    straightFx?.until,
+  ]);
 
   const prevCount = useRef(seat.hands.length);
   const prevAuraTier = useRef<number | null>(null);
@@ -188,6 +205,16 @@ export function SeatView({
               {(seat.tripleBonusCents ?? 0) > 0 && (
                 <span className="seat-triple-banner-amt">
                   +{formatCents(seat.tripleBonusCents!)}
+                </span>
+              )}
+            </div>
+          )}
+          {straightActive && straightLen != null && (
+            <div className="seat-straight-banner" aria-live="polite">
+              ⚡ {straightLen}-CARD STRAIGHT!
+              {straightAmt > 0 && (
+                <span className="seat-straight-banner-amt">
+                  +{formatCents(straightAmt)}
                 </span>
               )}
             </div>
@@ -399,6 +426,15 @@ export function SeatView({
                         index={ci}
                       />
                     ))}
+                    {straightFx &&
+                      straightFx.handIndex === hi &&
+                      straightFx.until > nowTick &&
+                      straightFx.cardIndices.length >= 2 && (
+                        <StraightNeonTrace
+                          cardIndices={straightFx.cardIndices}
+                          until={straightFx.until}
+                        />
+                      )}
                   </div>
                   <div className="hand-meta">
                     <HandValueBadge value={hand.value} />

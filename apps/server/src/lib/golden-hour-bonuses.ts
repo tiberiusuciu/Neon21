@@ -11,6 +11,69 @@ export const SUITED_PAIR_MULT: Record<Suit, number> = {
 
 const TRIPLE_RANKS = new Set<Rank>(["2", "3", "4", "5", "6", "7"]);
 
+/** Ace = 1 only (A-2-3…); Q-K-A is not a straight. */
+export function straightRank(rank: Rank): number {
+  if (rank === "A") return 1;
+  if (rank === "J") return 11;
+  if (rank === "Q") return 12;
+  if (rank === "K") return 13;
+  return Number(rank);
+}
+
+const STRAIGHT_MULT: Record<number, number> = {
+  3: 1,
+  4: 2.5,
+  5: 5,
+};
+
+export type StraightDetect = {
+  length: number;
+  /** Indices into `cards`, ordered low→high rank. */
+  cardIndices: number[];
+};
+
+/** Longest consecutive unique-rank run (order in hand does not matter). */
+export function detectLongestStraight(cards: Card[]): StraightDetect | null {
+  const byRank = new Map<number, number>();
+  for (let i = 0; i < cards.length; i++) {
+    const r = straightRank(cards[i]!.rank);
+    if (!Number.isFinite(r) || byRank.has(r)) continue;
+    byRank.set(r, i);
+  }
+  const ranks = [...byRank.keys()].sort((a, b) => a - b);
+  if (ranks.length < 3) return null;
+
+  let bestStart = 0;
+  let bestLen = 1;
+  let runStart = 0;
+  let runLen = 1;
+  for (let i = 1; i < ranks.length; i++) {
+    if (ranks[i] === ranks[i - 1]! + 1) {
+      runLen += 1;
+      if (runLen > bestLen) {
+        bestLen = runLen;
+        bestStart = runStart;
+      }
+    } else {
+      runStart = i;
+      runLen = 1;
+    }
+  }
+  if (bestLen < 3) return null;
+  const capped = Math.min(bestLen, 5);
+  const seq = ranks.slice(bestStart, bestStart + capped);
+  return {
+    length: capped,
+    cardIndices: seq.map((r) => byRank.get(r)!),
+  };
+}
+
+export function straightBonusCents(betCents: number, length: number): number {
+  const m = STRAIGHT_MULT[length];
+  if (!m || betCents <= 0) return 0;
+  return Math.floor(betCents * m);
+}
+
 export function detectSuitedPairSuit(cards: Card[]): Suit | null {
   if (cards.length !== 2) return null;
   const [a, b] = cards;

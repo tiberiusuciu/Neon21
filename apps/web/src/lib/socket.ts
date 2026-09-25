@@ -12,6 +12,7 @@ import type {
   JackpotWinBroadcast,
   GoldenHourPublic,
   GoldenHourRebateProgress,
+  TableStraightBonusEvent,
 } from "@neon21/shared";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
@@ -77,6 +78,7 @@ export type ServerToClientEvents = {
   "golden-hour:ended": (payload: GoldenHourPublic) => void;
   "golden-hour:rebate": (payload: GoldenHourRebateProgress) => void;
   "golden-hour:rebate-paid": (payload: { rebateCents: number }) => void;
+  "table:straight_bonus": (payload: TableStraightBonusEvent) => void;
 };
 
 export type GameSocket = Socket<ServerToClientEvents, ClientToServerEvents>;

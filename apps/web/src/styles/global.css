@@ -2477,6 +2477,7 @@ h3 {
 }
 
 .card-row {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -2994,6 +2995,87 @@ h3 {
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   color: #e8fff9;
+}
+
+.seat-straight-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #7ae8ff 55%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #3a8ec4 38%, transparent),
+    color-mix(in srgb, #7a3dff 18%, transparent)
+  );
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.06em;
+  color: #e8f8ff;
+  text-shadow: 0 0 12px color-mix(in srgb, #5ee1ff 50%, transparent);
+  animation: seat-bonus-pop 0.55s ease-out;
+}
+
+.seat-straight-banner-amt {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.seat-straight-neon {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 4;
+  overflow: visible;
+  transition: opacity 0.4s ease;
+}
+
+.seat-straight-neon.is-fade {
+  opacity: 0;
+}
+
+.seat-straight-neon-glow {
+  fill: none;
+  stroke: #5ee1ff;
+  stroke-width: 0.45;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: blur(0.12rem);
+  opacity: 0.85;
+  transition: stroke-dashoffset 0.18s linear;
+}
+
+.seat-straight-neon-core {
+  fill: none;
+  stroke: #e8ffff;
+  stroke-width: 0.14;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke-dashoffset 0.18s linear;
+}
+
+.seat-straight-neon-node {
+  fill: #fff;
+  stroke: #5ee1ff;
+  stroke-width: 0.06;
+  filter: drop-shadow(0 0 0.15rem #5ee1ff);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seat-straight-banner {
+    animation: none;
+  }
+
+  .seat-straight-neon-glow,
+  .seat-straight-neon-core {
+    transition: none;
+  }
 }
 
 @keyframes seat-bonus-pop {

@@ -397,6 +397,12 @@ export const PublicSeatSchema = z.object({
   tripleBonusFxUntil: z.number().int().nullable().optional(),
   /** Cents of the triple bonus shown during FX. */
   tripleBonusCents: z.number().int().nonnegative().optional(),
+  /** Epoch ms while running-straight bonus FX should show. */
+  straightBonusFxUntil: z.number().int().nullable().optional(),
+  /** Cents of the straight bonus shown during FX. */
+  straightBonusCents: z.number().int().nonnegative().optional(),
+  /** Straight length (3–5) shown during FX. */
+  straightBonusLength: z.number().int().min(3).max(5).optional(),
   /** Golden Hand token armed for next hand (betting) or active this round. */
   goldenHandActive: z.boolean().optional(),
   /** Player inventory of Golden Hand tokens. */
@@ -610,6 +616,19 @@ export const JackpotWinBroadcastSchema = z.object({
   goldenHandsGranted: z.number().int().nonnegative().optional(),
 });
 export type JackpotWinBroadcast = z.infer<typeof JackpotWinBroadcastSchema>;
+
+export const TableStraightBonusEventSchema = z.object({
+  tableId: z.string(),
+  seatIndex: z.number().int().nonnegative(),
+  handIndex: z.number().int().nonnegative(),
+  length: z.union([z.literal(3), z.literal(4), z.literal(5)]),
+  bonusCents: z.number().int().positive(),
+  cardIndices: z.array(z.number().int().nonnegative()),
+  until: z.number().int(),
+});
+export type TableStraightBonusEvent = z.infer<
+  typeof TableStraightBonusEventSchema
+>;
 
 export * from "./jackpotWheel.js";
 
