@@ -1,7 +1,7 @@
 import type { Rank, Suit } from "@neon21/shared";
 import type { Card } from "../game/types.js";
 
-/** Suited-pair profit multipliers during Golden Hour (win only). */
+/** Suited-pair instant bonus multipliers (× bet, credited on deal). */
 export const SUITED_PAIR_MULT: Record<Suit, number> = {
   S: 3,
   H: 2.5,
@@ -83,6 +83,17 @@ export function detectSuitedPairSuit(cards: Card[]): Suit | null {
 
 export function suitedPairProfitMultiplier(suit: Suit): number {
   return SUITED_PAIR_MULT[suit] ?? 1;
+}
+
+/** Instant side bonus: bet × suit multiplier. */
+export function suitedPairBonusCents(
+  betCents: number,
+  suit: Suit | null | undefined
+): number {
+  if (!suit || betCents <= 0) return 0;
+  const m = SUITED_PAIR_MULT[suit];
+  if (!m) return 0;
+  return Math.floor(betCents * m);
 }
 
 export function applySuitedPairProfit(

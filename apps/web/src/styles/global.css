@@ -2997,6 +2997,35 @@ h3 {
   color: #e8fff9;
 }
 
+.seat-suited-pair-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  margin: 0.15rem 0 0.35rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, #f0c14a 55%, transparent);
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, #c9a227 36%, transparent),
+    color-mix(in srgb, #8a5a12 14%, transparent)
+  );
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  color: #fff4d4;
+  text-shadow: 0 0 12px color-mix(in srgb, #f0c14a 45%, transparent);
+  animation: seat-bonus-pop 0.55s ease-out;
+}
+
+.seat-suited-pair-banner-amt {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: #fff8e8;
+}
+
 .seat-straight-banner {
   display: flex;
   flex-direction: column;

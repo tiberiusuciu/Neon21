@@ -24,6 +24,8 @@ export interface HandState {
   resultCents: number | null;
   /** GH suited-pair suit locked at deal; cleared on hit/double/split. */
   suitedPairSuit: Suit | null;
+  /** Suited-pair instant bonus already paid for this hand. */
+  suitedPairPaid: boolean;
   /** GH triple-card bonus already paid for this hand. */
   tripleBonusPaid: boolean;
   /** Highest straight length already paid this hand (0 / 3 / 4 / 5). */
@@ -44,6 +46,10 @@ export interface SeatState {
   connected: boolean;
   bjTowardSpin: number;
   spinVouchers: number;
+  /** Epoch ms; suited-pair bonus celebrate FX. */
+  suitedPairFxUntil: number | null;
+  /** Cents of the suited-pair bonus shown during FX. */
+  suitedPairBonusCents: number;
   /** Epoch ms; 5-card Charlie celebrate FX for late joiners. */
   charlieFxUntil: number | null;
   /** Epoch ms; triple-card bonus celebrate FX. */

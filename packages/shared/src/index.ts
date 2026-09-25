@@ -391,6 +391,10 @@ export const PublicSeatSchema = z.object({
   bjTowardSpin: z.number().int().min(0).max(4).optional(),
   /** Open spin vouchers stacked. */
   spinVouchers: z.number().int().nonnegative().optional(),
+  /** Epoch ms while suited-pair bonus FX should show. */
+  suitedPairFxUntil: z.number().int().nullable().optional(),
+  /** Cents of the suited-pair bonus shown during FX. */
+  suitedPairBonusCents: z.number().int().nonnegative().optional(),
   /** Epoch ms while 5-card Charlie FX should show. */
   charlieFxUntil: z.number().int().nullable().optional(),
   /** Epoch ms while triple-card bonus FX should show. */

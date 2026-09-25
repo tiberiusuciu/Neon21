@@ -67,10 +67,10 @@ import {
   isGoldenHourActive,
 } from "../lib/golden-hour.js";
 import {
-  applySuitedPairProfit,
   detectLongestStraight,
   detectSuitedPairSuit,
   straightBonusCents,
+  suitedPairBonusCents,
   tripleCardBonusCents,
 } from "../lib/golden-hour-bonuses.js";
 import { recordGoldenHourResults } from "../lib/golden-hour-rebate.js";
@@ -92,6 +92,7 @@ function emptyHand(betCents: number, goldenHand = false): HandState {
     fromSplit: false,
     resultCents: null,
     suitedPairSuit: null,
+    suitedPairPaid: false,
     tripleBonusPaid: false,
     straightPaidLength: 0,
     goldenHand,
@@ -244,6 +245,11 @@ export class TableRoom {
       connected: seat.connected,
       bjTowardSpin: seat.bjTowardSpin,
       spinVouchers: seat.spinVouchers,
+      suitedPairFxUntil: seat.suitedPairFxUntil,
+      suitedPairBonusCents:
+        seat.suitedPairFxUntil != null && seat.suitedPairFxUntil > Date.now()
+          ? seat.suitedPairBonusCents
+          : undefined,
       charlieFxUntil: seat.charlieFxUntil,
       tripleBonusFxUntil: seat.tripleBonusFxUntil,
       tripleBonusCents:
@@ -494,6 +500,8 @@ export class TableRoom {
       connected: true,
       bjTowardSpin: 0,
       spinVouchers: 0,
+      suitedPairFxUntil: null,
+      suitedPairBonusCents: 0,
       charlieFxUntil: null,
       tripleBonusFxUntil: null,
       tripleBonusCents: 0,
@@ -880,10 +888,12 @@ export class TableRoom {
 
     const heistLive = isGoldenHourActive();
     for (const i of order) {
-      const hand = this.seats[i]?.hands[0];
-      if (!hand) continue;
+      const seat = this.seats[i];
+      const hand = seat?.hands[0];
+      if (!seat || !hand) continue;
       if (heistLive || hand.goldenHand) {
         hand.suitedPairSuit = detectSuitedPairSuit(hand.cards);
+        await this.maybePaySuitedPairBonus(seat, hand);
       }
     }
     if (heistLive || order.some((i) => this.seats[i]?.hands[0]?.goldenHand)) {
@@ -1283,6 +1293,7 @@ export class TableRoom {
         fromSplit: true,
         resultCents: null,
         suitedPairSuit: null,
+        suitedPairPaid: false,
         tripleBonusPaid: false,
         straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
@@ -1295,6 +1306,7 @@ export class TableRoom {
         fromSplit: true,
         resultCents: null,
         suitedPairSuit: null,
+        suitedPairPaid: false,
         tripleBonusPaid: false,
         straightPaidLength: 0,
         goldenHand: ctx.hand.goldenHand,
@@ -1354,10 +1366,7 @@ export class TableRoom {
   }
 
   private winPayout(hand: HandState, baseProfit: number) {
-    let profit = baseProfit;
-    if (this.heistCombosFor(hand)) {
-      profit = applySuitedPairProfit(profit, hand.suitedPairSuit);
-    }
+    const profit = baseProfit;
     if (hand.goldenHand) {
       return goldenHandWinPayout(hand.betCents, profit);
     }
@@ -1367,6 +1376,21 @@ export class TableRoom {
   private lossPayout(hand: HandState) {
     if (hand.goldenHand) return goldenHandLossPayout(hand.betCents);
     return goldenLossPayout(hand.betCents);
+  }
+
+  private async maybePaySuitedPairBonus(
+    seat: SeatState,
+    hand: HandState
+  ): Promise<void> {
+    if (!this.heistCombosFor(hand) || hand.suitedPairPaid) return;
+    if (isDebugSeatUser(seat.userId)) return;
+    const bonus = suitedPairBonusCents(hand.betCents, hand.suitedPairSuit);
+    if (bonus <= 0) return;
+    hand.suitedPairPaid = true;
+    const bal = await creditCents(seat.userId, bonus);
+    this.cb.onWalletUpdate(seat.userId, bal);
+    seat.suitedPairBonusCents = bonus;
+    seat.suitedPairFxUntil = Date.now() + 2_400;
   }
 
   private async maybePayTripleBonus(
@@ -2052,6 +2076,8 @@ export class TableRoom {
       connected: true,
       bjTowardSpin: 0,
       spinVouchers: 0,
+      suitedPairFxUntil: null,
+      suitedPairBonusCents: 0,
       charlieFxUntil: null,
       tripleBonusFxUntil: null,
       tripleBonusCents: 0,

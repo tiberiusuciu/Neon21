@@ -307,9 +307,11 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
           </ul>
 
           <div className="howto-visual-block">
-            <p className="howto-visual-label">Suited pair · win multiplier</p>
+            <p className="howto-visual-label">Suited pair · instant bonus</p>
             <p className="howto-visual-sub">
-              Same rank + same suit on the deal. Hit or double clears it.
+              Same rank + same suit on the deal — credited to your wallet
+              immediately (bet × suit). Hit or double clears the tag; the cash
+              stays.
             </p>
             <div className="howto-combo-grid">
               <CardRow
@@ -317,7 +319,7 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
                   { rank: "A", suit: "S" },
                   { rank: "A", suit: "S" },
                 ]}
-                badge="♠ 3×"
+                badge="♠ 3× bet"
               />
               <CardRow
                 cards={[
@@ -440,7 +442,6 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
               even outside the heist. Losses still send{" "}
               <strong>10%</strong> to the pot
             </li>
-            <li>Stacks with suited-pair multipliers on wins</li>
           </ul>
           <div className="howto-visual-block howto-golden-callout">
             <span className="howto-golden-pill">Golden ON</span>

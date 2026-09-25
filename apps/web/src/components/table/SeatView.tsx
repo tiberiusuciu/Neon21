@@ -66,6 +66,8 @@ export function SeatView({
     seat.charlieFxUntil != null && seat.charlieFxUntil > nowTick;
   const tripleActive =
     seat.tripleBonusFxUntil != null && seat.tripleBonusFxUntil > nowTick;
+  const suitedPairActive =
+    seat.suitedPairFxUntil != null && seat.suitedPairFxUntil > nowTick;
   const straightActive =
     (straightFx != null && straightFx.until > nowTick) ||
     (seat.straightBonusFxUntil != null && seat.straightBonusFxUntil > nowTick);
@@ -78,6 +80,7 @@ export function SeatView({
     const until = Math.max(
       seat.charlieFxUntil ?? 0,
       seat.tripleBonusFxUntil ?? 0,
+      seat.suitedPairFxUntil ?? 0,
       seat.straightBonusFxUntil ?? 0,
       straightFx?.until ?? 0
     );
@@ -92,6 +95,7 @@ export function SeatView({
   }, [
     seat.charlieFxUntil,
     seat.tripleBonusFxUntil,
+    seat.suitedPairFxUntil,
     seat.straightBonusFxUntil,
     straightFx?.until,
   ]);
@@ -197,6 +201,16 @@ export function SeatView({
           {seat.goldenHandActive && (
             <div className="seat-golden-hand-banner" aria-live="polite">
               GOLDEN HAND ACTIVATED
+            </div>
+          )}
+          {suitedPairActive && (
+            <div className="seat-suited-pair-banner" aria-live="polite">
+              SUITED PAIR
+              {(seat.suitedPairBonusCents ?? 0) > 0 && (
+                <span className="seat-suited-pair-banner-amt">
+                  +{formatCents(seat.suitedPairBonusCents!)}
+                </span>
+              )}
             </div>
           )}
           {tripleActive && (
