@@ -77,10 +77,11 @@ export type ActiveSpin = {
   offerEndsAt?: number;
   tileIndex?: number;
   label?: string;
-  kind?: "percent" | "flat";
+  kind?: "percent" | "flat" | "goldenHands";
   pctBps?: number;
   payoutCents?: number;
   potBeforeCents?: number;
+  goldenHandsGranted?: number;
 };
 
 export type RoomCallbacks = {

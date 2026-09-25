@@ -1636,6 +1636,8 @@ export class TableRoom {
     const payoutCents = payoutForTile(tile, potBefore);
     const kind = tile.kind;
     const pctBps = tile.kind === "percent" ? tile.pctBps : 0;
+    const goldenHandsGranted =
+      tile.kind === "goldenHands" ? tile.count : 0;
     const label = tile.label;
     const voucherId = this.spin.voucherId;
     const seatIdx = this.spin.seatIndex;
@@ -1652,6 +1654,12 @@ export class TableRoom {
           where: { id: voucherId },
           data: { status: "used", usedAt: new Date() },
         });
+        if (goldenHandsGranted > 0) {
+          await tx.user.update({
+            where: { id: userId },
+            data: { goldenHands: { increment: goldenHandsGranted } },
+          });
+        }
         await tx.jackpotClaim.create({
           data: {
             userId,
@@ -1664,6 +1672,7 @@ export class TableRoom {
             pctBps,
             payoutCents,
             potBeforeCents: potBefore,
+            goldenHandsGranted,
           },
         });
       });
@@ -1692,10 +1701,11 @@ export class TableRoom {
       tableId: this.id,
       tableName: this.name,
       tileIndex,
-      kind: kind as "percent" | "flat",
+      kind: kind as "percent" | "flat" | "goldenHands",
       pctBps,
       payoutCents,
       potBeforeCents: potBefore,
+      goldenHandsGranted: goldenHandsGranted > 0 ? goldenHandsGranted : undefined,
       label,
       createdAt: new Date().toISOString(),
     };
@@ -1720,6 +1730,8 @@ export class TableRoom {
       pctBps,
       payoutCents,
       potBeforeCents: potBefore,
+      goldenHandsGranted:
+        goldenHandsGranted > 0 ? goldenHandsGranted : undefined,
     };
     if (tileIndex === 0 || pctBps === 10_000) {
       this.jackpotCelebrateUntil = Date.now() + JACKPOT_CELEBRATE_MS;
@@ -1730,16 +1742,25 @@ export class TableRoom {
       const bal = await creditCents(userId, payoutCents);
       this.cb.onWalletUpdate(userId, bal);
     }
+    if (goldenHandsGranted > 0) {
+      await this.refreshSeatGoldenHands(userId);
+      this.cb.onNotice(
+        userId,
+        `Wheel prize: +${goldenHandsGranted} Golden Hands`
+      );
+    }
     this.cb.onJackpotClaim(claimEntry);
     this.cb.onJackpotWin({
       userId,
       name,
       tableId: this.id,
       tableName: this.name,
-      kind: kind as "percent" | "flat",
+      kind: kind as "percent" | "flat" | "goldenHands",
       pctBps,
       payoutCents,
       label,
+      goldenHandsGranted:
+        goldenHandsGranted > 0 ? goldenHandsGranted : undefined,
     });
 
     await this.refreshSeatSpinProgress(userId);

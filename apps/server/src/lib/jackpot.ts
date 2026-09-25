@@ -231,7 +231,12 @@ export async function getAdminJackpotLedger(
     deltaCents: -c.payoutCents,
     createdAt: c.createdAt.toISOString(),
     userName: c.userName,
-    label: formatClaimLabel(c.kind, c.pctBps, c.payoutCents),
+    label: formatClaimLabel(
+      c.kind,
+      c.pctBps,
+      c.payoutCents,
+      c.goldenHandsGranted
+    ),
     pctBps: c.pctBps,
     payoutCents: c.payoutCents,
     potBeforeCents: c.potBeforeCents,

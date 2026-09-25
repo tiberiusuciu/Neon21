@@ -432,7 +432,8 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
           </li>
           <li>
             Landing the <strong>100%</strong> tile pays the entire available
-            pot
+            pot; the <strong>3 GH</strong> tile grants three Golden Hands
+            (1% chance, does not drain the pot)
           </li>
         </ul>
 

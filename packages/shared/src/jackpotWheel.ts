@@ -2,7 +2,8 @@
 
 export type WheelTile =
   | { kind: "percent"; pctBps: number; label: string }
-  | { kind: "flat"; cents: number; label: string };
+  | { kind: "flat"; cents: number; label: string }
+  | { kind: "goldenHands"; count: number; label: string };
 
 function pct(pctBps: number): WheelTile {
   const p = pctBps / 100;
@@ -13,6 +14,10 @@ function pct(pctBps: number): WheelTile {
 
 function flat(cents: number, label: string): WheelTile {
   return { kind: "flat", cents, label };
+}
+
+function goldenHands(count: number): WheelTile {
+  return { kind: "goldenHands", count, label: `${count} GH` };
 }
 
 /** Build exactly 100 tiles. Index 0 is the jackpot 100% tile. */
@@ -43,6 +48,9 @@ export function buildJackpotWheel(): WheelTile[] {
   tiles.push(pct(1_500)); // 15%
   tiles.push(pct(2_000)); // 20%
   tiles.push(pct(2_500)); // 25%
+
+  // 3 Golden Hands — 1/100, same rarity as a medium % slice (does not drain pot)
+  tiles.push(goldenHands(3));
 
   while (tiles.length < 100) tiles.push(pct(10));
   return tiles.slice(0, 100);
@@ -80,7 +88,11 @@ export function wheelBiasOptions(): WheelBiasOption[] {
   for (let i = 0; i < JACKPOT_WHEEL.length; i++) {
     const t = JACKPOT_WHEEL[i]!;
     const key =
-      t.kind === "flat" ? `flat:${t.cents}` : `pct:${t.pctBps}`;
+      t.kind === "flat"
+        ? `flat:${t.cents}`
+        : t.kind === "goldenHands"
+          ? `gh:${t.count}`
+          : `pct:${t.pctBps}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push({ tileIndex: i, label: t.label });
@@ -92,6 +104,7 @@ export function payoutForTile(
   tile: WheelTile,
   availableCents: number
 ): number {
+  if (tile.kind === "goldenHands") return 0;
   if (availableCents <= 0) return 0;
   if (tile.kind === "flat") return Math.min(tile.cents, availableCents);
   return Math.floor((availableCents * tile.pctBps) / 10_000);
@@ -101,8 +114,13 @@ export function payoutForTile(
 export function formatClaimLabel(
   kind: string,
   pctBps: number,
-  payoutCents: number
+  payoutCents: number,
+  goldenHandsGranted = 0
 ): string {
+  if (kind === "goldenHands") {
+    const n = goldenHandsGranted > 0 ? goldenHandsGranted : 3;
+    return `${n} GH`;
+  }
   if (kind === "flat") return `$${(payoutCents / 100).toFixed(0)}`;
   const tile = JACKPOT_WHEEL.find(
     (t) => t.kind === "percent" && t.pctBps === pctBps

@@ -434,10 +434,11 @@ export const TableSpinStateSchema = z.object({
   offerEndsAt: z.number().optional(),
   tileIndex: z.number().int().optional(),
   label: z.string().optional(),
-  kind: z.enum(["percent", "flat"]).optional(),
+  kind: z.enum(["percent", "flat", "goldenHands"]).optional(),
   pctBps: z.number().int().optional(),
   payoutCents: z.number().int().optional(),
   potBeforeCents: z.number().int().optional(),
+  goldenHandsGranted: z.number().int().nonnegative().optional(),
 });
 export type TableSpinState = z.infer<typeof TableSpinStateSchema>;
 
@@ -572,10 +573,11 @@ export const JackpotClaimEntrySchema = z.object({
   tableId: z.string(),
   tableName: z.string(),
   tileIndex: z.number().int(),
-  kind: z.enum(["percent", "flat"]),
+  kind: z.enum(["percent", "flat", "goldenHands"]),
   pctBps: z.number().int(),
   payoutCents: z.number().int(),
   potBeforeCents: z.number().int(),
+  goldenHandsGranted: z.number().int().nonnegative().optional(),
   label: z.string(),
   createdAt: z.string(),
 });
@@ -601,10 +603,11 @@ export const JackpotWinBroadcastSchema = z.object({
   name: z.string(),
   tableId: z.string(),
   tableName: z.string(),
-  kind: z.enum(["percent", "flat"]),
+  kind: z.enum(["percent", "flat", "goldenHands"]),
   pctBps: z.number().int(),
   payoutCents: z.number().int(),
   label: z.string(),
+  goldenHandsGranted: z.number().int().nonnegative().optional(),
 });
 export type JackpotWinBroadcast = z.infer<typeof JackpotWinBroadcastSchema>;
 

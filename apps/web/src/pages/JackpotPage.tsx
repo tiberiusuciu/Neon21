@@ -355,7 +355,9 @@ export function JackpotPage() {
                         <span className="muted"> · {c.label}</span>
                       </div>
                       <div className="jackpot-claim-amt">
-                        {formatCents(c.payoutCents)}
+                        {c.kind === "goldenHands"
+                          ? `+${c.goldenHandsGranted ?? 3} GH`
+                          : formatCents(c.payoutCents)}
                       </div>
                       <div className="jackpot-claim-when muted">
                         {formatClaimWhen(c.createdAt)}

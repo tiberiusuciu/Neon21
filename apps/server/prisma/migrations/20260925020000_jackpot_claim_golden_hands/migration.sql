@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "JackpotClaim" ADD COLUMN IF NOT EXISTS "goldenHandsGranted" INTEGER NOT NULL DEFAULT 0;

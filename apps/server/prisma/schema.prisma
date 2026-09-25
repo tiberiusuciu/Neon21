@@ -84,6 +84,8 @@ model JackpotClaim {
   pctBps         Int         @default(0)
   payoutCents    Int
   potBeforeCents Int
+  /** Non-cash wheel prizes (e.g. Golden Hands tile). */
+  goldenHandsGranted Int     @default(0)
   createdAt      DateTime    @default(now())
 
   @@index([createdAt])

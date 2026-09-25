@@ -25,11 +25,23 @@ export async function jackpotRoutes(app: FastifyInstance) {
         tableId: r.tableId,
         tableName: r.tableName,
         tileIndex: r.tileIndex,
-        kind: r.kind === "flat" ? "flat" : "percent",
+        kind:
+          r.kind === "flat"
+            ? "flat"
+            : r.kind === "goldenHands"
+              ? "goldenHands"
+              : "percent",
         pctBps: r.pctBps,
         payoutCents: r.payoutCents,
         potBeforeCents: r.potBeforeCents,
-        label: formatClaimLabel(r.kind, r.pctBps, r.payoutCents),
+        goldenHandsGranted:
+          r.goldenHandsGranted > 0 ? r.goldenHandsGranted : undefined,
+        label: formatClaimLabel(
+          r.kind,
+          r.pctBps,
+          r.payoutCents,
+          r.goldenHandsGranted
+        ),
         createdAt: r.createdAt.toISOString(),
       }));
 

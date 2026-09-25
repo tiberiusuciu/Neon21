@@ -7719,6 +7719,13 @@ html[data-resolved="dark"] .table-debug-field select {
   animation: seat-spin-pop 0.45s var(--ease);
 }
 
+.seat-spin-payout-gh {
+  color: #ffe9a8;
+  font-size: 0.88rem;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 14px color-mix(in srgb, #c9a227 55%, transparent);
+}
+
 .seat-spin-label {
   position: relative;
   z-index: 2;

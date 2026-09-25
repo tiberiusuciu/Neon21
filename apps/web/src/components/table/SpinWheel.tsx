@@ -39,6 +39,7 @@ function tileFill(t: WheelTile, index: number, p: string): string {
   if (index === 0 || (t.kind === "percent" && t.pctBps >= 10_000)) {
     return `url(#${p}-jackpot-grad)`;
   }
+  if (t.kind === "goldenHands") return `url(#${p}-pearl-gh)`;
   if (t.kind === "flat") return `url(#${p}-pearl-dud)`;
   if (t.pctBps >= 2_000) return `url(#${p}-pearl-rare)`;
   if (t.pctBps >= 1_000) return `url(#${p}-pearl-high)`;
@@ -148,6 +149,7 @@ function loupeLabelPriority(b: {
 }): number {
   if (b.jackpot) return 100;
   const t = JACKPOT_WHEEL[b.start]!;
+  if (t.kind === "goldenHands") return 88;
   if (t.kind === "percent" && t.pctBps >= 2_500) return 90;
   if (b.onePct) return 75;
   if (t.kind === "flat") return 65;
@@ -367,6 +369,12 @@ export function WheelFace({
           <stop offset="58%" stopColor="#2a8fc4" />
           <stop offset="100%" stopColor="#1a4a7a" />
         </radialGradient>
+        <linearGradient id={`${prefix}-pearl-gh`} x1="15%" y1="0%" x2="85%" y2="100%">
+          <stop offset="0%" stopColor="#ffe9a8" />
+          <stop offset="35%" stopColor="#e0b84a" />
+          <stop offset="70%" stopColor="#a07820" />
+          <stop offset="100%" stopColor="#5a4010" />
+        </linearGradient>
         <linearGradient id={`${prefix}-pearl-a`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#6a6280" />
           <stop offset="45%" stopColor="#3a3450" />
@@ -535,7 +543,9 @@ export function SpinWheel({
 
   const spinning = spin.phase === "result" && !animDone;
   const showResult =
-    spin.phase === "result" && animDone && spin.payoutCents != null;
+    spin.phase === "result" &&
+    animDone &&
+    (spin.payoutCents != null || spin.kind === "goldenHands");
   const emitHot = spinning || spin.phase === "offer";
   const offerUrgent =
     spin.phase === "offer" &&
@@ -702,9 +712,16 @@ export function SpinWheel({
           {offerSeconds != null ? ` ${offerSeconds}s` : ""}
         </p>
       )}
-      {showResult && spin.payoutCents != null && (
-        <div className="seat-spin-payout">{formatCents(spin.payoutCents)}</div>
+      {showResult && spin.kind === "goldenHands" && (
+        <div className="seat-spin-payout seat-spin-payout-gh">
+          +{spin.goldenHandsGranted ?? 3} Golden Hands
+        </div>
       )}
+      {showResult &&
+        spin.kind !== "goldenHands" &&
+        spin.payoutCents != null && (
+          <div className="seat-spin-payout">{formatCents(spin.payoutCents)}</div>
+        )}
       {showResult && spin.label && (
         <div className="seat-spin-label">{spin.label}</div>
       )}
