@@ -7595,6 +7595,77 @@ html[data-resolved="dark"] .table-debug-field select {
     drop-shadow(0 0 4px color-mix(in srgb, #c8a040 65%, transparent));
 }
 
+.seat-spin-wedge-gh {
+  filter: drop-shadow(0 0 2.5px #ffe9a8)
+    drop-shadow(0 0 6px color-mix(in srgb, #e8c76a 75%, transparent))
+    drop-shadow(0 0 10px color-mix(in srgb, #c9a227 45%, transparent));
+  animation: seat-spin-gh-wedge-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes seat-spin-gh-wedge-pulse {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 2px #ffe9a8)
+      drop-shadow(0 0 5px color-mix(in srgb, #e8c76a 65%, transparent));
+  }
+  50% {
+    filter: drop-shadow(0 0 3.5px #fff6d0)
+      drop-shadow(0 0 9px color-mix(in srgb, #ffe08a 85%, transparent))
+      drop-shadow(0 0 14px color-mix(in srgb, #c9a227 55%, transparent));
+  }
+}
+
+.seat-spin-gh-fx {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--a, 0deg));
+}
+
+.seat-spin-gh-fx span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: calc(2px + (var(--i, 0) % 3) * 0.7px);
+  height: calc(2px + (var(--i, 0) % 3) * 0.7px);
+  margin: -1px 0 0 -1px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    #fff8dc 0%,
+    #ffe08a 40%,
+    #c9a227 75%,
+    transparent 100%
+  );
+  box-shadow:
+    0 0 4px color-mix(in srgb, #ffe9a8 90%, transparent),
+    0 0 8px color-mix(in srgb, #e8c76a 55%, transparent);
+  opacity: 0;
+  animation: seat-spin-gh-sparkle calc(1.1s + var(--i, 0) * 0.12s) ease-out
+    infinite;
+  animation-delay: calc(var(--i, 0) * 0.14s);
+}
+
+@keyframes seat-spin-gh-sparkle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--i, 0) * 18deg))
+      translateY(-28px) scale(0.4);
+  }
+  18% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(calc(var(--i, 0) * 18deg))
+      translateY(-52px) scale(1.15);
+  }
+}
+
 .seat-spin-jackpot-fx {
   pointer-events: none;
   position: absolute;
@@ -7832,6 +7903,8 @@ html[data-resolved="dark"] .table-debug-field select {
   .seat-spin-wheel.is-spinning,
   .seat-spin-payout,
   .seat-spin-jackpot-fx span,
+  .seat-spin-gh-fx span,
+  .seat-spin-wedge-gh,
   .seat-spin-edge-particles i,
   .seat-spin-timer-fill,
   .seat-spin-go,
@@ -7842,7 +7915,8 @@ html[data-resolved="dark"] .table-debug-field select {
     animation: none !important;
   }
 
-  .seat-spin-edge-particles {
+  .seat-spin-edge-particles,
+  .seat-spin-gh-fx {
     display: none;
   }
 
@@ -8985,7 +9059,7 @@ html[data-resolved="light"] .btn-double.is-ready {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  overflow: hidden;
+  overflow: visible;
   border: 2px solid color-mix(in srgb, #a898d0 45%, transparent);
   box-shadow:
     inset 0 0 14px color-mix(in srgb, #000 50%, transparent),

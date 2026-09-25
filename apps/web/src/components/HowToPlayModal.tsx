@@ -121,7 +121,7 @@ function MiniWheelDemo({ potCents }: { potCents: number | null }) {
       <div className="howto-wheel-mini">
         <div className="howto-wheel-pointer" />
         <div className="howto-wheel-disc">
-          <WheelFace prefix="howto-wheel" />
+              <WheelFace prefix="howto-wheel" showFx />
           <div className="seat-spin-disc-sheen" />
         </div>
         <div className="howto-wheel-hub" />
@@ -432,8 +432,9 @@ export function HowToPlayModal({ open, onClose, initialTab = "basics" }: Props) 
           </li>
           <li>
             Landing the <strong>100%</strong> tile pays the entire available
-            pot; the <strong>3 GH</strong> tile grants three Golden Hands
-            (1% chance, does not drain the pot)
+            pot; the <strong>3 GH</strong> tiles flanking the jackpot grant
+            three Golden Hands (<strong>2%</strong> chance, does not drain
+            the pot)
           </li>
         </ul>
 

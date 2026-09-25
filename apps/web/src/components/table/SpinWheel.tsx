@@ -59,6 +59,7 @@ function buildBands(p: string) {
     end: number;
     fill: string;
     jackpot: boolean;
+    goldenHands: boolean;
     onePct: boolean;
     label: string | null;
   }[] = [];
@@ -74,6 +75,7 @@ function buildBands(p: string) {
         end: i + 1,
         fill,
         jackpot: i === 0,
+        goldenHands: t.kind === "goldenHands",
         onePct: isOnePercent(t),
         label: t.label,
       });
@@ -149,7 +151,7 @@ function loupeLabelPriority(b: {
 }): number {
   if (b.jackpot) return 100;
   const t = JACKPOT_WHEEL[b.start]!;
-  if (t.kind === "goldenHands") return 88;
+  if (t.kind === "goldenHands") return 92;
   if (t.kind === "percent" && t.pctBps >= 2_500) return 90;
   if (b.onePct) return 75;
   if (t.kind === "flat") return 65;
@@ -197,22 +199,33 @@ function pickLabelRadius(
 export function WheelFace({
   prefix,
   showLabels = false,
+  showFx = false,
 }: {
   prefix: string;
   showLabels?: boolean;
+  showFx?: boolean;
 }) {
-  const { wedges, labels } = useMemo(() => {
+  const { wedges, labels, ghMids } = useMemo(() => {
     const bands = buildBands(prefix);
+    const ghMids: number[] = [];
     const wedges = bands.map((b) => {
       const span = b.end - b.start;
-      const stroke =
-        span >= 3 ? "rgba(200, 220, 255, 0.22)" : "rgba(160, 180, 220, 0.1)";
-      const strokeWidth = span >= 3 ? 0.22 : 0.07;
+      const stroke = b.goldenHands
+        ? "rgba(255, 220, 120, 0.55)"
+        : span >= 3
+          ? "rgba(200, 220, 255, 0.22)"
+          : "rgba(160, 180, 220, 0.1)";
+      const strokeWidth = b.goldenHands ? 0.35 : span >= 3 ? 0.22 : 0.07;
       const wedgeClass = b.jackpot
         ? "seat-spin-wedge-jackpot"
-        : b.onePct
-          ? "seat-spin-wedge-one"
-          : "seat-spin-wedge";
+        : b.goldenHands
+          ? "seat-spin-wedge-gh"
+          : b.onePct
+            ? "seat-spin-wedge-one"
+            : "seat-spin-wedge";
+      if (b.goldenHands) {
+        ghMids.push((b.start + b.end) / 2);
+      }
       return (
         <path
           key={`${b.start}-${b.end}`}
@@ -357,11 +370,12 @@ export function WheelFace({
       });
     }
 
-    return { wedges, labels };
+    return { wedges, labels, ghMids };
   }, [prefix, showLabels]);
 
   return (
-    <svg className="seat-spin-svg" viewBox="0 0 100 100" aria-hidden>
+    <>
+      <svg className="seat-spin-svg" viewBox="0 0 100 100" aria-hidden>
       <defs>
         <radialGradient id={`${prefix}-jackpot-grad`} cx="38%" cy="32%" r="78%">
           <stop offset="0%" stopColor="#a8ffe8" />
@@ -369,11 +383,12 @@ export function WheelFace({
           <stop offset="58%" stopColor="#2a8fc4" />
           <stop offset="100%" stopColor="#1a4a7a" />
         </radialGradient>
-        <linearGradient id={`${prefix}-pearl-gh`} x1="15%" y1="0%" x2="85%" y2="100%">
-          <stop offset="0%" stopColor="#ffe9a8" />
-          <stop offset="35%" stopColor="#e0b84a" />
-          <stop offset="70%" stopColor="#a07820" />
-          <stop offset="100%" stopColor="#5a4010" />
+        <linearGradient id={`${prefix}-pearl-gh`} x1="10%" y1="0%" x2="90%" y2="100%">
+          <stop offset="0%" stopColor="#fff6d0" />
+          <stop offset="22%" stopColor="#ffe08a" />
+          <stop offset="48%" stopColor="#e8b84a" />
+          <stop offset="72%" stopColor="#c09028" />
+          <stop offset="100%" stopColor="#6a4810" />
         </linearGradient>
         <linearGradient id={`${prefix}-pearl-a`} x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#6a6280" />
@@ -426,6 +441,23 @@ export function WheelFace({
       {wedges}
       {labels}
     </svg>
+      {showFx &&
+        ghMids.map((mid) => {
+          const a = -90 + mid * SEG;
+          return (
+            <div
+              key={`gh-fx-${mid}`}
+              className="seat-spin-gh-fx"
+              style={{ ["--a" as string]: `${a}deg` }}
+              aria-hidden
+            >
+              {Array.from({ length: 7 }, (_, i) => (
+                <span key={i} style={{ ["--i" as string]: i }} />
+              ))}
+            </div>
+          );
+        })}
+    </>
   );
 }
 
@@ -651,7 +683,7 @@ export function SpinWheel({
           ))}
         </div>
         <div ref={discRef} className="seat-spin-disc" style={discStyle}>
-          <WheelFace prefix="seat-spin" />
+          <WheelFace prefix="seat-spin" showFx />
           <div className="seat-spin-jackpot-fx" aria-hidden>
             {Array.from({ length: 8 }, (_, i) => (
               <span key={i} style={{ ["--i" as string]: i }} />

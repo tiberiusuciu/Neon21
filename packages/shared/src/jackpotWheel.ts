@@ -20,10 +20,12 @@ function goldenHands(count: number): WheelTile {
   return { kind: "goldenHands", count, label: `${count} GH` };
 }
 
-/** Build exactly 100 tiles. Index 0 is the jackpot 100% tile. */
+/** Build exactly 100 tiles. Index 0 is the jackpot 100% tile;
+ *  indices 1 and 99 are 3 Golden Hands — flanking the jackpot (2/100). */
 export function buildJackpotWheel(): WheelTile[] {
   const tiles: WheelTile[] = [];
   tiles.push(pct(10_000)); // 100% — 1/100
+  tiles.push(goldenHands(3)); // clockwise neighbor of jackpot
 
   // ~10 unlucky $25
   for (let i = 0; i < 10; i++) tiles.push(flat(2_500, "$25"));
@@ -49,10 +51,8 @@ export function buildJackpotWheel(): WheelTile[] {
   tiles.push(pct(2_000)); // 20%
   tiles.push(pct(2_500)); // 25%
 
-  // 3 Golden Hands — 1/100, same rarity as a medium % slice (does not drain pot)
-  tiles.push(goldenHands(3));
-
-  while (tiles.length < 100) tiles.push(pct(10));
+  while (tiles.length < 99) tiles.push(pct(10));
+  tiles.push(goldenHands(3)); // counter-clockwise neighbor of jackpot
   return tiles.slice(0, 100);
 }
 
